@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- XML docs are still being filled in during early milestones. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Shown on the NuGet.org package page. -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Alembic.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Pack the solution README into the package so it renders on NuGet.org. -->
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+</Project>
