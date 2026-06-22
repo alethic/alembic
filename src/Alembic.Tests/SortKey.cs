@@ -22,7 +22,7 @@ sealed class SortKey : IMultipleTrait
 
     public string Key => _key;
 
-    ITraitDef ITrait.Def => SortKeyTraitDef.Instance;
+    ITraitDef ITrait.TraitDef => SortKeyTraitDef.Instance;
 
     public bool IsTop => _key.Length == 0;
 

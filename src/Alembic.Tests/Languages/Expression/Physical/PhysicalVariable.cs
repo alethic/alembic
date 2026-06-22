@@ -13,22 +13,24 @@ sealed class PhysicalVariable : AbstractNode
 
     readonly string _name;
 
-    public PhysicalVariable(TraitSet traits, string name)
-        : base(traits, ImmutableArray<INode>.Empty)
+    public PhysicalVariable(Cluster cluster, TraitSet traits, string name)
+        : base(cluster, traits, ImmutableArray<INode>.Empty)
     {
         _name = name;
     }
 
     public string Name => _name;
 
-    protected override void Explain(INodeWriter writer)
+    public override INodeWriter ExplainTerms(INodeWriter writer)
     {
+        base.ExplainTerms(writer);
         writer.Item("name", _name);
+        return writer;
     }
 
     public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
     {
-        return new PhysicalVariable(traits, _name);
+        return new PhysicalVariable(Cluster, traits, _name);
     }
 
 }

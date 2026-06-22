@@ -9,7 +9,7 @@ namespace Alembic.Algebra;
 
 /// <summary>
 /// Convenience base for <see cref="INode"/> implementations. A node lists its identity-bearing terms
-/// in <see cref="Explain"/> — its own attributes and its inputs — and the base derives
+/// in <see cref="ExplainTerms"/> — its own attributes and its inputs — and the base derives
 /// <see cref="DeepEquals"/> / <see cref="DeepHashCode"/> from them. Each node keeps one
 /// <see cref="INodeDigest"/> that caches its hash.
 /// </summary>
@@ -19,14 +19,18 @@ public abstract class AbstractNode : INode
     readonly InnerNodeDigest _digest;
 
     /// <summary>
-    /// Initializes the node with its traits and children.
+    /// Initializes the node with its cluster, traits, and children.
     /// </summary>
-    protected AbstractNode(TraitSet traits, ImmutableArray<INode> children)
+    protected AbstractNode(Cluster cluster, TraitSet traits, ImmutableArray<INode> children)
     {
+        Cluster = cluster;
         Traits = traits;
         Children = children;
         _digest = new InnerNodeDigest(this);
     }
+
+    /// <inheritdoc />
+    public Cluster Cluster { get; }
 
     /// <inheritdoc />
     public TraitSet Traits { get; }
@@ -35,14 +39,20 @@ public abstract class AbstractNode : INode
     public ImmutableArray<INode> Children { get; }
 
     /// <summary>
-    /// Lists this node's identity-bearing terms. A subclass calls <c>base.Explain</c>, then adds its
+    /// Lists this node's identity-bearing terms. A subclass calls <c>base.ExplainTerms</c>, then adds its
     /// own attributes (<see cref="INodeWriter.Item"/>) and its inputs (<see cref="INodeWriter.Input"/>).
     /// Two nodes of the same type with equal traits and equal terms are structurally equivalent; a node
     /// that omits a term excludes it from that comparison, so inputs must be listed here.
     /// </summary>
-    protected virtual void Explain(INodeWriter writer)
+    public virtual INodeWriter ExplainTerms(INodeWriter writer)
     {
+        return writer;
+    }
 
+    /// <inheritdoc />
+    public void Explain(INodeWriter writer)
+    {
+        ExplainTerms(writer).Done(this);
     }
 
     /// <inheritdoc />
@@ -63,43 +73,11 @@ public abstract class AbstractNode : INode
     }
 
     /// <summary>
-    /// Renders this node and its inputs as an indented plan tree — each line is a node's type, traits,
-    /// and attributes, with inputs nested beneath. For display and debugging.
+    /// Discards this node's cached digest, so it is recomputed on next use.
     /// </summary>
-    internal string RenderPlan()
+    public void RecomputeDigest()
     {
-        var sb = new StringBuilder();
-        Render(this, null, sb, 0);
-        return sb.ToString().TrimEnd();
-    }
-
-    static void Render(INode node, string? label, StringBuilder sb, int depth)
-    {
-        var writer = new RenderWriter();
-        if (node is AbstractNode self)
-            self.Explain(writer);
-
-        sb.Append(' ', depth * 2);
-        if (label is not null)
-            sb.Append(label).Append(": ");
-
-        sb.Append(node.GetType().Name).Append(' ').Append(node.Traits);
-        if (writer.Items.Count > 0)
-        {
-            sb.Append(" (");
-            for (int i = 0; i < writer.Items.Count; i++)
-            {
-                if (i > 0) sb.Append(", ");
-                sb.Append(writer.Items[i].Name).Append('=').Append(writer.Items[i].Value);
-            }
-
-            sb.Append(')');
-        }
-
-        sb.Append('\n');
-
-        foreach (var (name, child) in writer.Inputs)
-            Render(child, name, sb, depth + 1);
+        _digest.Clear();
     }
 
     /// <inheritdoc />
@@ -152,13 +130,13 @@ public abstract class AbstractNode : INode
     List<(string Name, object? Value)> DigestItems()
     {
         var writer = new DigestWriter();
-        Explain(writer);
+        ExplainTerms(writer);
         return writer.Items;
     }
 
     /// <summary>
     /// The digest kept by each node: it caches its hash and delegates equality to the node's
-    /// <see cref="DeepEquals"/>. Because it is nested it can reach the node's <see cref="Explain"/> to
+    /// <see cref="DeepEquals"/>. Because it is nested it can reach the node's <see cref="ExplainTerms"/> to
     /// render the digest string.
     /// </summary>
     sealed class InnerNodeDigest : INodeDigest
@@ -196,18 +174,25 @@ public abstract class AbstractNode : INode
         {
             var writer = new DigestWriter();
             _node.Explain(writer);
-            return writer.Done(_node);
+            return writer.Digest;
         }
 
     }
 
     /// <summary>
-    /// Collects a node's explain terms. <see cref="Done"/> renders them into the digest string.
+    /// Collects a node's explain terms and, on <see cref="Done"/>, renders them into the digest string.
+    /// The digest analog of Calcite's per-node digest writer (inputs are referenced by type, not
+    /// recursed). <see cref="Items"/> also backs the term-by-term <see cref="DeepEquals"/> comparison.
     /// </summary>
     sealed class DigestWriter : INodeWriter
     {
 
         public List<(string Name, object? Value)> Items { get; } = new List<(string, object?)>();
+
+        /// <summary>
+        /// The rendered digest string, available after <see cref="Done"/>.
+        /// </summary>
+        public string Digest { get; private set; } = "";
 
         public INodeWriter Item(string name, object? value)
         {
@@ -215,13 +200,7 @@ public abstract class AbstractNode : INode
             return this;
         }
 
-        public INodeWriter Input(string name, INode input)
-        {
-            Items.Add((name, input));
-            return this;
-        }
-
-        public string Done(INode node)
+        public INodeWriter Done(INode node)
         {
             var sb = new StringBuilder();
             sb.Append(node.GetType().Name).Append('.').Append(node.Traits).Append('(');
@@ -233,30 +212,7 @@ public abstract class AbstractNode : INode
             }
 
             sb.Append(')');
-            return sb.ToString();
-        }
-
-    }
-
-    /// <summary>
-    /// Collects a node's attributes and inputs for the indented plan rendering.
-    /// </summary>
-    sealed class RenderWriter : INodeWriter
-    {
-
-        public List<(string Name, object? Value)> Items { get; } = new List<(string, object?)>();
-
-        public List<(string Name, INode Child)> Inputs { get; } = new List<(string, INode)>();
-
-        public INodeWriter Item(string name, object? value)
-        {
-            Items.Add((name, value));
-            return this;
-        }
-
-        public INodeWriter Input(string name, INode input)
-        {
-            Inputs.Add((name, input));
+            Digest = sb.ToString();
             return this;
         }
 

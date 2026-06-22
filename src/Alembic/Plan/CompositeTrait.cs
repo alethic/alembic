@@ -6,11 +6,30 @@ using System.Linq;
 namespace Alembic.Plan;
 
 /// <summary>
+/// The non-generic face of a <see cref="CompositeTrait{T}"/>, so a <see cref="TraitSet"/> can recognize
+/// and flatten composite traits without knowing the member type.
+/// </summary>
+public interface ICompositeTrait : ITrait
+{
+
+    /// <summary>
+    /// The number of member traits.
+    /// </summary>
+    int Count { get; }
+
+    /// <summary>
+    /// The member trait at the given index.
+    /// </summary>
+    ITrait TraitAt(int index);
+
+}
+
+/// <summary>
 /// A trait that consists of a list of traits, all of the same dimension. It lets a
 /// <see cref="TraitSet"/> hold several values on one dimension (e.g. several sort orders).
 /// </summary>
 /// <typeparam name="T">The member trait type.</typeparam>
-public sealed class CompositeTrait<T> : ITrait
+public sealed class CompositeTrait<T> : ICompositeTrait
     where T : IMultipleTrait
 {
 
@@ -43,7 +62,13 @@ public sealed class CompositeTrait<T> : ITrait
     public ImmutableArray<T> Traits => _traits;
 
     /// <inheritdoc />
-    public ITraitDef Def => _def;
+    public int Count => _traits.Length;
+
+    /// <inheritdoc />
+    public ITrait TraitAt(int index) => _traits[index];
+
+    /// <inheritdoc />
+    public ITraitDef TraitDef => _def;
 
     /// <inheritdoc />
     public bool Satisfies(ITrait other)

@@ -24,7 +24,7 @@ sealed class VariableConverter : ConverterRule
     public override INode? Convert(INode node)
     {
         if (node is Variable variable)
-            return new PhysicalVariable(_physical, variable.Name);
+            return new PhysicalVariable(variable.Cluster, _physical, variable.Name);
 
         return null;
     }

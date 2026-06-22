@@ -7,25 +7,30 @@ namespace Alembic.Plan.Volcano;
 
 /// <summary>
 /// The rule call used while firing rules during registration. Instead of applying the rule
-/// immediately, it defers each match by adding a <see cref="VolcanoRuleMatch"/> to the planner's rule
-/// queue, for the <see cref="IRuleDriver"/> to apply later.
+/// immediately, each completed match is deferred by adding a <see cref="VolcanoRuleMatch"/> to the
+/// planner's rule queue, for the <see cref="IRuleDriver"/> to apply later.
 /// </summary>
 public sealed class DeferringRuleCall : VolcanoRuleCall
 {
 
-    internal DeferringRuleCall(VolcanoPlanner planner, IRule rule)
-        : base(planner, rule, ImmutableArray<INode>.Empty)
-    {
+    readonly VolcanoPlanner _planner;
 
+    internal DeferringRuleCall(VolcanoPlanner planner, RuleOperand operand0)
+        : base(planner, operand0)
+    {
+        _planner = planner;
     }
 
     /// <summary>
-    /// Finds every match of the rule's operand rooted at <paramref name="node"/> and queues each one.
+    /// Queues the completed match rather than applying it.
     /// </summary>
-    public void Match(INode node)
+    public override void OnMatch()
     {
-        foreach (var binding in Planner.MatchBindings(Rule.Operand, node))
-            Planner.RuleDriver.Queue.AddMatch(new VolcanoRuleMatch(Planner, Rule, binding));
+        var builder = ImmutableArray.CreateBuilder<INode>(Rels.Length);
+        foreach (var rel in Rels)
+            builder.Add(rel!);
+
+        _planner.RuleDriver.Queue.AddMatch(new VolcanoRuleMatch(_planner, Operand0, builder.MoveToImmutable()));
     }
 
 }

@@ -15,7 +15,7 @@ sealed class PhysicalFma : AbstractNode
 {
 
     public PhysicalFma(TraitSet traits, INode a, INode b, INode c)
-        : base(traits, ImmutableArray.Create(a, b, c))
+        : base(a.Cluster, traits, ImmutableArray.Create(a, b, c))
     {
 
     }
@@ -26,11 +26,13 @@ sealed class PhysicalFma : AbstractNode
 
     public INode C => Children[2];
 
-    protected override void Explain(INodeWriter writer)
+    public override INodeWriter ExplainTerms(INodeWriter writer)
     {
+        base.ExplainTerms(writer);
         writer.Input("a", A);
         writer.Input("b", B);
         writer.Input("c", C);
+        return writer;
     }
 
     public override INode Copy(TraitSet traits, ImmutableArray<INode> children)

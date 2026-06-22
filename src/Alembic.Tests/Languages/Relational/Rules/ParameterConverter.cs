@@ -24,7 +24,7 @@ sealed class ParameterConverter : ConverterRule
     public override INode? Convert(INode node)
     {
         if (node is LogicalParameter parameter)
-            return new PhysicalParameter(_physical, parameter.Name);
+            return new PhysicalParameter(parameter.Cluster, _physical, parameter.Name);
 
         return null;
     }

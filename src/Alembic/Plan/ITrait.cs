@@ -10,7 +10,7 @@ public interface ITrait
     /// <summary>
     /// The dimension this trait belongs to.
     /// </summary>
-    ITraitDef Def { get; }
+    ITraitDef TraitDef { get; }
 
     /// <summary>
     /// Whether a node carrying this trait also satisfies a requirement for <paramref name="other"/>.

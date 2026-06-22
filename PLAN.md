@@ -100,9 +100,14 @@ src/Alembic/
       ConverterRule.cs  abstract base: holds Source/Target, leaves Convert abstract
     Hep/
       HepMatchOrder.cs  Arbitrary | BottomUp | TopDown | DepthFirst
-      HepProgram.cs     HepProgram: rules + match order + match limit; Builder()
-      HepProgramBuilder.cs  fluent: AddRule / AddMatchOrder / AddMatchLimit / Build
-      HepPlanner.cs     HepPlanner : AbstractPlanner (see note below)
+      HepInstruction.cs HepInstruction + nested instruction/state types + PrepareContext
+      HepState.cs       base for an instruction's mutable per-run state
+      HepProgram.cs     HepProgram : HepInstruction — ordered instructions; prepare() → State; Builder()
+      HepProgramBuilder.cs  fluent: AddRuleInstance / AddRuleCollection / AddRuleClass /
+                        AddRuleByDescription / AddConverters / AddCommonRelSubExprInstruction /
+                        AddMatchOrder / AddMatchLimit / AddSubprogram / AddGroupBegin / AddGroupEnd
+      HepNodeVertex.cs  vertex wrapping a current node in the shared DAG (the HepRelVertex analog)
+      HepPlanner.cs     HepPlanner : AbstractPlanner — DirectedGraph DAG, GC, fired-rules cache (see note)
       HepRuleCall.cs    HepRuleCall : RuleCall — the HEP rule-call
     Volcano/            the cost-based planner
       NodeSet.cs        NodeSet: an equivalence set, partitioned into subsets (the RelSet analog)
@@ -345,20 +350,30 @@ planner, rules, operands, and `Convention.register` all take `INode`. (The gener
 2. **✅ Done — rule layering.** Every `IRule` has an `Operand` (Calcite-faithful); the planner matches
    via `OperandMatcher`. `IConverterRule` (Source/Target, `Convert` returns null to decline) +
    `ConverterRule` base supply a convention-matching operand. `RuleCall` abstract + `HepRuleCall`.
-3. **Shared-DAG HEP planner.** *(Next perf step.)* Introduce a vertex DAG that dedups equivalent
-   subtrees (keyed on `DeepHashCode`/`DeepEquals`) and propagates rewrites up the spine, instead of
-   rebuilding the immutable tree per pass.
-4. **`HepInstruction` model.** Replace the flat rule list with ordered instructions:
-   `RuleInstance`, `RuleCollection`, `MatchLimit`, `Subprogram`, per-instruction match order. Build
-   them via the program builder. Model as a sealed hierarchy / records + switch in the planner.
+3. **✅ Done — shared-DAG HEP planner.** `HepPlanner` holds the plan as a graph of `HepNodeVertex`
+   (the `HepRelVertex` analog): equal subexpressions are interned to one vertex (keyed on the node
+   digest), so a rule fires once per distinct subexpression and a rewrite is shared by every parent
+   that references it. A vertex's identity is stable (`Id`), so replacing its content leaves parents'
+   digests intact; the planner's own operand matching sees through a vertex to its current node (as
+   Volcano's matcher descends a `NodeSubset` — each planner owns its stand-in node, no shared
+   abstraction). `SharedDagTests` proves the sharing (`Assert.Same` on a folded common subexpression).
+4. **✅ Done — `HepInstruction` model.** `HepProgram` is an ordered list of `HepInstruction`s
+   (`RuleInstance`, `RuleCollection`, `RuleClass`, `RuleLookup`, `ConverterRules`,
+   `CommonRelSubExprRules`, `MatchOrder`, `MatchLimit`, `SubProgram`, `BeginGroup`/`EndGroup`), built by
+   `HepProgramBuilder`. Execution uses the re-entrant `prepare(PrepareContext) → HepState` design:
+   instructions are immutable, all mutable state lives in per-run `State` objects, so a program can be
+   reused. `HepPlanner` runs them via `ExecuteProgram` + the `ExecuteXxx` dispatch. `HepProgramTests`
+   covers match orders, match limit, subprograms, groups, and rule classes.
 5. **✅ Done — general rewrite rules + matcher coverage.** `OperandMatchingTests` exercises nested
    operands + arity; the relational suite adds single-convention rewrites (true-filter removal, filter
    merging) and a push-down rule.
 6. **✅ Done — `Cluster` + convention rule-registration.** `register` is declared on `ITrait`
    (`RelTrait.register` analog), takes the planner — `void Register(IPlanner planner)` — and
    `Convention` overrides it to add rules via `planner.AddRule`, reading `planner.EmptyTraitSet`.
-7. **`RuleCall` multiple equivalents.** Today `Transform` records a single `Result`. Decide whether
-   a rule may register several equivalents (needed once cost selection exists) and adapt.
+7. **✅ Done — `RuleCall` multiple equivalents.** `Transform` appends to a list of results
+   (`HepRuleCall.Results`, the `getResults()` analog); a single match may register several equivalents.
+   `MultipleEquivalentsTests` registers two physical scans of differing cost and the cost-based planner
+   picks the cheaper.
 8. **✅ Done — operand on the base rule.** `IRule.Operand` (Calcite-faithful); the planner matches via
    `OperandMatcher.Matches(rule.Operand, node)`. `IOperandRule` retired.
 9. **✅ Done — two-child base + a second language.** `BiNode` (the `BiRel` analog) joins `SingleNode`;
@@ -376,8 +391,11 @@ planner, rules, operands, and `Convention.register` all take `INode`. (The gener
    `TraitDimensionTests` proves a second dimension (`Sortedness`) with a real `Satisfies` partial
    order and interning via `CreateEmpty`/`Plus`. Remaining: a built-in ordering/collation trait if
    one is wanted in the library itself (the test's is a fixture).
-9. **Trait conversion hooks** on `TraitDef` (canConvert / convert) and an optional built-in
-   converter node concept.
+9. **✅ Done — trait conversion hooks** on `TraitDef` (`CanConvert` / `Convert`, the
+   `RelTraitDef.canConvert` / `convert` analogs — virtual, default decline). Volcano's
+   `ChangeTraitsUsingConverters` consults them alongside converter rules, so a dimension can supply its
+   own enforcement (e.g. wrapping a node in a sort) without a registered converter rule.
+   `TraitConversionTests` enforces sortedness through the hook with no converter rule present.
 
 ### Larger (cost + Volcano)
 10. **✅ Done — cost model in core.** `ICost` (the `RelOptCost` analog: `IsInfinite` /
@@ -423,17 +441,28 @@ planner, rules, operands, and `Convention.register` all take `INode`. (The gener
     even though Calcite's built-in metadata is relational).
 
 ### Partial / hardening (started, not finished)
-20. **Shared-DAG HEP** (see near-term #3) and the **`HepInstruction` model** (see near-term #4) —
-    `HepPlanner` currently rewrites the immutable tree directly with a flat rule list.
-21. **Operand policies.** `Operand` supports a predicate, positional children, and an "any" wildcard,
-    but not the richer policies (unordered, some, leaf) a full rule-pattern language has.
-22. **Multi-step trait conversion.** `ChangeTraitsUsingConverters` looks up a single converter;
-    precompute the transitive closure of conversions so multi-hop trait changes (and cheapest chains)
-    are found.
-23. **Set-merge hardening.** Volcano's `Merge` handles the cases the tests exercise; harden it for the
-    full range of equivalence-set merges (re-registration, pruning, cycles) a mature planner hits.
-24. **`RuleCall` multiple equivalents** (see near-term #7) — a single match registering several
-    equivalents, useful under cost-based search.
+20. **✅ Done — shared-DAG HEP** (see near-term #3) **and the `HepInstruction` model** (see near-term
+    #4). `HepPlanner` holds the plan in a generic `DirectedGraph<V, E>` (interface) backed by
+    `DefaultDirectedGraph<V, E>` with an `EdgeFactory`, traversed by real iterator types
+    (`DepthFirstIterator` / `BreadthFirstIterator` / `TopologicalOrderIterator` / `HepVertexIterator`),
+    with mark-and-sweep garbage collection and a fired-rules cache, driven by the instruction/state
+    program model. Large-plan mode (`LargePlanMode`) uses `HepVertexIterator` to resume from a
+    transformed vertex rather than restart from the root. Non-guaranteed converters are applied bottom-up
+    via `TraitMatchingRule` (`AddConverters(false)`). Out of scope (relational or debug-only): metadata
+    providers, materializations, and cycle/consistency assertions.
+21. **✅ Done — operand policies.** `Operand` carries an `OperandChildPolicy` (`Any` / `Leaf` / `Some` /
+    `Unordered`, the `RelOptRuleOperandChildPolicy` analog); a childless operand defaults to `Leaf`, as
+    in the model. Both matchers (HEP `OperandMatcher`, Volcano `MatchBindings`) honour all four, with
+    backtracking for `Unordered`. `OperandPolicyTests` covers each.
+22. **✅ Done — multi-step trait conversion.** `ChangeTraitsUsingConverters` runs a BFS over the
+    conversion graph — converter rules *and* trait-def hooks as edges — and applies the shortest chain,
+    so multi-hop trait changes are found. `TraitConversionTests` reaches a convention through an
+    intermediate (logical → CPU → GPU).
+23. **✅ Done — set-merge hardening.** Volcano's `Merge` re-points parents whose child subsets moved to
+    the surviving set (the `rename` analog), recomputing their digests and folding any that become
+    newly equivalent. `SetMergeTests` triggers a real cross-set merge (a fold makes one subtree equal
+    another) and the re-point path runs.
+24. **✅ Done — `RuleCall` multiple equivalents** (see near-term #7).
 
 ### Cross-cutting / polish
 14. **Complete XML docs** and remove the `CS1591` suppression in `Alembic.csproj`.

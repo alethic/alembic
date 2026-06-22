@@ -18,6 +18,11 @@ public interface INode
 {
 
     /// <summary>
+    /// The cluster this node belongs to — its shared planning context. Every node in a plan shares one.
+    /// </summary>
+    Cluster Cluster { get; }
+
+    /// <summary>
     /// The physical properties (convention, etc.) carried by this node.
     /// </summary>
     TraitSet Traits { get; }
@@ -43,11 +48,26 @@ public interface INode
     int DeepHashCode();
 
     /// <summary>
+    /// Describes this node to <paramref name="writer"/> — its attributes and inputs. The plan-rendering
+    /// and digest machinery drive this. (Calcite's <c>RelNode.explain</c>.)
+    /// </summary>
+    void Explain(INodeWriter writer);
+
+    /// <summary>
     /// This node's structural digest — the key the planner deduplicates on.
     /// </summary>
     INodeDigest GetDigest()
     {
         return new NodeDigest(this);
+    }
+
+    /// <summary>
+    /// Recomputes this node's digest, discarding any cached value. A planner calls this after something
+    /// a node's digest depends on has changed underneath it (e.g. a shared child's content).
+    /// </summary>
+    void RecomputeDigest()
+    {
+        GetDigest().Clear();
     }
 
     /// <summary>
@@ -65,6 +85,18 @@ public interface INode
     {
         get { return Children.IsEmpty; }
     }
+
+    /// <summary>
+    /// Whether this node only enforces a physical property on its input (e.g. a converter) rather than
+    /// computing a result. The top-down search gives enforcers lower priority. Defaults to <c>false</c>.
+    /// </summary>
+    bool IsEnforcer => false;
+
+    /// <summary>
+    /// This node with any planner wrapping removed — a placeholder node (an equivalence subset, a graph
+    /// vertex) returns the concrete node it stands for; an ordinary node returns itself.
+    /// </summary>
+    INode Stripped => this;
 
     /// <summary>
     /// Produces a copy of this node with a single child replaced.

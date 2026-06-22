@@ -24,7 +24,7 @@ sealed class SourceConverter : ConverterRule
     public override INode? Convert(INode node)
     {
         if (node is LogicalSource source)
-            return new PhysicalSource(_physical, source.Table);
+            return new PhysicalSource(source.Cluster, _physical, source.Table);
 
         return null;
     }

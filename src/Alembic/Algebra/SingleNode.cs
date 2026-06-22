@@ -6,7 +6,7 @@ namespace Alembic.Algebra;
 
 /// <summary>
 /// Convenience base for an <see cref="INode"/> with exactly one child. It lists the child as an input
-/// term; subclasses add their own attributes in <see cref="AbstractNode.Explain"/> and override
+/// term; subclasses add their own attributes in <see cref="AbstractNode.ExplainTerms"/> and override
 /// <see cref="INode.Copy"/>.
 /// </summary>
 public abstract class SingleNode : AbstractNode
@@ -16,7 +16,7 @@ public abstract class SingleNode : AbstractNode
     /// Initializes the node with its traits and single child.
     /// </summary>
     protected SingleNode(TraitSet traits, INode child)
-        : base(traits, ImmutableArray.Create(child))
+        : base(child.Cluster, traits, ImmutableArray.Create(child))
     {
 
     }
@@ -27,10 +27,11 @@ public abstract class SingleNode : AbstractNode
     public INode Child => Children[0];
 
     /// <inheritdoc />
-    protected override void Explain(INodeWriter writer)
+    public override INodeWriter ExplainTerms(INodeWriter writer)
     {
-        base.Explain(writer);
+        base.ExplainTerms(writer);
         writer.Input("input", Child);
+        return writer;
     }
 
 }

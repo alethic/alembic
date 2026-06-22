@@ -15,8 +15,8 @@ namespace Alembic.Plan.Volcano;
 public sealed class VolcanoRuleMatch : VolcanoRuleCall
 {
 
-    internal VolcanoRuleMatch(VolcanoPlanner planner, IRule rule, ImmutableArray<INode> nodes)
-        : base(planner, rule, nodes)
+    internal VolcanoRuleMatch(VolcanoPlanner planner, RuleOperand operand0, ImmutableArray<INode> nodes)
+        : base(planner, operand0, nodes)
     {
 
     }

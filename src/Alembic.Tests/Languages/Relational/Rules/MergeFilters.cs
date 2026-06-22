@@ -9,16 +9,19 @@ namespace Alembic.Tests.Languages.Relational.Rules;
 /// Simplification: a filter directly over another filter collapses into one filter whose predicate
 /// is the conjunction of the two.
 /// </summary>
-sealed class MergeFilters : IRule
+sealed class MergeFilters : Rule
 {
 
-    public Operand Operand => Operand.Of<LogicalFilter>(Operand.Of<LogicalFilter>());
+    public MergeFilters()
+        : base(Some<LogicalFilter>(Any<LogicalFilter>()))
+    {
+    }
 
-    public void OnMatch(RuleCall call)
+    public override void OnMatch(RuleCall call)
     {
         var outer = (LogicalFilter)call.Node(0);
         var inner = (LogicalFilter)call.Node(1);
-        call.Transform(new LogicalFilter(outer.Traits, inner.Input, $"{outer.Predicate} AND {inner.Predicate}"));
+        call.TransformTo(new LogicalFilter(outer.Traits, inner.Input, $"{outer.Predicate} AND {inner.Predicate}"));
     }
 
 }

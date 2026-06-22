@@ -58,6 +58,57 @@ public sealed class VolcanoCost : ICost
     }
 
     /// <inheritdoc />
+    public ICost Minus(ICost other)
+    {
+        if (IsInfinite)
+            return this;
+
+        var that = (VolcanoCost)other;
+        return new VolcanoCost(_cpu - that._cpu, _io - that._io);
+    }
+
+    /// <inheritdoc />
+    public ICost MultiplyBy(double factor)
+    {
+        if (this == InfinityCost)
+            return this;
+
+        return new VolcanoCost(_cpu * factor, _io * factor);
+    }
+
+    /// <inheritdoc />
+    public double DivideBy(ICost other)
+    {
+        // The geometric mean of the per-component ratios over the components non-zero and finite in both.
+        var that = (VolcanoCost)other;
+        double d = 1;
+        int n = 0;
+
+        if (_cpu != 0 && !double.IsInfinity(_cpu) && that._cpu != 0 && !double.IsInfinity(that._cpu))
+        {
+            d *= _cpu / that._cpu;
+            n++;
+        }
+
+        if (_io != 0 && !double.IsInfinity(_io) && that._io != 0 && !double.IsInfinity(that._io))
+        {
+            d *= _io / that._io;
+            n++;
+        }
+
+        return n == 0 ? 1.0 : Math.Pow(d, 1.0 / n);
+    }
+
+    /// <inheritdoc />
+    public bool IsEqWithEpsilon(ICost other)
+    {
+        return other is VolcanoCost that
+            && (ReferenceEquals(this, that) || (Math.Abs(_cpu - that._cpu) < Epsilon && Math.Abs(_io - that._io) < Epsilon));
+    }
+
+    const double Epsilon = 1.0e-5;
+
+    /// <inheritdoc />
     public override bool Equals(object? obj) => obj is VolcanoCost other && _cpu == other._cpu && _io == other._io;
 
     /// <inheritdoc />

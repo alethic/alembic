@@ -9,14 +9,17 @@ namespace Alembic.Tests.Languages.Relational.Rules;
 /// Simplification: a filter whose predicate is the constant <c>"true"</c> is redundant and is
 /// replaced by its input.
 /// </summary>
-sealed class RemoveTrueFilter : IRule
+sealed class RemoveTrueFilter : Rule
 {
 
-    public Operand Operand => Operand.Of<LogicalFilter>(filter => filter.Predicate == "true");
-
-    public void OnMatch(RuleCall call)
+    public RemoveTrueFilter()
+        : base(Any<LogicalFilter>(n => ((LogicalFilter)n).Predicate == "true"))
     {
-        call.Transform(((LogicalFilter)call.Node(0)).Input);
+    }
+
+    public override void OnMatch(RuleCall call)
+    {
+        call.TransformTo(((LogicalFilter)call.Node(0)).Input);
     }
 
 }

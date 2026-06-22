@@ -14,22 +14,24 @@ sealed class LogicalParameter : AbstractNode
 
     readonly string _name;
 
-    public LogicalParameter(TraitSet traits, string name)
-        : base(traits, ImmutableArray<INode>.Empty)
+    public LogicalParameter(Cluster cluster, TraitSet traits, string name)
+        : base(cluster, traits, ImmutableArray<INode>.Empty)
     {
         _name = name;
     }
 
     public string Name => _name;
 
-    protected override void Explain(INodeWriter writer)
+    public override INodeWriter ExplainTerms(INodeWriter writer)
     {
+        base.ExplainTerms(writer);
         writer.Item("name", _name);
+        return writer;
     }
 
     public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
     {
-        return new LogicalParameter(traits, _name);
+        return new LogicalParameter(Cluster, traits, _name);
     }
 
 }

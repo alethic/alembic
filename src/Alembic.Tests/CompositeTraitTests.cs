@@ -41,4 +41,36 @@ public class CompositeTraitTests
         Assert.True(have.Satisfies(need));
     }
 
+    [Fact]
+    public void Simplify_flattens_composite_traits()
+    {
+        var a = new SortKey("a");
+        var b = new SortKey("b");
+
+        var multi = TraitSet.CreateEmpty().Replace(SortKeyTraitDef.Instance, new[] { a, b });
+        Assert.False(multi.AllSimple());
+
+        // A many-member composite collapses to the dimension's default; the set is then all-simple.
+        var simplified = multi.Simplify();
+        Assert.True(simplified.AllSimple());
+        Assert.Equal(SortKeyTraitDef.Instance.Default, simplified.Get(SortKeyTraitDef.Instance));
+
+        // A single-member composite is stored as a plain trait, so it is simple already.
+        var single = TraitSet.CreateEmpty().Replace(SortKeyTraitDef.Instance, new[] { a });
+        Assert.True(single.AllSimple());
+    }
+
+    [Fact]
+    public void Replace_a_trait_ignores_an_absent_dimension()
+    {
+        var empty = TraitSet.CreateEmpty();
+
+        // The SortKey dimension is absent, so Replace is a no-op and returns the same interned set.
+        Assert.Same(empty, empty.Replace(new SortKey("a")));
+
+        // Once present, Replace substitutes the value.
+        var present = empty.Plus(new SortKey("a"));
+        Assert.Equal(new SortKey("b"), present.Replace(new SortKey("b")).Get(SortKeyTraitDef.Instance));
+    }
+
 }

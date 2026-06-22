@@ -28,9 +28,11 @@ public class ExpressionLoweringTests
     {
         var (logical, physical) = Setup();
 
-        INode root = new Add(logical, new Variable(logical, "a"), new Variable(logical, "b"));
+        var planner = BuildPlanner(Converters(physical));
+        var cluster = new Cluster(planner);
+        INode root = new Add(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b"));
 
-        var result = Lower(root, physical, Converters(physical));
+        var result = Lower(planner, root, physical);
 
         var add = Assert.IsType<PhysicalAdd>(result);
         Assert.Equal("a", Assert.IsType<PhysicalVariable>(add.Left).Name);
@@ -42,9 +44,11 @@ public class ExpressionLoweringTests
     {
         var (logical, physical) = Setup();
 
-        INode root = new Add(logical, new Multiply(logical, new Variable(logical, "a"), new Variable(logical, "b")), new Variable(logical, "c"));
+        var planner = BuildPlanner(Converters(physical));
+        var cluster = new Cluster(planner);
+        INode root = new Add(logical, new Multiply(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b")), new Variable(cluster, logical, "c"));
 
-        var result = Lower(root, physical, Converters(physical));
+        var result = Lower(planner, root, physical);
 
         var add = Assert.IsType<PhysicalAdd>(result);
         Assert.IsType<PhysicalMultiply>(add.Left);
@@ -56,10 +60,12 @@ public class ExpressionLoweringTests
     {
         var (logical, physical) = Setup();
 
-        INode root = new Add(logical, new Multiply(logical, new Variable(logical, "a"), new Variable(logical, "b")), new Variable(logical, "c"));
-
         // Lower, then fuse the physical multiply-then-add into a single fused multiply-add.
-        var result = Lower(root, physical, [.. Converters(physical), new FuseMultiplyAdd()]);
+        var planner = BuildPlanner([.. Converters(physical), new FuseMultiplyAdd()]);
+        var cluster = new Cluster(planner);
+        INode root = new Add(logical, new Multiply(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b")), new Variable(cluster, logical, "c"));
+
+        var result = Lower(planner, root, physical);
 
         var fma = Assert.IsType<PhysicalFma>(result);
         Assert.Equal("a", Assert.IsType<PhysicalVariable>(fma.A).Name);
@@ -72,9 +78,11 @@ public class ExpressionLoweringTests
     {
         var (logical, _) = Setup();
 
-        INode root = new Add(logical, new Literal(logical, 2), new Literal(logical, 3));
+        var planner = BuildPlanner(new FoldAdd());
+        var cluster = new Cluster(planner);
+        INode root = new Add(logical, new Literal(cluster, logical, 2), new Literal(cluster, logical, 3));
 
-        var result = Simplify(root, new FoldAdd());
+        var result = Simplify(planner, root);
 
         Assert.Equal(5, Assert.IsType<Literal>(result).Value);
     }
@@ -85,9 +93,11 @@ public class ExpressionLoweringTests
         var (logical, _) = Setup();
 
         // (2 * 3) + 4 folds bottom-up to 10.
-        INode root = new Add(logical, new Multiply(logical, new Literal(logical, 2), new Literal(logical, 3)), new Literal(logical, 4));
+        var planner = BuildPlanner(new FoldMultiply(), new FoldAdd());
+        var cluster = new Cluster(planner);
+        INode root = new Add(logical, new Multiply(logical, new Literal(cluster, logical, 2), new Literal(cluster, logical, 3)), new Literal(cluster, logical, 4));
 
-        var result = Simplify(root, new FoldMultiply(), new FoldAdd());
+        var result = Simplify(planner, root);
 
         Assert.Equal(10, Assert.IsType<Literal>(result).Value);
     }
@@ -97,25 +107,30 @@ public class ExpressionLoweringTests
     {
         var (logical, physical) = Setup();
 
-        INode root = new Add(logical, new Literal(logical, 2), new Literal(logical, 3));
+        var planner = BuildPlanner(new FoldAdd());
+        var cluster = new Cluster(planner);
+        INode root = new Add(logical, new Literal(cluster, logical, 2), new Literal(cluster, logical, 3));
 
-        var folded = Simplify(root, new FoldAdd());
+        var folded = Simplify(planner, root);
         Assert.Equal(5, Assert.IsType<Literal>(folded).Value);
 
-        var lowered = Lower(folded, physical, Converters(physical));
+        var lowered = Lower(BuildPlanner(Converters(physical)), folded, physical);
         Assert.Equal(5, Assert.IsType<PhysicalLiteral>(lowered).Value);
     }
 
     [Fact]
     public void Convention_registers_its_lowering_rules()
     {
-        var planner = new HepPlanner(HepProgram.Builder().Build());
+        // The program applies every converter rule; the physical convention contributes them to the
+        // planner, rather than the caller listing them by hand.
+        var planner = new HepPlanner(HepProgram.Builder().AddRuleClass<ConverterRule>().Build());
+        var cluster = new Cluster(planner);
 
         ExpressionConventions.Physical.Register(planner);
 
         var logical = TraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
         var physical = TraitSet.CreateEmpty().Plus(ExpressionConventions.Physical);
-        INode root = new Multiply(logical, new Variable(logical, "a"), new Literal(logical, 7));
+        INode root = new Multiply(logical, new Variable(cluster, logical, "a"), new Literal(cluster, logical, 7));
 
         planner.SetRoot(root);
         planner.ChangeTraits(root, physical);
@@ -131,13 +146,13 @@ public class ExpressionLoweringTests
     {
         var (logical, physical) = Setup();
 
-        INode root = new Add(logical, new Variable(logical, "a"), new Variable(logical, "b"));
-
         // Omit the variable converter: the variables can never reach the physical convention, so the
         // planner cannot satisfy the requested output traits.
-        IRule[] rules = [new LiteralConverter(physical), new AddConverter(physical), new MultiplyConverter(physical)];
+        var planner = BuildPlanner(new LiteralConverter(physical), new AddConverter(physical), new MultiplyConverter(physical));
+        var cluster = new Cluster(planner);
+        INode root = new Add(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b"));
 
-        Assert.Throws<CannotPlanException>(() => Lower(root, physical, rules));
+        Assert.Throws<CannotPlanException>(() => Lower(planner, root, physical));
     }
 
     static (TraitSet Logical, TraitSet Physical) Setup()
@@ -147,38 +162,35 @@ public class ExpressionLoweringTests
             TraitSet.CreateEmpty().Plus(ExpressionConventions.Physical));
     }
 
-    static IRule[] Converters(TraitSet physical)
+    static Rule[] Converters(TraitSet physical)
     {
         return [new LiteralConverter(physical), new VariableConverter(physical), new AddConverter(physical), new MultiplyConverter(physical)];
     }
 
-    INode Lower(INode root, TraitSet required, params IRule[] rules)
+    INode Lower(HepPlanner planner, INode root, TraitSet required)
     {
-        var planner = BuildPlanner(rules);
         planner.SetRoot(root);
         planner.ChangeTraits(root, required);
         var best = planner.FindBestPlan();
         _output.WriteLine("--- lowered ---");
-        _output.WriteLine(best.ToPlanString());
+        _output.WriteLine(PlanUtil.ToString(best));
         return best;
     }
 
-    INode Simplify(INode root, params IRule[] rules)
+    INode Simplify(HepPlanner planner, INode root)
     {
-        var planner = BuildPlanner(rules);
         planner.SetRoot(root);
         var best = planner.FindBestPlan();
         _output.WriteLine("--- simplified ---");
-        _output.WriteLine(best.ToPlanString());
+        _output.WriteLine(PlanUtil.ToString(best));
         return best;
     }
 
-    static HepPlanner BuildPlanner(IRule[] rules)
+    static HepPlanner BuildPlanner(params Rule[] rules)
     {
-        var builder = HepProgram.Builder();
-        foreach (var rule in rules)
-            builder.AddRule(rule);
-
+        // Fire all the rules together to a fixed point (a rule collection), so lowering can cascade
+        // across them in one instruction.
+        var builder = HepProgram.Builder().AddRuleCollection(rules);
         return new HepPlanner(builder.Build());
     }
 

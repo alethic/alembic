@@ -51,6 +51,12 @@ public sealed class Cost : ICost
     public double Value => _value;
 
     /// <inheritdoc />
+    public double Cpu => _value;
+
+    /// <inheritdoc />
+    public double Io => 0.0;
+
+    /// <inheritdoc />
     public bool IsInfinite => double.IsInfinity(_value);
 
     /// <inheritdoc />
@@ -61,6 +67,32 @@ public sealed class Cost : ICost
 
     /// <inheritdoc />
     public ICost Plus(ICost other) => new Cost(_value + ((Cost)other)._value);
+
+    /// <inheritdoc />
+    public ICost Minus(ICost other) => IsInfinite ? this : new Cost(_value - ((Cost)other)._value);
+
+    /// <inheritdoc />
+    public ICost MultiplyBy(double factor) => IsInfinite ? this : new Cost(_value * factor);
+
+    /// <inheritdoc />
+    public double DivideBy(ICost other)
+    {
+        // A single component (the magnitude): the geometric mean reduces to its ratio when both are
+        // non-zero and finite, otherwise 1.0.
+        var that = ((Cost)other)._value;
+        if (_value != 0 && !double.IsInfinity(_value) && that != 0 && !double.IsInfinity(that))
+            return _value / that;
+
+        return 1.0;
+    }
+
+    /// <inheritdoc />
+    public bool IsEqWithEpsilon(ICost other)
+    {
+        return other is Cost that && (ReferenceEquals(this, that) || Math.Abs(_value - that._value) < Epsilon);
+    }
+
+    const double Epsilon = 1.0e-5;
 
     /// <inheritdoc />
     public override bool Equals(object? obj) => obj is Cost other && _value == other._value;

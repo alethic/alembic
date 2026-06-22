@@ -217,11 +217,25 @@ return a best plan; they differ in *how* they search.
 
 ### 7a. The heuristic planner (`HepPlanner`)
 
-A **deterministic, program-driven rewriter**. It walks the immutable tree in a configured order
-(`HepMatchOrder`), applies each matching rule (at most one transform per node per pass), and re-passes
-until nothing changes (a fixed point). There is **no cost model** — it simply applies the rules you give
-it, in order, to convergence. Use it for deterministic rewriting: simplifications, canonicalization, and
-straightforward lowering where you don't need cost-based choice.
+A **deterministic, program-driven rewriter**. It holds the plan as a **shared graph** of
+`HepNodeVertex` (the `HepRelVertex` analog): equal subexpressions are interned to a single vertex, so a
+rule fires once per distinct subexpression and a rewrite is shared by every parent that references it. A
+vertex's identity is stable, so replacing its content (a rewrite) leaves referencing parents' digests
+intact; the planner's own operand matching sees through a vertex to its current node (just as the
+Volcano matcher descends through a `NodeSubset`). It visits the vertices in
+a configured order (`HepMatchOrder`), applies each matching rule (at most one transform per vertex per
+pass), and re-passes until nothing changes (a fixed point). A rewrite re-points the vertex's parents and
+orphaned vertices are reclaimed by mark-and-sweep garbage collection. There is **no cost model** — it
+simply applies the rules you give it, in order, to convergence. Use it for deterministic rewriting:
+simplifications, canonicalization, and straightforward lowering where you don't need cost-based choice.
+
+What it applies, and in what order, is a **program** (`HepProgram`) — an ordered list of instructions
+built with `HepProgramBuilder`: apply one rule (`AddRuleInstance`), a collection (`AddRuleCollection`),
+every rule of a type (`AddRuleClass`), or every converter (`AddConverters`); set the match order
+(`AddMatchOrder`) or a match limit (`AddMatchLimit`); run a sub-program to its own fixed point
+(`AddSubprogram`); or collect rules into a group fired together (`AddGroupBegin`/`AddGroupEnd`).
+Instructions are immutable; each run allocates a `HepState` to hold its mutable state, so a program can
+be reused.
 
 It still *enforces* a required output: `ChangeTraits(root, traits)` records the traits the final plan
 must carry, and `FindBestPlan` verifies every node satisfies them, throwing `CannotPlanException` if the

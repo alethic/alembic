@@ -27,15 +27,17 @@ public class ExpressionVolcanoTests
         var logical = TraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
         var physical = TraitSet.CreateEmpty().Plus(ExpressionConventions.Physical);
 
-        // (a * b) + c — exercises the two-child BiNode shape through the cost-based planner.
-        INode root = new Add(logical, new Multiply(logical, new Variable(logical, "a"), new Variable(logical, "b")), new Variable(logical, "c"));
-
         var planner = new VolcanoPlanner();
+        var cluster = new Cluster(planner);
+
+        // (a * b) + c — exercises the two-child BiNode shape through the cost-based planner.
+        INode root = new Add(logical, new Multiply(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b")), new Variable(cluster, logical, "c"));
+
         ExpressionConventions.Physical.Register(planner);
         planner.SetRoot(root);
         planner.ChangeTraits(root, physical);
         var best = planner.FindBestPlan();
-        _output.WriteLine(best.ToPlanString());
+        _output.WriteLine(PlanUtil.ToString(best));
 
         var add = Assert.IsType<PhysicalAdd>(best);
         Assert.IsType<PhysicalMultiply>(add.Left);

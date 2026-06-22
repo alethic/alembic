@@ -25,21 +25,23 @@ public class OperandMatchingTests
     {
         var logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
 
+        var program = HepProgram.Builder()
+            .AddRuleInstance(new TagFilterOverSource())
+            .Build();
+
+        var planner = new HepPlanner(program);
+        var cluster = new Cluster(planner);
+
         // An outer filter over an inner filter over a source. Only the inner filter sits directly
         // over a source, so only it should match the Filter(Source) operand.
         INode root = new LogicalFilter(
             logical,
-            new LogicalFilter(logical, new LogicalSource(logical, "t"), "inner"),
+            new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "inner"),
             "outer");
 
-        var program = HepProgram.Builder()
-            .AddRule(new TagFilterOverSource())
-            .Build();
-
-        var planner = new HepPlanner(program);
         planner.SetRoot(root);
         var best = Assert.IsType<LogicalFilter>(planner.FindBestPlan());
-        _output.WriteLine(best.ToPlanString());
+        _output.WriteLine(PlanUtil.ToString(best));
 
         // Outer filter's child is a filter, not a source — operand does not match, so it is untouched.
         Assert.Equal("outer", best.Predicate);

@@ -26,12 +26,14 @@ public class VolcanoPlanningTests
     public void Returns_the_only_plan_when_no_rule_applies()
     {
         var physical = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
-        INode root = new PhysicalFilter(physical, new PhysicalSource(physical, "t"), "x > 5");
 
         var planner = new VolcanoPlanner();
+        var cluster = new Cluster(planner);
+        INode root = new PhysicalFilter(physical, new PhysicalSource(cluster, physical, "t"), "x > 5");
+
         planner.SetRoot(root);
         var best = planner.FindBestPlan();
-        _output.WriteLine(best.ToPlanString());
+        _output.WriteLine(PlanUtil.ToString(best));
 
         var filter = Assert.IsType<PhysicalFilter>(best);
         Assert.Equal("x > 5", filter.Predicate);
@@ -42,15 +44,17 @@ public class VolcanoPlanningTests
     public void Chooses_the_cheaper_equivalent()
     {
         var physical = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
-        INode root = new PhysicalFilter(physical, new PhysicalSource(physical, "t"), "x > 5");
 
         // The push-down rule offers a fused scan-and-filter (cost 100) as an equivalent of the
         // separate filter-over-scan (cost 10 + 100). The planner must pick the cheaper one.
         var planner = new VolcanoPlanner();
+        var cluster = new Cluster(planner);
+        INode root = new PhysicalFilter(physical, new PhysicalSource(cluster, physical, "t"), "x > 5");
+
         planner.AddRule(new PushFilterIntoSource());
         planner.SetRoot(root);
         var best = planner.FindBestPlan();
-        _output.WriteLine(best.ToPlanString());
+        _output.WriteLine(PlanUtil.ToString(best));
 
         var scan = Assert.IsType<PhysicalFilteredSource>(best);
         Assert.Equal("t", scan.Table);
@@ -61,15 +65,17 @@ public class VolcanoPlanningTests
     public void Lowers_a_logical_tree_to_the_requested_convention()
     {
         var (logical, physical) = Setup();
-        INode root = new LogicalFilter(logical, new LogicalSource(logical, "t"), "x > 5");
 
         var planner = new VolcanoPlanner();
+        var cluster = new Cluster(planner);
+        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+
         RelationalConventions.Physical.Register(planner);
 
         planner.SetRoot(root);
         planner.ChangeTraits(root, physical);
         var best = planner.FindBestPlan();
-        _output.WriteLine(best.ToPlanString());
+        _output.WriteLine(PlanUtil.ToString(best));
 
         var filter = Assert.IsType<PhysicalFilter>(best);
         Assert.Equal("t", Assert.IsType<PhysicalSource>(filter.Input).Table);
@@ -79,16 +85,18 @@ public class VolcanoPlanningTests
     public void Lowers_then_chooses_the_cheaper_pushed_down_plan()
     {
         var (logical, physical) = Setup();
-        INode root = new LogicalFilter(logical, new LogicalSource(logical, "t"), "x > 5");
 
         var planner = new VolcanoPlanner();
+        var cluster = new Cluster(planner);
+        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+
         RelationalConventions.Physical.Register(planner);
         planner.AddRule(new PushFilterIntoSource());
 
         planner.SetRoot(root);
         planner.ChangeTraits(root, physical);
         var best = planner.FindBestPlan();
-        _output.WriteLine(best.ToPlanString());
+        _output.WriteLine(PlanUtil.ToString(best));
 
         var scan = Assert.IsType<PhysicalFilteredSource>(best);
         Assert.Equal("t", scan.Table);
@@ -99,11 +107,13 @@ public class VolcanoPlanningTests
     public void Throws_when_a_required_conversion_is_missing()
     {
         var (logical, physical) = Setup();
-        INode root = new LogicalFilter(logical, new LogicalSource(logical, "t"), "x > 5");
 
         // No source converter: the source can never reach the physical convention, so the requested
         // physical plan cannot be produced.
         var planner = new VolcanoPlanner();
+        var cluster = new Cluster(planner);
+        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+
         planner.AddRule(new FilterConverter(physical));
         planner.AddRule(new ParameterConverter(physical));
 
@@ -119,43 +129,63 @@ public class VolcanoPlanningTests
         var unsorted = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical).Plus(Sortedness.Unsorted);
         var sorted = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical).Plus(Sortedness.Sorted);
 
-        INode root = new PhysicalSource(unsorted, "t");
-
         // The planner is asked for the source sorted; it has no sorted form, so it must insert the
         // sort enforcer — a converter rule whose Source/Target are a trait other than convention.
         var planner = new VolcanoPlanner();
+        var cluster = new Cluster(planner);
+        INode root = new PhysicalSource(cluster, unsorted, "t");
+
         planner.AddTraitDef(SortednessTraitDef.Instance);
         planner.AddRule(new SortEnforcer());
         planner.SetRoot(root);
         planner.ChangeTraits(root, sorted);
         var best = planner.FindBestPlan();
-        _output.WriteLine(best.ToPlanString());
+        _output.WriteLine(PlanUtil.ToString(best));
 
         var sort = Assert.IsType<PhysicalSort>(best);
         Assert.Equal("t", Assert.IsType<PhysicalSource>(sort.Input).Table);
     }
 
     [Fact]
-    public void Top_down_search_is_not_supported()
+    public void Top_down_search_lowers_and_chooses_the_cheaper_plan()
     {
-        var planner = new VolcanoPlanner();
+        var (logical, physical) = Setup();
 
-        Assert.False(planner.TopDownOpt);
-        planner.SetTopDownOpt(false);
-        Assert.Throws<System.NotSupportedException>(() => planner.SetTopDownOpt(true));
+        // The same lowering-and-cost-choice scenario as the bottom-up search, but driven top-down.
+        var planner = new VolcanoPlanner();
+        var cluster = new Cluster(planner);
+        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+
+        planner.SetTopDownOpt(true);
+        RelationalConventions.Physical.Register(planner);
+        planner.AddRule(new PushFilterIntoSource());
+
+        planner.SetRoot(root);
+        planner.ChangeTraits(root, physical);
+        var best = planner.FindBestPlan();
+        _output.WriteLine(PlanUtil.ToString(best));
+
+        var scan = Assert.IsType<PhysicalFilteredSource>(best);
+        Assert.Equal("t", scan.Table);
+        Assert.Equal("x > 5", scan.Predicate);
     }
 
     [Fact]
     public void Notifies_a_listener_of_planning_events()
     {
-        var physical = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
-        INode root = new PhysicalFilter(physical, new PhysicalSource(physical, "t"), "x > 5");
+        var (logical, physical) = Setup();
 
+        // A lowering scenario: the converters fire (rules produced), and the chosen plan keeps a child
+        // (a physical source under the physical filter), so a non-root node is chosen.
         var listener = new CountingListener();
         var planner = new VolcanoPlanner();
+        var cluster = new Cluster(planner);
+        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+
+        RelationalConventions.Physical.Register(planner);
         planner.AddListener(listener);
-        planner.AddRule(new PushFilterIntoSource());
         planner.SetRoot(root);
+        planner.ChangeTraits(root, physical);
         planner.FindBestPlan();
 
         Assert.True(listener.EquivalencesFound > 0);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 
 using Alembic.Algebra;
 using Alembic.Algebra.Convert;
@@ -14,9 +15,9 @@ namespace Alembic.Plan.Volcano;
 /// </summary>
 /// <remarks>
 /// Registration drives rule matching; matches are deferred to a <see cref="RuleQueue"/> and applied by
-/// a <see cref="IRuleDriver"/> until the queue is empty, and each subset remembers its cheapest member.
-/// Only the exhaustive iterative driver is provided; an importance-guided or top-down driver is future
-/// work.
+/// a <see cref="IRuleDriver"/>, and each subset remembers its cheapest member. Two drivers are provided:
+/// the exhaustive bottom-up <see cref="IterativeRuleDriver"/> (the default) and the top-down
+/// <see cref="TopDownRuleDriver"/> (Cascades), selected with <see cref="SetTopDownOpt"/>.
 /// </remarks>
 public sealed class VolcanoPlanner : AbstractPlanner
 {
@@ -25,10 +26,22 @@ public sealed class VolcanoPlanner : AbstractPlanner
     readonly Dictionary<INodeDigest, INode> _digestToNode = new Dictionary<INodeDigest, INode>();
     readonly Dictionary<INode, NodeSubset> _nodeToSubset = new Dictionary<INode, NodeSubset>(ReferenceEqualityComparer.Instance);
 
+    // The rule-dispatch table: each node class maps to the operands that could bind a node of that class
+    // (across every registered rule). Built incrementally as rules are added and as new node classes are
+    // first seen, so that registering a node fires only the operands that can possibly match it.
+    readonly Dictionary<Type, List<RuleOperand>> _classOperands = new Dictionary<Type, List<RuleOperand>>();
+    readonly HashSet<Type> _classes = new HashSet<Type>();
+
+    // Nodes that have been pruned (importance zero): they are not added to a set on registration, and a
+    // rule match touching one is skipped. Identity-based, like the nodes themselves.
+    readonly HashSet<INode> _prunedNodes = new HashSet<INode>(ReferenceEqualityComparer.Instance);
+
     IRuleDriver _ruleDriver;
     NodeSubset? _root;
     TraitSet? _requestedRootTraits;
+    Cluster? _cluster;
     bool _topDownOpt;
+    bool _locked;
     int _nextSetId;
 
     /// <summary>
@@ -46,43 +59,168 @@ public sealed class VolcanoPlanner : AbstractPlanner
     /// </summary>
     internal IRuleDriver RuleDriver => _ruleDriver;
 
-    /// <summary>
-    /// The root subset being optimized, once a root has been set.
-    /// </summary>
-    internal NodeSubset? Root => _root;
+    /// <inheritdoc />
+    public override INode? Root => _root;
 
     /// <summary>
-    /// Whether the planner uses a top-down (Cascades) search. Only the iterative search is
-    /// implemented, so this can only be left at its default of <c>false</c>.
+    /// Whether the planner uses the top-down (Cascades) search rather than the default bottom-up search.
     /// </summary>
     public bool TopDownOpt => _topDownOpt;
 
     /// <summary>
-    /// Chooses between the iterative and top-down search strategies. Only the iterative strategy is
-    /// available; requesting top-down throws.
+    /// Chooses between the iterative (bottom-up) and top-down (Cascades) search strategies.
     /// </summary>
     public void SetTopDownOpt(bool value)
     {
-        if (value)
-            throw new NotSupportedException("The top-down (Cascades) rule driver is not implemented; only the iterative driver is available.");
-
         _topDownOpt = value;
-        _ruleDriver = new IterativeRuleDriver(this);
+        _ruleDriver = value ? new TopDownRuleDriver(this) : new IterativeRuleDriver(this);
+    }
+
+    /// <summary>
+    /// Locks or unlocks the planner. A locked planner accepts no new rules: <see cref="AddRule"/> does
+    /// nothing and returns <c>false</c>.
+    /// </summary>
+    public void SetLocked(bool locked) => _locked = locked;
+
+    /// <inheritdoc />
+    public override bool AddRule(Rule rule)
+    {
+        if (_locked)
+            return false;
+
+        if (!base.AddRule(rule))
+            return false;
+
+        // Each of the rule's operands is an entry point for a match. Index every operand against the
+        // concrete node classes already seen that could bind it — but a transformation rule is never
+        // indexed against physical node classes, since it rewrites within a convention rather than
+        // implementing one.
+        bool isTransformationRule = rule is ITransformationRule;
+        foreach (var operand in rule.Operands)
+            foreach (var subClass in SubClasses(operand.MatchedClass))
+            {
+                if (isTransformationRule && typeof(IPhysicalNode).IsAssignableFrom(subClass))
+                    continue;
+
+                OperandsFor(subClass).Add(operand);
+            }
+
+        // A converter rule registers itself with the trait dimension it converts, building the
+        // conversion graph that the abstract converters expand against.
+        if (rule is ConverterRule converterRule)
+        {
+            var def = converterRule.Source.TraitDef;
+            if (TraitDefs.Contains(def))
+                def.RegisterConverterRule(this, converterRule);
+        }
+
+        return true;
+    }
+
+    /// <inheritdoc />
+    public override bool RemoveRule(Rule rule)
+    {
+        if (!base.RemoveRule(rule))
+            return false;
+
+        foreach (var operands in _classOperands.Values)
+            operands.RemoveAll(operand => ReferenceEquals(operand.Rule, rule));
+
+        if (rule is ConverterRule converterRule)
+        {
+            var def = converterRule.Source.TraitDef;
+            if (TraitDefs.Contains(def))
+                def.DeregisterConverterRule(this, converterRule);
+        }
+
+        return true;
+    }
+
+    /// <inheritdoc />
+    public override void Clear()
+    {
+        base.Clear();
+
+        foreach (var rule in new List<Rule>(Rules))
+            RemoveRule(rule);
+
+        _classOperands.Clear();
+        _classes.Clear();
+        _allSets.Clear();
+        _digestToNode.Clear();
+        _nodeToSubset.Clear();
+        _prunedNodes.Clear();
+        _ruleDriver.Clear();
+        _root = null;
+        _requestedRootTraits = null;
+        _cluster = null;
+        _nextSetId = 0;
+    }
+
+    List<RuleOperand> OperandsFor(Type clazz)
+    {
+        if (!_classOperands.TryGetValue(clazz, out var operands))
+        {
+            operands = new List<RuleOperand>();
+            _classOperands[clazz] = operands;
+        }
+
+        return operands;
+    }
+
+    /// <summary>
+    /// The concrete node classes seen so far that are assignable to <paramref name="matchedClass"/>.
+    /// </summary>
+    IEnumerable<Type> SubClasses(Type matchedClass)
+    {
+        foreach (var clazz in _classes)
+            if (matchedClass.IsAssignableFrom(clazz))
+                yield return clazz;
+    }
+
+    /// <summary>
+    /// Records a node's concrete class the first time it is seen, so that instances of it match the
+    /// operands of every rule registered so far (and any registered later, via <see cref="AddRule"/>).
+    /// </summary>
+    void OnNewClass(INode node)
+    {
+        var clazz = node.GetType();
+        if (!_classes.Add(clazz))
+            return;
+
+        bool isPhysical = typeof(IPhysicalNode).IsAssignableFrom(clazz);
+        foreach (var rule in Rules)
+        {
+            // A transformation rule never matches a physical node.
+            if (isPhysical && rule is ITransformationRule)
+                continue;
+
+            foreach (var operand in rule.Operands)
+                if (operand.MatchedClass.IsAssignableFrom(clazz))
+                    OperandsFor(clazz).Add(operand);
+        }
     }
 
     /// <inheritdoc />
     public override void SetRoot(INode node)
     {
+        _cluster ??= node.Cluster;
         _root = EnsureRegistered(node, null);
     }
 
     /// <inheritdoc />
     public override INode ChangeTraits(INode node, TraitSet toTraits)
     {
-        var subset = EnsureRegistered(node, null);
         _requestedRootTraits = toTraits;
-        _root = subset.Traits.Equals(toTraits) ? subset : subset.Set.GetOrCreateSubset(toTraits);
+        _root = (NodeSubset)Convert(node, toTraits);
         return _root;
+    }
+
+    /// <inheritdoc />
+    public override INode Convert(INode node, TraitSet toTraits)
+    {
+        var subset = EnsureRegistered(node, null);
+        return EquivRoot(subset.Set).GetOrCreateSubset(toTraits, required: true);
     }
 
     /// <inheritdoc />
@@ -94,9 +232,7 @@ public sealed class VolcanoPlanner : AbstractPlanner
         EnsureRootConverters();
         _ruleDriver.Drive();
 
-        var plan = BuildCheapestPlan(_root);
-        FireNodeChosen(null);
-        return plan;
+        return _root.BuildCheapestPlan(this);
     }
 
     /// <summary>
@@ -109,13 +245,13 @@ public sealed class VolcanoPlanner : AbstractPlanner
         if (equivalent is not null)
         {
             var equivSubset = EnsureRegistered(equivalent, null);
-            set = Live(equivSubset.Set);
+            set = EquivRoot(equivSubset.Set);
         }
 
         return RegisterImpl(node, set);
     }
 
-    NodeSubset EnsureRegistered(INode node, INode? equivalent)
+    internal NodeSubset EnsureRegistered(INode node, INode? equivalent)
     {
         if (node is NodeSubset subset)
             return subset;
@@ -139,9 +275,10 @@ public sealed class VolcanoPlanner : AbstractPlanner
         // Make sure the children are registered first, replacing each with its subset.
         node = OnRegister(node);
 
-        // If an equivalent expression already exists, join its set.
+        // If an equivalent expression already exists, join its set (and carry over its pruned state).
         if (_digestToNode.TryGetValue(node.GetDigest(), out var equiv))
         {
+            CheckPruned(equiv, node);
             var equivSubset = _nodeToSubset[equiv];
             return RegisterSubset(set, equivSubset);
         }
@@ -149,7 +286,7 @@ public sealed class VolcanoPlanner : AbstractPlanner
         // A converter lives in the same set as the input it converts.
         if (node is IConverter converter)
         {
-            var childSet = Live(((NodeSubset)converter.Input).Set);
+            var childSet = EquivRoot(((NodeSubset)converter.Input).Set);
             if (set is not null && set != childSet && set.EquivalentSet is null)
                 Merge(set, childSet);
             else
@@ -158,11 +295,11 @@ public sealed class VolcanoPlanner : AbstractPlanner
 
         if (set is null)
         {
-            set = new NodeSet(_nextSetId++, CostFactory);
+            set = new NodeSet(_nextSetId++, CostFactory, _cluster ??= node.Cluster);
             _allSets.Add(set);
         }
 
-        set = Live(set);
+        set = EquivRoot(set);
 
         var added = AddNodeToSet(node, set);
         _digestToNode[node.GetDigest()] = node;
@@ -170,15 +307,18 @@ public sealed class VolcanoPlanner : AbstractPlanner
         foreach (var child in node.Children)
             ((NodeSubset)child).Set.Parents.Add(node);
 
+        OnNewClass(node);
         FireRules(node);
+
+        _ruleDriver.OnProduce(node, added);
 
         return added;
     }
 
     NodeSubset RegisterSubset(NodeSet? set, NodeSubset subset)
     {
-        var live = Live(subset.Set);
-        if (set is not null && Live(set) != live)
+        var live = EquivRoot(subset.Set);
+        if (set is not null && EquivRoot(set) != live)
             Merge(set, live);
 
         return subset;
@@ -214,14 +354,13 @@ public sealed class VolcanoPlanner : AbstractPlanner
         var subset = set.Add(node);
         _nodeToSubset[node] = subset;
         PropagateCostImprovements(node);
-        FireNodeEquivalenceFound(node);
         return subset;
     }
 
-    void PropagateCostImprovements(INode node)
+    internal void PropagateCostImprovements(INode node)
     {
         var cost = GetCost(node);
-        var set = Live(_nodeToSubset[node].Set);
+        var set = EquivRoot(_nodeToSubset[node].Set);
 
         foreach (var subset in set.Subsets)
         {
@@ -251,125 +390,122 @@ public sealed class VolcanoPlanner : AbstractPlanner
         return cost;
     }
 
-    void FireRules(INode node)
+    /// <summary>
+    /// Fires every rule matched by a just-registered node. The dispatch table yields only the operands
+    /// that could bind a node of this class; each such operand seeds a match that solves outward.
+    /// </summary>
+    internal void FireRules(INode node)
     {
-        foreach (var rule in Rules)
-            new DeferringRuleCall(this, rule).Match(node);
+        if (!_classOperands.TryGetValue(node.GetType(), out var operands))
+            return;
+
+        foreach (var operand in operands.ToArray())
+            if (operand.Matches(node))
+                new DeferringRuleCall(this, operand).Match(node);
     }
 
     /// <summary>
-    /// Enumerates every way the operand pattern matches the node, returning the operand-bound nodes for
-    /// each match (a node's children are subsets, so the matcher descends into a subset's members).
+    /// The subset a registered node belongs to. (The traversal helpers <c>GetParentRels</c> / <c>GetRels</c>
+    /// / <c>Contains</c> live on <see cref="NodeSubset"/>.)
     /// </summary>
-    internal IEnumerable<ImmutableArray<INode>> MatchBindings(Operand operand, INode node)
+    internal NodeSubset GetSubsetNonNull(INode node) => _nodeToSubset[node];
+
+    /// <summary>
+    /// The subset a node belongs to, or <c>null</c> if it is not registered (or has been removed).
+    /// </summary>
+    internal NodeSubset? GetSubset(INode node) => _nodeToSubset.GetValueOrDefault(node);
+
+    /// <summary>
+    /// Prunes a node: marks it as having zero importance, so it is not added to a set on registration and
+    /// no rule fires on a match that touches it.
+    /// </summary>
+    public override void Prune(INode node) => _prunedNodes.Add(node);
+
+    /// <summary>
+    /// Whether <paramref name="node"/> has been pruned.
+    /// </summary>
+    internal bool IsPruned(INode node) => _prunedNodes.Contains(node);
+
+    /// <summary>
+    /// Propagates pruning across a newly discovered equivalence: if <paramref name="duplicate"/> is
+    /// pruned, then <paramref name="node"/> (equivalent to it) is pruned too.
+    /// </summary>
+    void CheckPruned(INode node, INode duplicate)
     {
-        if (!operand.Predicate(node))
-            yield break;
-
-        if (operand.Children.IsEmpty)
-        {
-            yield return ImmutableArray.Create(node);
-            yield break;
-        }
-
-        if (node.Children.Length != operand.Children.Length)
-            yield break;
-
-        var perChild = new List<List<ImmutableArray<INode>>>(operand.Children.Length);
-        for (int i = 0; i < operand.Children.Length; i++)
-        {
-            var bindings = new List<ImmutableArray<INode>>(MatchChild(operand.Children[i], node.Children[i]));
-            if (bindings.Count == 0)
-                yield break;
-
-            perChild.Add(bindings);
-        }
-
-        foreach (var combo in CartesianProduct(perChild))
-        {
-            var builder = ImmutableArray.CreateBuilder<INode>();
-            builder.Add(node);
-            foreach (var part in combo)
-                builder.AddRange(part);
-
-            yield return builder.ToImmutable();
-        }
+        if (_prunedNodes.Contains(duplicate))
+            _prunedNodes.Add(node);
     }
 
-    IEnumerable<ImmutableArray<INode>> MatchChild(Operand operand, INode child)
+    // ~ Top-down (Cascades) search support -------------------------------------
+
+    /// <summary>
+    /// The root subset (typed), or <c>null</c> if no root has been set.
+    /// </summary>
+    internal NodeSubset? RootSubset => _root;
+
+    /// <summary>
+    /// The convention the root is requested in. A node in any other (non-physical) convention is logical.
+    /// </summary>
+    internal IConvention? RootConvention => _root?.Traits.Convention;
+
+    /// <summary>
+    /// A zero cost from the active factory.
+    /// </summary>
+    internal ICost ZeroCost => CostFactory.MakeZeroCost();
+
+    /// <summary>
+    /// An infinite cost from the active factory.
+    /// </summary>
+    internal ICost InfiniteCost => CostFactory.MakeInfiniteCost();
+
+    /// <summary>
+    /// Whether a node is logical: not physical, and not already in the requested root convention.
+    /// </summary>
+    internal bool IsLogical(INode node)
     {
-        // An operand with no further structure that accepts the subset binds the subset itself
-        // (the "matches any child" case).
-        if (operand.Children.IsEmpty && operand.Predicate(child))
-        {
-            yield return ImmutableArray.Create(child);
-            yield break;
-        }
-
-        if (child is not NodeSubset subset)
-            yield break;
-
-        foreach (var member in Live(subset.Set).Nodes)
-        {
-            if (!member.Traits.Satisfies(subset.Traits))
-                continue;
-
-            foreach (var binding in MatchBindings(operand, member))
-                yield return binding;
-        }
+        return node is not IPhysicalNode && !node.Convention.Equals(RootConvention);
     }
 
-    static IEnumerable<List<ImmutableArray<INode>>> CartesianProduct(List<List<ImmutableArray<INode>>> lists)
-    {
-        var result = new List<List<ImmutableArray<INode>>> { new List<ImmutableArray<INode>>() };
-        foreach (var list in lists)
-        {
-            var next = new List<List<ImmutableArray<INode>>>();
-            foreach (var partial in result)
-            {
-                foreach (var item in list)
-                {
-                    var extended = new List<ImmutableArray<INode>>(partial) { item };
-                    next.Add(extended);
-                }
-            }
+    /// <summary>
+    /// Whether a match is for a transformation rule.
+    /// </summary>
+    internal bool IsTransformationRule(VolcanoRuleMatch match) => match.Rule is ITransformationRule;
 
-            result = next;
+    /// <summary>
+    /// Whether a match is for a substitution rule. Alembic has no substitution rules.
+    /// </summary>
+    internal bool IsSubstituteRule(VolcanoRuleMatch match) => false;
+
+    /// <summary>
+    /// Whether a node has been registered.
+    /// </summary>
+    internal bool IsRegistered(INode node) => _nodeToSubset.ContainsKey(node);
+
+    /// <summary>
+    /// The live set a registered node belongs to.
+    /// </summary>
+    internal NodeSet GetSet(INode node) => EquivRoot(_nodeToSubset[node].Set);
+
+    /// <summary>
+    /// The lower bound of a node's cost. Pending the metadata subsystem this is the trivial zero bound,
+    /// so the top-down search keeps its branch-and-bound structure but performs no lower-bound pruning.
+    /// </summary>
+    internal ICost GetLowerBound(INode node) => ZeroCost;
+
+    /// <summary>
+    /// The upper bound to allow a node's inputs, given the node's own upper bound: the bound minus the
+    /// node's self cost.
+    /// </summary>
+    internal ICost UpperBoundForInputs(INode node, ICost upperBound)
+    {
+        if (!upperBound.IsInfinite)
+        {
+            var selfCost = node.ComputeSelfCost(this);
+            if (!selfCost.IsInfinite)
+                return upperBound.Minus(selfCost);
         }
 
-        return result;
-    }
-
-    INode BuildCheapestPlan(NodeSubset root)
-    {
-        return BuildCheapest(root, new Dictionary<NodeSubset, INode>());
-    }
-
-    INode BuildCheapest(NodeSubset subset, Dictionary<NodeSubset, INode> memo)
-    {
-        if (memo.TryGetValue(subset, out var done))
-            return done;
-
-        var best = subset.Best;
-        if (best is null)
-            throw new CannotPlanException($"There are not enough rules to produce a node with the requested traits ({subset.Traits.Convention}).");
-
-        FireNodeChosen(best);
-
-        var children = best.Children;
-        ImmutableArray<INode>.Builder? builder = null;
-        for (int i = 0; i < children.Length; i++)
-        {
-            if (children[i] is NodeSubset childSubset)
-            {
-                builder ??= children.ToBuilder();
-                builder[i] = BuildCheapest(childSubset, memo);
-            }
-        }
-
-        var result = builder is null ? best : best.Copy(best.Traits, builder.ToImmutable());
-        memo[subset] = result;
-        return result;
+        return upperBound;
     }
 
     /// <summary>
@@ -384,7 +520,7 @@ public sealed class VolcanoPlanner : AbstractPlanner
         if (_root is null || _requestedRootTraits is null)
             return;
 
-        var set = Live(_root.Set);
+        var set = EquivRoot(_root.Set);
         foreach (var subset in set.Subsets.ToArray())
         {
             if (subset.Traits.Equals(_root.Traits))
@@ -395,63 +531,220 @@ public sealed class VolcanoPlanner : AbstractPlanner
     }
 
     /// <summary>
-    /// Converts a subset to the given traits by applying the registered converter rules to its members,
-    /// returning the target subset once it has a member (or <c>null</c> if none can be produced).
+    /// Converts a subset to the given traits, finding a (possibly multi-step) chain of converter rules
+    /// and trait-dimension conversion hooks and applying it. Returns the target subset once it has a
+    /// member, or <c>null</c> if no chain reaches the traits.
     /// </summary>
     internal INode? ChangeTraitsUsingConverters(INode node, TraitSet toTraits)
     {
         var subset = (NodeSubset)node;
-        var set = Live(subset.Set);
         if (subset.Traits.Equals(toTraits))
             return subset;
 
-        foreach (var rule in Rules)
+        var path = FindConversionPath(subset.Traits, toTraits);
+        if (path is null)
+            return null;
+
+        var current = subset;
+        foreach (var step in path)
         {
-            if (rule is not IConverterRule converter)
-                continue;
-
-            if (!subset.Traits.Get(converter.Source.Def).Equals(converter.Source) || !toTraits.Get(converter.Target.Def).Equals(converter.Target))
-                continue;
-
-            foreach (var member in set.Nodes.ToArray())
+            foreach (var member in EquivRoot(current.Set).Nodes.ToArray())
             {
-                if (!member.Traits.Satisfies(subset.Traits))
+                if (!member.Traits.Satisfies(current.Traits))
                     continue;
 
-                var converted = converter.Convert(member);
+                var converted = step.Convert(member);
                 if (converted is not null)
                     Register(converted, member);
             }
+
+            var next = EquivRoot(current.Set).GetSubset(step.Result);
+            if (next is null)
+                return null;
+
+            current = next;
         }
 
-        var target = Live(subset.Set).GetSubset(toTraits);
-        return target is not null && target.Best is not null ? target : null;
+        return current.Best is not null ? current : null;
+    }
+
+    List<ConversionStep>? FindConversionPath(TraitSet from, TraitSet to)
+    {
+        var visited = new HashSet<TraitSet> { from };
+        var cameFrom = new Dictionary<TraitSet, (TraitSet Previous, ConversionStep Step)>();
+        var queue = new Queue<TraitSet>();
+        queue.Enqueue(from);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            foreach (var (next, step) in ConversionEdges(current, to))
+            {
+                if (!visited.Add(next))
+                    continue;
+
+                cameFrom[next] = (current, step);
+                if (next.Equals(to))
+                    return Reconstruct(cameFrom, from, to);
+
+                queue.Enqueue(next);
+            }
+        }
+
+        return null;
+    }
+
+    IEnumerable<(TraitSet Next, ConversionStep Step)> ConversionEdges(TraitSet current, TraitSet to)
+    {
+        // A registered converter rule converts the dimension named by its Source/Target.
+        foreach (var rule in Rules)
+        {
+            if (rule is not ConverterRule converter)
+                continue;
+
+            if (!current.Get(converter.Source.TraitDef).Equals(converter.Source))
+                continue;
+
+            var next = current.Plus(converter.Target);
+            if (!next.Equals(current))
+                yield return (next, new ConversionStep(next, member => converter.Convert(member)));
+        }
+
+        // A dimension may convert itself toward its goal value via its trait-def hook.
+        foreach (var def in TraitDefs)
+        {
+            var source = current.Get(def);
+            var target = to.Get(def);
+            if (source.Equals(target) || !def.CanConvert(this, source, target))
+                continue;
+
+            var next = current.Plus(target);
+            var hookDef = def;
+            if (!next.Equals(current))
+                yield return (next, new ConversionStep(next, member => hookDef.Convert(this, member, target, true)));
+        }
+    }
+
+    static List<ConversionStep> Reconstruct(Dictionary<TraitSet, (TraitSet Previous, ConversionStep Step)> cameFrom, TraitSet from, TraitSet to)
+    {
+        var steps = new List<ConversionStep>();
+        var trait = to;
+        while (!trait.Equals(from))
+        {
+            var (previous, step) = cameFrom[trait];
+            steps.Add(step);
+            trait = previous;
+        }
+
+        steps.Reverse();
+        return steps;
+    }
+
+    sealed class ConversionStep
+    {
+
+        public ConversionStep(TraitSet result, Func<INode, INode?> convert)
+        {
+            Result = result;
+            Convert = convert;
+        }
+
+        public TraitSet Result { get; }
+
+        public Func<INode, INode?> Convert { get; }
+
     }
 
     void Merge(NodeSet set1, NodeSet set2)
     {
-        set1 = Live(set1);
-        set2 = Live(set2);
+        set1 = EquivRoot(set1);
+        set2 = EquivRoot(set2);
         if (set1 == set2)
             return;
 
-        set2.EquivalentSet = set1;
-        _allSets.Remove(set2);
-
-        foreach (var node in set2.Nodes)
-        {
-            var subset = set1.Add(node);
-            _nodeToSubset[node] = subset;
-            PropagateCostImprovements(node);
-        }
-
-        set1.Parents.AddRange(set2.Parents);
-
-        foreach (var node in set2.Nodes)
-            FireRules(node);
+        set1.MergeWith(this, set2);
     }
 
-    static NodeSet Live(NodeSet set)
+    /// <summary>
+    /// Removes a set from the live registry (called by <see cref="NodeSet.MergeWith"/> when a set is
+    /// absorbed). The C# analog of Calcite's package-private <c>planner.allSets.remove</c>.
+    /// </summary>
+    internal void RemoveSet(NodeSet set) => _allSets.Remove(set);
+
+    /// <summary>
+    /// Records the subset a node now belongs to (called by <see cref="NodeSet.MergeWith"/> as it moves
+    /// nodes into the surviving set).
+    /// </summary>
+    internal void MapNodeToSubset(INode node, NodeSubset subset) => _nodeToSubset[node] = subset;
+
+    /// <summary>
+    /// Re-points a node's child subsets at their live (merged) sets, rebuilding the node if any child
+    /// moved. Returns the rebuilt node, or <c>null</c> if nothing changed. The node is immutable, so the
+    /// re-pointing produces a fresh copy rather than mutating in place.
+    /// </summary>
+    INode? FixUpInputs(INode node)
+    {
+        var changed = false;
+        var children = ImmutableArray.CreateBuilder<INode>(node.Children.Length);
+        foreach (var child in node.Children)
+        {
+            var childSubset = (NodeSubset)child;
+            var live = EquivRoot(childSubset.Set);
+            var resolved = live == childSubset.Set ? childSubset : live.GetOrCreateSubset(childSubset.Traits);
+            if (!ReferenceEquals(resolved, child))
+                changed = true;
+
+            children.Add(resolved);
+        }
+
+        if (!changed)
+            return null;
+
+        return node.Copy(node.Traits, children.MoveToImmutable());
+    }
+
+    /// <summary>
+    /// Recomputes a node's digest after its children have been renamed (their sets merged), replacing it
+    /// in place. If the recomputed node coincides with an existing one, their sets are merged instead.
+    /// </summary>
+    internal void Rename(INode node)
+    {
+        if (!_nodeToSubset.TryGetValue(node, out var subset))
+            return;
+
+        var rebuilt = FixUpInputs(node);
+        if (rebuilt is null)
+            return;
+
+        var set = EquivRoot(subset.Set);
+
+        _digestToNode.Remove(node.GetDigest());
+        set.Nodes.Remove(node);
+        _nodeToSubset.Remove(node);
+
+        // The re-pointed node may now be a duplicate of one already registered; if so, fold the sets
+        // together rather than keeping two copies (carrying over the pruned state).
+        if (_digestToNode.TryGetValue(rebuilt.GetDigest(), out var equiv))
+        {
+            CheckPruned(equiv, node);
+            var equivSet = EquivRoot(_nodeToSubset[equiv].Set);
+            if (equivSet != set)
+                Merge(set, equivSet);
+
+            return;
+        }
+
+        var added = set.Add(rebuilt);
+        _nodeToSubset[rebuilt] = added;
+        _digestToNode[rebuilt.GetDigest()] = rebuilt;
+        PropagateCostImprovements(rebuilt);
+    }
+
+    /// <summary>
+    /// The live representative of a set: the set itself, or the set it was merged into (following the
+    /// chain). Calcite's <c>VolcanoPlanner.equivRoot</c>.
+    /// </summary>
+    internal static NodeSet EquivRoot(NodeSet set)
     {
         while (set.EquivalentSet is not null)
             set = set.EquivalentSet;

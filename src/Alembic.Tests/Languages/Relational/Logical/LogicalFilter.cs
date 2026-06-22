@@ -23,10 +23,11 @@ sealed class LogicalFilter : SingleNode
 
     public string Predicate => _predicate;
 
-    protected override void Explain(INodeWriter writer)
+    public override INodeWriter ExplainTerms(INodeWriter writer)
     {
-        base.Explain(writer);
+        base.ExplainTerms(writer);
         writer.Item("predicate", _predicate);
+        return writer;
     }
 
     public override INode Copy(TraitSet traits, ImmutableArray<INode> children)

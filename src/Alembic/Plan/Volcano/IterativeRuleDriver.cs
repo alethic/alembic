@@ -9,14 +9,14 @@ namespace Alembic.Plan.Volcano;
 public sealed class IterativeRuleDriver : IRuleDriver
 {
 
-    readonly RuleQueue _queue = new RuleQueue();
+    readonly IterativeRuleQueue _queue;
 
     /// <summary>
     /// Creates a driver for the given planner.
     /// </summary>
     public IterativeRuleDriver(VolcanoPlanner planner)
     {
-        _ = planner;
+        _queue = new IterativeRuleQueue(planner);
     }
 
     /// <inheritdoc />

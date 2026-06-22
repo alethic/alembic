@@ -9,15 +9,18 @@ namespace Alembic.Tests;
 /// An operand rule matching a <see cref="LogicalFilter"/> directly over a <see cref="LogicalSource"/>,
 /// retagging the filter's predicate. Exercises operand nesting and arity.
 /// </summary>
-sealed class TagFilterOverSource : IRule
+sealed class TagFilterOverSource : Rule
 {
 
-    public Operand Operand => Operand.Of<LogicalFilter>(Operand.Of<LogicalSource>());
+    public TagFilterOverSource()
+        : base(Some<LogicalFilter>(Leaf<LogicalSource>()))
+    {
+    }
 
-    public void OnMatch(RuleCall call)
+    public override void OnMatch(RuleCall call)
     {
         var filter = (LogicalFilter)call.Node(0);
-        call.Transform(new LogicalFilter(filter.Traits, filter.Input, "tagged"));
+        call.TransformTo(new LogicalFilter(filter.Traits, filter.Input, "tagged"));
     }
 
 }

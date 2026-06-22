@@ -28,9 +28,11 @@ public class RelationalLoweringTests
     {
         var (logical, physical) = Setup();
 
-        INode root = new LogicalFilter(logical, new LogicalSource(logical, "t"), "x > 5");
+        var planner = BuildPlanner(Converters(physical));
+        var cluster = new Cluster(planner);
+        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
-        var result = Lower(root, physical, Converters(physical));
+        var result = Lower(planner, root, physical);
 
         var filter = Assert.IsType<PhysicalFilter>(result);
         Assert.Equal("x > 5", filter.Predicate);
@@ -42,10 +44,12 @@ public class RelationalLoweringTests
     {
         var (logical, physical) = Setup();
 
-        INode root = new LogicalFilter(logical, new LogicalSource(logical, "t"), "x > 5");
-
         // Lower, then push the physical filter down into the source — a second physical realization.
-        var result = Lower(root, physical, new SourceConverter(physical), new FilterConverter(physical), new PushFilterIntoSource());
+        var planner = BuildPlanner(new SourceConverter(physical), new FilterConverter(physical), new PushFilterIntoSource());
+        var cluster = new Cluster(planner);
+        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+
+        var result = Lower(planner, root, physical);
 
         var scan = Assert.IsType<PhysicalFilteredSource>(result);
         Assert.Equal("t", scan.Table);
@@ -57,9 +61,11 @@ public class RelationalLoweringTests
     {
         var (logical, physical) = Setup();
 
-        INode root = new LogicalFilter(logical, new LogicalParameter(logical, "p"), "x > 5");
+        var planner = BuildPlanner(Converters(physical));
+        var cluster = new Cluster(planner);
+        INode root = new LogicalFilter(logical, new LogicalParameter(cluster, logical, "p"), "x > 5");
 
-        var result = Lower(root, physical, Converters(physical));
+        var result = Lower(planner, root, physical);
 
         var filter = Assert.IsType<PhysicalFilter>(result);
         Assert.Equal("p", Assert.IsType<PhysicalParameter>(filter.Input).Name);
@@ -70,9 +76,11 @@ public class RelationalLoweringTests
     {
         var (logical, _) = Setup();
 
-        INode root = new LogicalFilter(logical, new LogicalSource(logical, "t"), "true");
+        var planner = BuildPlanner(new RemoveTrueFilter());
+        var cluster = new Cluster(planner);
+        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "true");
 
-        var result = Simplify(root, new RemoveTrueFilter());
+        var result = Simplify(planner, root);
 
         Assert.Equal("t", Assert.IsType<LogicalSource>(result).Table);
     }
@@ -82,9 +90,11 @@ public class RelationalLoweringTests
     {
         var (logical, _) = Setup();
 
-        INode root = new LogicalFilter(logical, new LogicalFilter(logical, new LogicalSource(logical, "t"), "b"), "a");
+        var planner = BuildPlanner(new MergeFilters());
+        var cluster = new Cluster(planner);
+        INode root = new LogicalFilter(logical, new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "b"), "a");
 
-        var result = Simplify(root, new MergeFilters());
+        var result = Simplify(planner, root);
 
         var filter = Assert.IsType<LogicalFilter>(result);
         Assert.Equal("a AND b", filter.Predicate);
@@ -96,29 +106,32 @@ public class RelationalLoweringTests
     {
         var (logical, physical) = Setup();
 
-        INode root = new LogicalFilter(logical, new LogicalSource(logical, "t"), "true");
+        var planner = BuildPlanner(new RemoveTrueFilter());
+        var cluster = new Cluster(planner);
+        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "true");
 
         // Phase 1: simplify away the redundant filter in the logical model.
-        var simplified = Simplify(root, new RemoveTrueFilter());
+        var simplified = Simplify(planner, root);
         Assert.IsType<LogicalSource>(simplified);
 
         // Phase 2: lower the residual.
-        var lowered = Lower(simplified, physical, Converters(physical));
+        var lowered = Lower(BuildPlanner(Converters(physical)), simplified, physical);
         Assert.Equal("t", Assert.IsType<PhysicalSource>(lowered).Table);
     }
 
     [Fact]
     public void Convention_registers_its_lowering_rules()
     {
-        var planner = new HepPlanner(HepProgram.Builder().Build());
+        // The program applies every converter rule; the physical convention contributes them to the
+        // planner, rather than the caller listing them by hand.
+        var planner = new HepPlanner(HepProgram.Builder().AddRuleClass<ConverterRule>().Build());
+        var cluster = new Cluster(planner);
 
-        // The physical convention contributes its converters to the planner, rather than the caller
-        // listing them by hand.
         RelationalConventions.Physical.Register(planner);
 
         var logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
         var physical = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
-        INode root = new LogicalFilter(logical, new LogicalSource(logical, "t"), "x > 5");
+        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         planner.SetRoot(root);
         planner.ChangeTraits(root, physical);
@@ -132,11 +145,13 @@ public class RelationalLoweringTests
     {
         var (logical, physical) = Setup();
 
-        INode root = new LogicalFilter(logical, new LogicalSource(logical, "t"), "x > 5");
-
         // Omit the source converter: the source can never reach the physical convention, so the
         // planner cannot satisfy the requested output traits.
-        Assert.Throws<CannotPlanException>(() => Lower(root, physical, new FilterConverter(physical)));
+        var planner = BuildPlanner(new FilterConverter(physical));
+        var cluster = new Cluster(planner);
+        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+
+        Assert.Throws<CannotPlanException>(() => Lower(planner, root, physical));
     }
 
     static (TraitSet Logical, TraitSet Physical) Setup()
@@ -146,38 +161,35 @@ public class RelationalLoweringTests
             TraitSet.CreateEmpty().Plus(RelationalConventions.Physical));
     }
 
-    static IRule[] Converters(TraitSet physical)
+    static Rule[] Converters(TraitSet physical)
     {
         return [new SourceConverter(physical), new FilterConverter(physical), new ParameterConverter(physical)];
     }
 
-    INode Lower(INode root, TraitSet required, params IRule[] rules)
+    INode Lower(HepPlanner planner, INode root, TraitSet required)
     {
-        var planner = BuildPlanner(rules);
         planner.SetRoot(root);
         planner.ChangeTraits(root, required);
         var best = planner.FindBestPlan();
         _output.WriteLine("--- lowered ---");
-        _output.WriteLine(best.ToPlanString());
+        _output.WriteLine(PlanUtil.ToString(best));
         return best;
     }
 
-    INode Simplify(INode root, params IRule[] rules)
+    INode Simplify(HepPlanner planner, INode root)
     {
-        var planner = BuildPlanner(rules);
         planner.SetRoot(root);
         var best = planner.FindBestPlan();
         _output.WriteLine("--- simplified ---");
-        _output.WriteLine(best.ToPlanString());
+        _output.WriteLine(PlanUtil.ToString(best));
         return best;
     }
 
-    static HepPlanner BuildPlanner(IRule[] rules)
+    static HepPlanner BuildPlanner(params Rule[] rules)
     {
-        var builder = HepProgram.Builder();
-        foreach (var rule in rules)
-            builder.AddRule(rule);
-
+        // Fire all the rules together to a fixed point (a rule collection), so lowering can cascade
+        // across them in one instruction.
+        var builder = HepProgram.Builder().AddRuleCollection(rules);
         return new HepPlanner(builder.Build());
     }
 

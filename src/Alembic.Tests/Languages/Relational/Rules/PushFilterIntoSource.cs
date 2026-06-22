@@ -9,16 +9,19 @@ namespace Alembic.Tests.Languages.Relational.Rules;
 /// Push-down: a physical filter directly over a physical source collapses into a single
 /// <see cref="PhysicalFilteredSource"/> that applies the predicate itself.
 /// </summary>
-sealed class PushFilterIntoSource : IRule
+sealed class PushFilterIntoSource : Rule
 {
 
-    public Operand Operand => Operand.Of<PhysicalFilter>(Operand.Of<PhysicalSource>());
+    public PushFilterIntoSource()
+        : base(Some<PhysicalFilter>(Leaf<PhysicalSource>()))
+    {
+    }
 
-    public void OnMatch(RuleCall call)
+    public override void OnMatch(RuleCall call)
     {
         var filter = (PhysicalFilter)call.Node(0);
         var source = (PhysicalSource)call.Node(1);
-        call.Transform(new PhysicalFilteredSource(filter.Traits, source.Table, filter.Predicate));
+        call.TransformTo(new PhysicalFilteredSource(source.Cluster, filter.Traits, source.Table, filter.Predicate));
     }
 
 }

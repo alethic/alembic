@@ -17,8 +17,8 @@ sealed class PhysicalFilteredSource : AbstractNode
     readonly string _table;
     readonly string _predicate;
 
-    public PhysicalFilteredSource(TraitSet traits, string table, string predicate)
-        : base(traits, ImmutableArray<INode>.Empty)
+    public PhysicalFilteredSource(Cluster cluster, TraitSet traits, string table, string predicate)
+        : base(cluster, traits, ImmutableArray<INode>.Empty)
     {
         _table = table;
         _predicate = predicate;
@@ -31,15 +31,17 @@ sealed class PhysicalFilteredSource : AbstractNode
     // A fused scan-and-filter is cheaper than a separate filter over a separate scan (10 + 100).
     public override ICost ComputeSelfCost(IPlanner planner) => planner.CostFactory.MakeCost(100, 0);
 
-    protected override void Explain(INodeWriter writer)
+    public override INodeWriter ExplainTerms(INodeWriter writer)
     {
+        base.ExplainTerms(writer);
         writer.Item("table", _table);
         writer.Item("predicate", _predicate);
+        return writer;
     }
 
     public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
     {
-        return new PhysicalFilteredSource(traits, _table, _predicate);
+        return new PhysicalFilteredSource(Cluster, traits, _table, _predicate);
     }
 
 }

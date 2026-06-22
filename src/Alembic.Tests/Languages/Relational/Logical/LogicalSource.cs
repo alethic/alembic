@@ -13,22 +13,24 @@ sealed class LogicalSource : AbstractNode
 
     readonly string _table;
 
-    public LogicalSource(TraitSet traits, string table)
-        : base(traits, ImmutableArray<INode>.Empty)
+    public LogicalSource(Cluster cluster, TraitSet traits, string table)
+        : base(cluster, traits, ImmutableArray<INode>.Empty)
     {
         _table = table;
     }
 
     public string Table => _table;
 
-    protected override void Explain(INodeWriter writer)
+    public override INodeWriter ExplainTerms(INodeWriter writer)
     {
+        base.ExplainTerms(writer);
         writer.Item("table", _table);
+        return writer;
     }
 
     public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
     {
-        return new LogicalSource(traits, _table);
+        return new LogicalSource(Cluster, traits, _table);
     }
 
 }

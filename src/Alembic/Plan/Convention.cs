@@ -44,7 +44,15 @@ public class Convention : IConvention
     /// <inheritdoc />
     public Type Interface => _interface;
 
-    ITraitDef ITrait.Def => ConventionTraitDef.Instance;
+    ITraitDef ITrait.TraitDef => ConventionTraitDef.Instance;
+
+    /// <summary>
+    /// A convention satisfies only itself.
+    /// </summary>
+    public virtual bool Satisfies(ITrait trait)
+    {
+        return Equals(trait);
+    }
 
     /// <summary>
     /// Registers the rules that produce this convention with the planner (declared on

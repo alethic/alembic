@@ -14,8 +14,8 @@ sealed class Load : AbstractNode, IImageOperation
 
     readonly string _source;
 
-    public Load(TraitSet traits, string source)
-        : base(traits, ImmutableArray<INode>.Empty)
+    public Load(Cluster cluster, TraitSet traits, string source)
+        : base(cluster, traits, ImmutableArray<INode>.Empty)
     {
         _source = source;
     }
@@ -29,14 +29,16 @@ sealed class Load : AbstractNode, IImageOperation
         return planner.CostFactory.MakeCost(ImageConventions.OpCost(Traits.Convention), 0);
     }
 
-    protected override void Explain(INodeWriter writer)
+    public override INodeWriter ExplainTerms(INodeWriter writer)
     {
+        base.ExplainTerms(writer);
         writer.Item("source", _source);
+        return writer;
     }
 
     public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
     {
-        return new Load(traits, _source);
+        return new Load(Cluster, traits, _source);
     }
 
 }

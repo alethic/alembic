@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.Immutable;
 
 using Alembic.Algebra;
@@ -5,9 +6,9 @@ using Alembic.Algebra;
 namespace Alembic.Plan.Rules;
 
 /// <summary>
-/// The context of a single rule match: the nodes bound to each operand and <see cref="Transform"/> —
+/// The context of a single rule match: the nodes bound to each operand and <see cref="TransformTo(INode)"/> —
 /// the sink through which the rule registers an equivalent. This base is planner-agnostic; each
-/// planner provides a subclass that decides what <see cref="Transform"/> does.
+/// planner provides a subclass that decides what <see cref="TransformTo(INode)"/> does.
 /// </summary>
 /// <remarks>
 /// A rule reaches its matched nodes through <see cref="Node"/>, not by navigating
@@ -19,13 +20,33 @@ public abstract class RuleCall
 {
 
     /// <summary>
-    /// Creates a call over the nodes bound to the rule's operands, in operand order (the operand root
-    /// first, then a pre-order walk of the child operands).
+    /// Creates a call seeded at <paramref name="operand0"/>, over the nodes bound to the rule's operands
+    /// in operand order (the operand root first, then a pre-order walk of the child operands). The rule
+    /// is taken from the seed operand.
     /// </summary>
-    protected RuleCall(ImmutableArray<INode> nodes)
+    protected RuleCall(IPlanner planner, RuleOperand operand0, ImmutableArray<INode> nodes)
     {
+        Planner = planner;
+        Operand0 = operand0;
+        Rule = operand0.Rule;
         Nodes = nodes;
     }
+
+    /// <summary>
+    /// The planner that issued this call.
+    /// </summary>
+    public IPlanner Planner { get; }
+
+    /// <summary>
+    /// The operand the match is seeded from (the operand bound to the node that started the match). The
+    /// rule is reached through it.
+    /// </summary>
+    public RuleOperand Operand0 { get; }
+
+    /// <summary>
+    /// The rule this call is for.
+    /// </summary>
+    public Rule Rule { get; }
 
     /// <summary>
     /// The nodes bound to the rule's operands, in operand order.
@@ -38,8 +59,15 @@ public abstract class RuleCall
     public INode Node(int ordinal) => Nodes[ordinal];
 
     /// <summary>
-    /// Registers an equivalent for the matched node. What this does is planner-specific.
+    /// Registers an equivalent for the matched node, with no other equivalences.
     /// </summary>
-    public abstract void Transform(INode equivalent);
+    public void TransformTo(INode equivalent) => TransformTo(equivalent, ImmutableDictionary<INode, INode>.Empty);
+
+    /// <summary>
+    /// Registers an equivalent for the matched node, along with a map of other equivalences to register
+    /// first (each key is registered as equivalent to its value, so the root registration below does not
+    /// register them twice). What this does is planner-specific.
+    /// </summary>
+    public abstract void TransformTo(INode equivalent, IReadOnlyDictionary<INode, INode> equiv);
 
 }

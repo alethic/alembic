@@ -13,22 +13,24 @@ sealed class Variable : AbstractNode
 
     readonly string _name;
 
-    public Variable(TraitSet traits, string name)
-        : base(traits, ImmutableArray<INode>.Empty)
+    public Variable(Cluster cluster, TraitSet traits, string name)
+        : base(cluster, traits, ImmutableArray<INode>.Empty)
     {
         _name = name;
     }
 
     public string Name => _name;
 
-    protected override void Explain(INodeWriter writer)
+    public override INodeWriter ExplainTerms(INodeWriter writer)
     {
+        base.ExplainTerms(writer);
         writer.Item("name", _name);
+        return writer;
     }
 
     public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
     {
-        return new Variable(traits, _name);
+        return new Variable(Cluster, traits, _name);
     }
 
 }

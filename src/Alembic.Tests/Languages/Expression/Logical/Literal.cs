@@ -13,22 +13,24 @@ sealed class Literal : AbstractNode
 
     readonly int _value;
 
-    public Literal(TraitSet traits, int value)
-        : base(traits, ImmutableArray<INode>.Empty)
+    public Literal(Cluster cluster, TraitSet traits, int value)
+        : base(cluster, traits, ImmutableArray<INode>.Empty)
     {
         _value = value;
     }
 
     public int Value => _value;
 
-    protected override void Explain(INodeWriter writer)
+    public override INodeWriter ExplainTerms(INodeWriter writer)
     {
+        base.ExplainTerms(writer);
         writer.Item("value", _value);
+        return writer;
     }
 
     public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
     {
-        return new Literal(traits, _value);
+        return new Literal(Cluster, traits, _value);
     }
 
 }

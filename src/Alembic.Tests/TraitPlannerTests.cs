@@ -27,16 +27,17 @@ public class TraitPlannerTests
         // its default (Unsorted).
         var logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical).Plus(Sortedness.Unsorted);
 
-        INode root = new LogicalFilter(logical, new LogicalSource(logical, "t"), "x > 5");
-
         var program = HepProgram.Builder()
-            .AddRule(new MarkSorted())
+            .AddRuleInstance(new MarkSorted())
             .Build();
 
         var planner = new HepPlanner(program);
+        var cluster = new Cluster(planner);
+        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+
         planner.SetRoot(root);
         var best = planner.FindBestPlan();
-        _output.WriteLine(best.ToPlanString());
+        _output.WriteLine(PlanUtil.ToString(best));
 
         // The rule read and wrote the new dimension on every node, and the planner preserved both
         // dimensions through Copy. Convention is untouched.

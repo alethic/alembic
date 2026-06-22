@@ -26,9 +26,11 @@ public class ImagePlanningTests
         // load is CPU-only; the three transforms are far cheaper on the GPU. With a CPU result wanted,
         // the cheapest plan uploads after the load, runs the transforms on the GPU, and downloads once:
         // 10 (load) + 5 (up) + 1 + 1 + 1 + 5 (down) = 23, versus 40 all on the CPU.
-        INode root = Threshold(Grayscale(Blur(Load("photo.png"))));
+        var planner = MakePlanner();
+        var cluster = new Cluster(planner);
+        INode root = Threshold(Grayscale(Blur(Load(cluster, "photo.png"))));
 
-        var best = Plan(root, Cpu);
+        var best = Plan(planner, root, Cpu);
 
         var download = Assert.IsType<Download>(best);
         var threshold = Assert.IsType<Threshold>(download.Input);
@@ -48,9 +50,11 @@ public class ImagePlanningTests
     [Fact]
     public void Skips_the_final_download_when_gpu_output_is_requested()
     {
-        INode root = Threshold(Grayscale(Blur(Load("photo.png"))));
+        var planner = MakePlanner();
+        var cluster = new Cluster(planner);
+        INode root = Threshold(Grayscale(Blur(Load(cluster, "photo.png"))));
 
-        var best = Plan(root, Gpu);
+        var best = Plan(planner, root, Gpu);
 
         // No CPU consumer, so the trailing download is gone — only the leading upload remains.
         var threshold = Assert.IsType<Threshold>(best);
@@ -65,9 +69,11 @@ public class ImagePlanningTests
         // A CPU-only inpaint sits between two GPU-worthy runs (blur+grayscale before it, blur+threshold
         // after). The planner uploads for the first run, downloads to inpaint, uploads again for the
         // second run, and downloads the result: CPU -> GPU -> CPU -> GPU -> CPU.
-        INode root = Threshold(Blur(Inpaint(Grayscale(Blur(Load("photo.png"))))));
+        var planner = MakePlanner();
+        var cluster = new Cluster(planner);
+        INode root = Threshold(Blur(Inpaint(Grayscale(Blur(Load(cluster, "photo.png"))))));
 
-        var best = Plan(root, Cpu);
+        var best = Plan(planner, root, Cpu);
 
         Assert.IsType<Download>(best);
         Assert.Equal(2, Count<Upload>(best));
@@ -83,16 +89,18 @@ public class ImagePlanningTests
         // One lone GPU-worthy blur between two CPU-only inpaints. Round-tripping it (5 + 1 + 5 = 11)
         // costs more than just running it on the CPU (10), so the planner keeps everything on the CPU
         // and inserts no transfers at all.
-        INode root = Inpaint(Blur(Inpaint(Load("photo.png"))));
+        var planner = MakePlanner();
+        var cluster = new Cluster(planner);
+        INode root = Inpaint(Blur(Inpaint(Load(cluster, "photo.png"))));
 
-        var best = Plan(root, Cpu);
+        var best = Plan(planner, root, Cpu);
 
         Assert.Equal(0, Count<Upload>(best));
         Assert.Equal(0, Count<Download>(best));
         AssertAllCpu(best);
     }
 
-    static INode Load(string source) => new Load(Logical, source);
+    static INode Load(Cluster cluster, string source) => new Load(cluster, Logical, source);
     static INode Blur(INode input) => new Blur(Logical, input);
     static INode Grayscale(INode input) => new Grayscale(Logical, input);
     static INode Threshold(INode input) => new Threshold(Logical, input);
@@ -102,17 +110,22 @@ public class ImagePlanningTests
     static readonly TraitSet Cpu = TraitSet.CreateEmpty().Plus(ImageConventions.Cpu);
     static readonly TraitSet Gpu = TraitSet.CreateEmpty().Plus(ImageConventions.Gpu);
 
-    INode Plan(INode root, TraitSet required)
+    static VolcanoPlanner MakePlanner()
     {
         var planner = new VolcanoPlanner();
         planner.AddRule(new LowerToCpu());
         planner.AddRule(new LowerToGpu());
         planner.AddRule(new DownloadRule());
         planner.AddRule(new UploadRule());
+        return planner;
+    }
+
+    INode Plan(VolcanoPlanner planner, INode root, TraitSet required)
+    {
         planner.SetRoot(root);
         planner.ChangeTraits(root, required);
         var best = planner.FindBestPlan();
-        _output.WriteLine(best.ToPlanString());
+        _output.WriteLine(PlanUtil.ToString(best));
         return best;
     }
 

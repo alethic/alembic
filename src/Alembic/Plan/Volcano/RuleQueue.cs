@@ -1,41 +1,78 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
+
+using Alembic.Algebra;
+using Alembic.Plan.Rules;
 
 namespace Alembic.Plan.Volcano;
 
 /// <summary>
-/// Holds the rule matches the planner has discovered but not yet applied. A match identical to one
-/// already queued (same rule, same bound nodes) is dropped, so a rule fires at most once per match.
+/// Holds the rule matches the planner has discovered but not yet applied. Each search strategy supplies
+/// its own queue: the bottom-up search drains a FIFO (<see cref="IterativeRuleQueue"/>), the top-down
+/// search pulls matches per node and in a rule-priority order (<see cref="TopDownRuleQueue"/>).
 /// </summary>
-public sealed class RuleQueue
+public abstract class RuleQueue
 {
 
-    readonly Queue<VolcanoRuleMatch> _matches = new Queue<VolcanoRuleMatch>();
-    readonly HashSet<VolcanoRuleMatch> _seen = new HashSet<VolcanoRuleMatch>();
-
     /// <summary>
-    /// Adds a match unless an identical one has already been queued.
+    /// The planner whose matches this queue holds.
     /// </summary>
-    public void AddMatch(VolcanoRuleMatch match)
+    protected RuleQueue(VolcanoPlanner planner)
     {
-        if (_seen.Add(match))
-            _matches.Enqueue(match);
+        Planner = planner;
     }
 
     /// <summary>
-    /// Removes and returns the next match, or <c>null</c> if the queue is empty.
+    /// The planner whose matches this queue holds.
     /// </summary>
-    public VolcanoRuleMatch? PopMatch()
-    {
-        return _matches.Count > 0 ? _matches.Dequeue() : null;
-    }
+    protected VolcanoPlanner Planner { get; }
+
+    /// <summary>
+    /// Adds a match to the queue.
+    /// </summary>
+    public abstract void AddMatch(VolcanoRuleMatch match);
 
     /// <summary>
     /// Empties the queue.
     /// </summary>
-    public void Clear()
+    public abstract void Clear();
+
+    /// <summary>
+    /// Whether a queued match should be skipped: when any of its bound nodes has been pruned, or when the
+    /// same subset appears more than once along a path from the root operand to a leaf (a cycle — a node
+    /// consuming its own output, which would only generate useless equivalents).
+    /// </summary>
+    protected virtual bool SkipMatch(VolcanoRuleMatch match)
     {
-        _matches.Clear();
-        _seen.Clear();
+        foreach (var rel in match.Nodes)
+            if (Planner.IsPruned(rel))
+                return true;
+
+        return HasDuplicateSubsetOnPath(new Stack<NodeSubset>(), match.Rule.Operand, match.Nodes);
+    }
+
+    /// <summary>
+    /// Whether the subset bound to <paramref name="operand"/> already appears on the current root-to-leaf
+    /// path (held in <paramref name="subsets"/>); recurses into the operand's children. Duplicate subsets
+    /// on different paths are fine — only a repeat along one path is a cycle.
+    /// </summary>
+    bool HasDuplicateSubsetOnPath(Stack<NodeSubset> subsets, RuleOperand operand, ImmutableArray<INode> rels)
+    {
+        var subset = Planner.GetSubsetNonNull(rels[operand.OrdinalInRule]);
+        if (subsets.Contains(subset))
+            return true;
+
+        if (operand.Children.Length > 0)
+        {
+            subsets.Push(subset);
+            foreach (var child in operand.Children)
+                if (HasDuplicateSubsetOnPath(subsets, child, rels))
+                    return true;
+
+            subsets.Pop();
+        }
+
+        return false;
     }
 
 }

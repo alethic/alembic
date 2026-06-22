@@ -6,7 +6,7 @@ namespace Alembic.Algebra;
 
 /// <summary>
 /// Convenience base for an <see cref="INode"/> with exactly two children — a left and a right. It
-/// lists both as input terms; subclasses add their own attributes in <see cref="AbstractNode.Explain"/>
+/// lists both as input terms; subclasses add their own attributes in <see cref="AbstractNode.ExplainTerms"/>
 /// and override <see cref="INode.Copy"/>.
 /// </summary>
 public abstract class BiNode : AbstractNode
@@ -16,7 +16,7 @@ public abstract class BiNode : AbstractNode
     /// Initializes the node with its traits and its left and right children.
     /// </summary>
     protected BiNode(TraitSet traits, INode left, INode right)
-        : base(traits, ImmutableArray.Create(left, right))
+        : base(left.Cluster, traits, ImmutableArray.Create(left, right))
     {
 
     }
@@ -32,11 +32,12 @@ public abstract class BiNode : AbstractNode
     public INode Right => Children[1];
 
     /// <inheritdoc />
-    protected override void Explain(INodeWriter writer)
+    public override INodeWriter ExplainTerms(INodeWriter writer)
     {
-        base.Explain(writer);
+        base.ExplainTerms(writer);
         writer.Input("left", Left);
         writer.Input("right", Right);
+        return writer;
     }
 
 }

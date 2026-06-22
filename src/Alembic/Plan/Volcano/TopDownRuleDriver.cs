@@ -1,0 +1,755 @@
+using System;
+using System.Collections.Generic;
+
+using Alembic.Algebra;
+using Alembic.Plan.Rules;
+
+namespace Alembic.Plan.Volcano;
+
+/// <summary>
+/// A rule driver that applies rules top-down (the Cascades strategy). Optimization is expressed as a
+/// stack of tasks: a task either applies rules or schedules further tasks, so the planner optimizes a
+/// group by exploring its logical members, implementing them, optimizing inputs against an upper bound,
+/// and deriving traits up from optimized inputs.
+/// </summary>
+/// <remarks>
+/// The branch-and-bound structure is faithful, but lower-bound pruning is disabled: pending the metadata
+/// subsystem, <see cref="VolcanoPlanner.GetLowerBound"/> returns zero, so the bound checks never prune.
+/// </remarks>
+public sealed class TopDownRuleDriver : IRuleDriver
+{
+
+    readonly VolcanoPlanner _planner;
+    readonly TopDownRuleQueue _ruleQueue;
+    readonly Stack<ITask> _tasks = new Stack<ITask>();
+    readonly HashSet<INode> _passThroughCache = new HashSet<INode>(ReferenceEqualityComparer.Instance);
+
+    IGeneratorTask? _applying;
+
+    /// <summary>
+    /// Creates a driver for the given planner.
+    /// </summary>
+    public TopDownRuleDriver(VolcanoPlanner planner)
+    {
+        _planner = planner;
+        _ruleQueue = new TopDownRuleQueue(planner);
+    }
+
+    /// <inheritdoc />
+    public RuleQueue Queue => _ruleQueue;
+
+    /// <inheritdoc />
+    public void Drive()
+    {
+        var root = _planner.RootSubset ?? throw new InvalidOperationException("No root has been set.");
+        _tasks.Push(new OptimizeGroup(this, root, _planner.InfiniteCost));
+
+        while (_tasks.Count > 0)
+            _tasks.Pop().Perform();
+    }
+
+    /// <inheritdoc />
+    public void Clear()
+    {
+        _ruleQueue.Clear();
+        _tasks.Clear();
+        _passThroughCache.Clear();
+        _applying = null;
+    }
+
+    void ApplyGenerator(IGeneratorTask? task, Action proc)
+    {
+        var applying = _applying;
+        _applying = task;
+        try
+        {
+            proc();
+        }
+        finally
+        {
+            _applying = applying;
+        }
+    }
+
+    /// <inheritdoc />
+    public void OnSetMerged(NodeSet set)
+    {
+        // Merging may open new opportunities for an optimized group; clear the optimized state of the
+        // set's subsets and their ancestors so they are optimized again.
+        ApplyGenerator(null, () => ClearProcessed(set));
+    }
+
+    void ClearProcessed(NodeSet set)
+    {
+        bool explored = set.Exploring is not null;
+        set.Exploring = null;
+
+        foreach (var subset in set.Subsets)
+        {
+            if (subset.ResetTaskState() || explored)
+            {
+                foreach (var parentRel in subset.GetParentRels())
+                    ClearProcessed(_planner.GetSet(parentRel));
+
+                if (ReferenceEquals(subset, _planner.RootSubset))
+                    _tasks.Push(new OptimizeGroup(this, subset, _planner.InfiniteCost));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public void OnProduce(INode node, NodeSubset subset)
+    {
+        // If the node was added to an unrelated subset, ignore it; a later OptimizeGroup will schedule it.
+        if (_applying is null || subset.Set != VolcanoPlanner.EquivRoot(_applying.Group.Set))
+            return;
+
+        if (!_applying.OnProduce(node))
+            return;
+
+        if (!_planner.IsLogical(node))
+        {
+            // A physical node: schedule tasks to optimize its inputs for the optimizing subset(s).
+            NodeSubset? optimizingGroup = null;
+            bool canPassThrough = node is IPhysicalNode && !_passThroughCache.Contains(node);
+            if (!canPassThrough && subset.TaskState is not null)
+            {
+                optimizingGroup = subset;
+            }
+            else
+            {
+                var upperBound = _planner.ZeroCost;
+                var set = subset.Set;
+                var subsetsToPassThrough = new List<NodeSubset>();
+                foreach (var otherSubset in set.Subsets)
+                {
+                    if (!otherSubset.IsRequired
+                        || !ReferenceEquals(otherSubset, _planner.RootSubset)
+                        && otherSubset.TaskState != NodeSubset.OptimizeState.Optimizing)
+                    {
+                        continue;
+                    }
+
+                    if (node.Traits.Satisfies(otherSubset.Traits))
+                    {
+                        if (upperBound.IsLessThan(otherSubset.UpperBound))
+                        {
+                            upperBound = otherSubset.UpperBound;
+                            optimizingGroup = otherSubset;
+                        }
+                    }
+                    else if (canPassThrough)
+                    {
+                        subsetsToPassThrough.Add(otherSubset);
+                    }
+                }
+
+                foreach (var otherSubset in subsetsToPassThrough)
+                {
+                    var task = GetOptimizeInputTask(node, otherSubset);
+                    if (task is not null)
+                        _tasks.Push(task);
+                }
+            }
+
+            if (optimizingGroup is null)
+                return;
+
+            var optimizeTask = GetOptimizeInputTask(node, optimizingGroup);
+            if (optimizeTask is not null)
+                _tasks.Push(optimizeTask);
+        }
+        else
+        {
+            bool optimizing = false;
+            foreach (var s in subset.Set.Subsets)
+            {
+                if (s.TaskState == NodeSubset.OptimizeState.Optimizing)
+                {
+                    optimizing = true;
+                    break;
+                }
+            }
+
+            var applying = _applying;
+            _tasks.Push(new OptimizeMExpr(this, node, applying.Group, applying.Exploring && !optimizing));
+        }
+    }
+
+    /// <summary>
+    /// Decides how to optimize a physical node for a target subset.
+    /// </summary>
+    ITask? GetOptimizeInputTask(INode rel, NodeSubset group)
+    {
+        // If the node does not deliver the group's traits, first try to convert it (pass-through or a
+        // converter rule).
+        if (!rel.Traits.Satisfies(group.Traits))
+        {
+            var passThroughRel = Convert(rel, group);
+            if (passThroughRel is null)
+                return null;
+
+            var finalPassThroughRel = passThroughRel;
+            ApplyGenerator(null, () => _planner.Register(finalPassThroughRel, group));
+            rel = passThroughRel;
+        }
+
+        bool unProcessed = false;
+        foreach (var input in rel.Children)
+        {
+            if (((NodeSubset)input).GetWinnerCost() is null)
+            {
+                unProcessed = true;
+                break;
+            }
+        }
+
+        // If all inputs are optimized, only trait derivation remains.
+        if (!unProcessed)
+            return new DeriveTrait(this, rel, group);
+
+        if (rel.Children.Length == 1)
+            return new OptimizeInput1(this, rel, group);
+
+        return new OptimizeInputs(this, rel, group);
+    }
+
+    /// <summary>
+    /// Tries to convert a physical node to a target subset's traits, by trait pass-through or, failing
+    /// that, by queuing a converter-rule match.
+    /// </summary>
+    INode? Convert(INode rel, NodeSubset group)
+    {
+        if (!_passThroughCache.Contains(rel))
+        {
+            if (CheckLowerBound(rel, group))
+            {
+                var passThrough = group.PassThrough(rel);
+                if (passThrough is not null)
+                {
+                    _passThroughCache.Add(passThrough);
+                    return passThrough;
+                }
+            }
+        }
+
+        var match = _ruleQueue.PopMatch(rel, m =>
+            m.Rule is ConverterRule converter && converter.Target.Satisfies(group.Traits.Convention));
+        if (match is not null)
+            _tasks.Push(new ApplyRule(this, match, group, false));
+
+        return null;
+    }
+
+    /// <summary>
+    /// Whether a node's lower bound is below a subset's upper bound (so optimizing it is worthwhile).
+    /// </summary>
+    bool CheckLowerBound(INode rel, NodeSubset group)
+    {
+        var upperBound = group.UpperBound;
+        if (upperBound.IsInfinite)
+            return true;
+
+        var lowerBound = _planner.GetLowerBound(rel);
+        return !upperBound.IsLessThanOrEqual(lowerBound);
+    }
+
+    // ~ Tasks ------------------------------------------------------------------
+
+    interface ITask
+    {
+        void Perform();
+    }
+
+    interface IGeneratorTask : ITask
+    {
+        NodeSubset Group { get; }
+        bool Exploring { get; }
+        bool OnProduce(INode node);
+    }
+
+    /// <summary>
+    /// Optimizes a subset: schedules optimization for its members.
+    /// </summary>
+    sealed class OptimizeGroup : ITask
+    {
+        readonly TopDownRuleDriver _driver;
+        readonly NodeSubset _group;
+        readonly ICost _upperBound;
+
+        public OptimizeGroup(TopDownRuleDriver driver, NodeSubset group, ICost upperBound)
+        {
+            _driver = driver;
+            _group = group;
+            _upperBound = upperBound;
+        }
+
+        public void Perform()
+        {
+            if (_group.GetWinnerCost() is not null)
+                return;
+
+            if (_group.TaskState is not null && _upperBound.IsLessThanOrEqual(_group.UpperBound))
+                return;
+
+            _group.StartOptimize(_upperBound);
+
+            _driver._tasks.Push(new GroupOptimized(_group));
+
+            var physicals = new List<INode>();
+            foreach (var rel in _group.Set.Nodes)
+            {
+                if (_driver._planner.IsLogical(rel))
+                    _driver._tasks.Push(new OptimizeMExpr(_driver, rel, _group, false));
+                else if (rel.IsEnforcer)
+                    physicals.Insert(0, rel);
+                else
+                    physicals.Add(rel);
+            }
+
+            // Apply input optimization first so as to get a valid upper bound.
+            foreach (var rel in physicals)
+            {
+                var task = _driver.GetOptimizeInputTask(rel, _group);
+                if (task is not null)
+                    _driver._tasks.Push(task);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Marks a subset optimized once its OptimizeGroup tasks complete.
+    /// </summary>
+    sealed class GroupOptimized : ITask
+    {
+        readonly NodeSubset _group;
+
+        public GroupOptimized(NodeSubset group)
+        {
+            _group = group;
+        }
+
+        public void Perform() => _group.SetOptimized();
+    }
+
+    /// <summary>
+    /// Optimizes a logical node: explores its inputs, then applies rules to it.
+    /// </summary>
+    sealed class OptimizeMExpr : ITask
+    {
+        readonly TopDownRuleDriver _driver;
+        readonly INode _mExpr;
+        readonly NodeSubset _group;
+        readonly bool _explore;
+
+        public OptimizeMExpr(TopDownRuleDriver driver, INode mExpr, NodeSubset group, bool explore)
+        {
+            _driver = driver;
+            _mExpr = mExpr;
+            _group = group;
+            _explore = explore;
+        }
+
+        public void Perform()
+        {
+            if (_explore && _group.IsExplored)
+                return;
+
+            _driver._tasks.Push(new ApplyRules(_driver, _mExpr, _group, _explore));
+            for (int i = _mExpr.Children.Length - 1; i >= 0; --i)
+                _driver._tasks.Push(new ExploreInput(_driver, _mExpr, i));
+        }
+    }
+
+    /// <summary>
+    /// Ensures an ExploreInput worked on the right input group (inputs may move when sets merge), then
+    /// marks the input explored.
+    /// </summary>
+    sealed class EnsureGroupExplored : ITask
+    {
+        readonly TopDownRuleDriver _driver;
+        readonly NodeSubset _input;
+        readonly INode _parent;
+        readonly int _inputOrdinal;
+
+        public EnsureGroupExplored(TopDownRuleDriver driver, NodeSubset input, INode parent, int inputOrdinal)
+        {
+            _driver = driver;
+            _input = input;
+            _parent = parent;
+            _inputOrdinal = inputOrdinal;
+        }
+
+        public void Perform()
+        {
+            if (!ReferenceEquals(_parent.Children[_inputOrdinal], _input))
+            {
+                _driver._tasks.Push(new ExploreInput(_driver, _parent, _inputOrdinal));
+                return;
+            }
+
+            _input.SetExplored();
+        }
+    }
+
+    /// <summary>
+    /// Explores an input of a node: optimizes (for exploration) the logical members of the input group.
+    /// </summary>
+    sealed class ExploreInput : ITask
+    {
+        readonly TopDownRuleDriver _driver;
+        readonly NodeSubset _group;
+        readonly INode _parent;
+        readonly int _inputOrdinal;
+
+        public ExploreInput(TopDownRuleDriver driver, INode parent, int inputOrdinal)
+        {
+            _driver = driver;
+            _group = (NodeSubset)parent.Children[inputOrdinal];
+            _parent = parent;
+            _inputOrdinal = inputOrdinal;
+        }
+
+        public void Perform()
+        {
+            if (!_group.Explore())
+                return;
+
+            _driver._tasks.Push(new EnsureGroupExplored(_driver, _group, _parent, _inputOrdinal));
+            foreach (var rel in _group.Set.Nodes)
+            {
+                if (_driver._planner.IsLogical(rel))
+                    _driver._tasks.Push(new OptimizeMExpr(_driver, rel, _group, true));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Pulls matches for a node out of the queue and schedules an ApplyRule task for each.
+    /// </summary>
+    sealed class ApplyRules : ITask
+    {
+        readonly TopDownRuleDriver _driver;
+        readonly INode _mExpr;
+        readonly NodeSubset _group;
+        readonly bool _exploring;
+
+        public ApplyRules(TopDownRuleDriver driver, INode mExpr, NodeSubset group, bool exploring)
+        {
+            _driver = driver;
+            _mExpr = mExpr;
+            _group = group;
+            _exploring = exploring;
+        }
+
+        public void Perform()
+        {
+            Func<VolcanoRuleMatch, bool>? predicate = _exploring ? _driver._planner.IsTransformationRule : null;
+            var match = _driver._ruleQueue.PopMatch(_mExpr, predicate);
+            while (match is not null)
+            {
+                _driver._tasks.Push(new ApplyRule(_driver, match, _group, _exploring));
+                match = _driver._ruleQueue.PopMatch(_mExpr, predicate);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Applies a single rule match, with the driver tracking it as the current generator.
+    /// </summary>
+    sealed class ApplyRule : IGeneratorTask
+    {
+        readonly TopDownRuleDriver _driver;
+        readonly VolcanoRuleMatch _match;
+        readonly NodeSubset _group;
+        readonly bool _exploring;
+
+        public ApplyRule(TopDownRuleDriver driver, VolcanoRuleMatch match, NodeSubset group, bool exploring)
+        {
+            _driver = driver;
+            _match = match;
+            _group = group;
+            _exploring = exploring;
+        }
+
+        public NodeSubset Group => _group;
+
+        public bool Exploring => _exploring;
+
+        public bool OnProduce(INode node) => true;
+
+        public void Perform() => _driver.ApplyGenerator(this, _match.OnMatch);
+    }
+
+    /// <summary>
+    /// Optimizes the single input of a physical node, then derives traits.
+    /// </summary>
+    sealed class OptimizeInput1 : ITask
+    {
+        readonly TopDownRuleDriver _driver;
+        readonly INode _mExpr;
+        readonly NodeSubset _group;
+
+        public OptimizeInput1(TopDownRuleDriver driver, INode mExpr, NodeSubset group)
+        {
+            _driver = driver;
+            _mExpr = mExpr;
+            _group = group;
+        }
+
+        public void Perform()
+        {
+            var upperBound = _group.UpperBound;
+            var upperForInput = _driver._planner.UpperBoundForInputs(_mExpr, upperBound);
+            if (upperForInput.IsLessThanOrEqual(_driver._planner.ZeroCost))
+                return;
+
+            var input = (NodeSubset)_mExpr.Children[0];
+
+            _driver._tasks.Push(new DeriveTrait(_driver, _mExpr, _group));
+            _driver._tasks.Push(new CheckInput(_driver, null, _mExpr, input, 0, upperForInput));
+            _driver._tasks.Push(new OptimizeGroup(_driver, input, upperForInput));
+        }
+    }
+
+    /// <summary>
+    /// Optimizes a physical node's inputs, apportioning the upper bound across them, then derives traits.
+    /// </summary>
+    sealed class OptimizeInputs : ITask
+    {
+        readonly TopDownRuleDriver _driver;
+        readonly INode _mExpr;
+        readonly NodeSubset _group;
+        readonly int _childCount;
+        ICost _upperBound;
+        ICost _upperForInput;
+        int _processingChild;
+
+        internal List<ICost>? LowerBounds;
+        internal ICost? LowerBoundSum;
+
+        public OptimizeInputs(TopDownRuleDriver driver, INode rel, NodeSubset group)
+        {
+            _driver = driver;
+            _mExpr = rel;
+            _group = group;
+            _upperBound = group.UpperBound;
+            _upperForInput = driver._planner.InfiniteCost;
+            _childCount = rel.Children.Length;
+            _processingChild = 0;
+        }
+
+        public void Perform()
+        {
+            var planner = _driver._planner;
+            var bestCost = _group.BestCost;
+            if (!bestCost.IsInfinite)
+            {
+                if (bestCost.IsLessThan(_upperBound))
+                {
+                    _upperBound = bestCost;
+                    _upperForInput = planner.UpperBoundForInputs(_mExpr, _upperBound);
+                }
+
+                if (LowerBoundSum is null)
+                {
+                    if (_upperForInput.IsInfinite)
+                        _upperForInput = planner.UpperBoundForInputs(_mExpr, _upperBound);
+
+                    LowerBounds = new List<ICost>(_childCount);
+                    foreach (var input in _mExpr.Children)
+                    {
+                        var lb = planner.GetLowerBound(input);
+                        LowerBounds.Add(lb);
+                        LowerBoundSum = LowerBoundSum is null ? lb : LowerBoundSum.Plus(lb);
+                    }
+                }
+
+                if (_upperForInput.IsLessThan(LowerBoundSum!))
+                    return;
+            }
+
+            if (LowerBoundSum is not null && LowerBoundSum.IsInfinite)
+                return;
+
+            if (_processingChild == 0)
+                _driver._tasks.Push(new DeriveTrait(_driver, _mExpr, _group));
+
+            while (_processingChild < _childCount)
+            {
+                var input = (NodeSubset)_mExpr.Children[_processingChild];
+
+                if (input.GetWinnerCost() is not null)
+                {
+                    ++_processingChild;
+                    continue;
+                }
+
+                var upper = _upperForInput;
+                if (!upper.IsInfinite)
+                    upper = _upperForInput.Minus(LowerBoundSum!).Plus(LowerBounds![_processingChild]);
+
+                if (input.TaskState is not null && upper.IsLessThanOrEqual(input.UpperBound))
+                    return;
+
+                if (_processingChild != _childCount - 1)
+                    _driver._tasks.Push(this);
+
+                _driver._tasks.Push(new CheckInput(_driver, this, _mExpr, input, _processingChild, upper));
+                _driver._tasks.Push(new OptimizeGroup(_driver, input, upper));
+                ++_processingChild;
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// After an input is optimized, verifies it and updates the parent's bound bookkeeping.
+    /// </summary>
+    sealed class CheckInput : ITask
+    {
+        readonly TopDownRuleDriver _driver;
+        readonly OptimizeInputs? _context;
+        readonly ICost _upper;
+        readonly INode _parent;
+        NodeSubset _input;
+        readonly int _i;
+
+        public CheckInput(TopDownRuleDriver driver, OptimizeInputs? context, INode parent, NodeSubset input, int i, ICost upper)
+        {
+            _driver = driver;
+            _context = context;
+            _parent = parent;
+            _input = input;
+            _i = i;
+            _upper = upper;
+        }
+
+        public void Perform()
+        {
+            if (!ReferenceEquals(_input, _parent.Children[_i]))
+            {
+                _input = (NodeSubset)_parent.Children[_i];
+                _driver._tasks.Push(this);
+                _driver._tasks.Push(new OptimizeGroup(_driver, _input, _upper));
+                return;
+            }
+
+            if (_context is null)
+                return;
+
+            var winner = _input.GetWinnerCost();
+            if (winner is null)
+            {
+                _context.LowerBoundSum = _driver._planner.InfiniteCost;
+                return;
+            }
+
+            var lowerBoundSum = _context.LowerBoundSum;
+            if (lowerBoundSum is not null && !lowerBoundSum.IsInfinite)
+            {
+                lowerBoundSum = lowerBoundSum.Minus(_context.LowerBounds![_i]);
+                lowerBoundSum = lowerBoundSum.Plus(winner);
+                _context.LowerBoundSum = lowerBoundSum;
+                _context.LowerBounds![_i] = winner;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Derives traits for an optimized physical node from its inputs' delivered trait sets.
+    /// </summary>
+    sealed class DeriveTrait : IGeneratorTask
+    {
+        readonly TopDownRuleDriver _driver;
+        readonly INode _mExpr;
+        readonly NodeSubset _group;
+
+        public DeriveTrait(TopDownRuleDriver driver, INode mExpr, NodeSubset group)
+        {
+            _driver = driver;
+            _mExpr = mExpr;
+            _group = group;
+        }
+
+        public NodeSubset Group => _group;
+
+        public bool Exploring => false;
+
+        public bool OnProduce(INode node)
+        {
+            _driver._passThroughCache.Add(node);
+            return true;
+        }
+
+        public void Perform()
+        {
+            foreach (var input in _mExpr.Children)
+            {
+                if (((NodeSubset)input).GetWinnerCost() is null)
+                    return;
+            }
+
+            // In case some implementations convert between physical conventions via rules.
+            _driver._tasks.Push(new ApplyRules(_driver, _mExpr, _group, false));
+
+            if (!_driver._passThroughCache.Contains(_mExpr))
+                _driver.ApplyGenerator(this, Derive);
+        }
+
+        void Derive()
+        {
+            if (_mExpr is not IPhysicalNode rel || rel.DeriveMode == DeriveMode.Prohibited)
+                return;
+
+            var mode = rel.DeriveMode;
+            int arity = rel.Children.Length;
+            var inputTraits = new List<IList<TraitSet>>(arity);
+
+            for (int i = 0; i < arity; i++)
+            {
+                int childId = mode == DeriveMode.RightFirst ? arity - i - 1 : i;
+
+                var input = (NodeSubset)rel.Children[childId];
+                var traits = new List<TraitSet>();
+                inputTraits.Add(traits);
+
+                int numSubset = input.Set.Subsets.Count;
+                for (int j = 0; j < numSubset; j++)
+                {
+                    var subset = input.Set.Subsets[j];
+                    if (!subset.IsDelivered || subset.Traits.EqualsSansConvention(rel.Cluster.TraitSet))
+                        continue;
+
+                    if (mode == DeriveMode.Omakase)
+                    {
+                        traits.Add(subset.Traits);
+                    }
+                    else
+                    {
+                        var newRel = rel.Derive(subset.Traits, childId);
+                        if (newRel is not null && !_driver._planner.IsRegistered(newRel))
+                        {
+                            var newInput = newRel.Children[childId];
+                            if (ReferenceEquals(newInput, subset))
+                                subset.DisableEnforcing();
+
+                            _driver._planner.Register(newRel, rel);
+                        }
+                    }
+                }
+
+                if (mode == DeriveMode.LeftFirst || mode == DeriveMode.RightFirst)
+                    break;
+            }
+
+            if (mode == DeriveMode.Omakase)
+            {
+                foreach (var newRel in rel.Derive(inputTraits))
+                    if (!_driver._planner.IsRegistered(newRel))
+                        _driver._planner.Register(newRel, rel);
+            }
+        }
+    }
+
+}

@@ -24,7 +24,7 @@ sealed class LiteralConverter : ConverterRule
     public override INode? Convert(INode node)
     {
         if (node is Literal literal)
-            return new PhysicalLiteral(_physical, literal.Value);
+            return new PhysicalLiteral(literal.Cluster, _physical, literal.Value);
 
         return null;
     }

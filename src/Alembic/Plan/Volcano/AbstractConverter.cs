@@ -24,7 +24,20 @@ public sealed class AbstractConverter : ConverterImpl
     }
 
     /// <inheritdoc />
+    public override INodeWriter ExplainTerms(INodeWriter writer)
+    {
+        base.ExplainTerms(writer);
+        foreach (var trait in Traits)
+            writer.Item(trait.TraitDef.Name, trait);
+
+        return writer;
+    }
+
+    /// <inheritdoc />
     public override ICost ComputeSelfCost(IPlanner planner) => planner.CostFactory.MakeInfiniteCost();
+
+    /// <inheritdoc />
+    public bool IsEnforcer => true;
 
     /// <inheritdoc />
     public override INode Copy(TraitSet traits, ImmutableArray<INode> children)

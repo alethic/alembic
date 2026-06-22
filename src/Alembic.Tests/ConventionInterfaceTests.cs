@@ -24,9 +24,10 @@ public class ConventionInterfaceTests
         // does not — the planner rejects it.
         var marked = new Convention("MARKED", typeof(IMarked));
         var traits = TraitSet.CreateEmpty().Plus(marked);
-        INode bad = new PhysicalSource(traits, "t");
 
         var planner = new VolcanoPlanner();
+        var cluster = new Cluster(planner);
+        INode bad = new PhysicalSource(cluster, traits, "t");
 
         Assert.Throws<InvalidOperationException>(() => planner.SetRoot(bad));
     }
@@ -37,9 +38,11 @@ public class ConventionInterfaceTests
         // The default interface is INode, which every node implements, so registration succeeds.
         var plain = new Convention("PLAIN");
         var traits = TraitSet.CreateEmpty().Plus(plain);
-        INode ok = new PhysicalSource(traits, "t");
 
         var planner = new VolcanoPlanner();
+        var cluster = new Cluster(planner);
+        INode ok = new PhysicalSource(cluster, traits, "t");
+
         planner.SetRoot(ok);
 
         Assert.IsType<PhysicalSource>(planner.FindBestPlan());

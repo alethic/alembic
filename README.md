@@ -32,8 +32,7 @@ Define your node types and a rule, then run the planner:
 
 ```csharp
 var program = HepProgram.Builder()
-    .AddMatchOrder(HepMatchOrder.BottomUp)
-    .AddRule(new MyConverterRule(physicalTraits))
+    .AddRuleCollection(new IRule[] { new MyConverterRule(physicalTraits) })
     .Build();
 
 var planner = new HepPlanner(program);
