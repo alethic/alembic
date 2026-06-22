@@ -62,6 +62,46 @@ public abstract class AbstractNode : INode
         return _digest;
     }
 
+    /// <summary>
+    /// Renders this node and its inputs as an indented plan tree — each line is a node's type, traits,
+    /// and attributes, with inputs nested beneath. For display and debugging.
+    /// </summary>
+    internal string RenderPlan()
+    {
+        var sb = new StringBuilder();
+        Render(this, null, sb, 0);
+        return sb.ToString().TrimEnd();
+    }
+
+    static void Render(INode node, string? label, StringBuilder sb, int depth)
+    {
+        var writer = new RenderWriter();
+        if (node is AbstractNode self)
+            self.Explain(writer);
+
+        sb.Append(' ', depth * 2);
+        if (label is not null)
+            sb.Append(label).Append(": ");
+
+        sb.Append(node.GetType().Name).Append(' ').Append(node.Traits);
+        if (writer.Items.Count > 0)
+        {
+            sb.Append(" (");
+            for (int i = 0; i < writer.Items.Count; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                sb.Append(writer.Items[i].Name).Append('=').Append(writer.Items[i].Value);
+            }
+
+            sb.Append(')');
+        }
+
+        sb.Append('\n');
+
+        foreach (var (name, child) in writer.Inputs)
+            Render(child, name, sb, depth + 1);
+    }
+
     /// <inheritdoc />
     public virtual bool DeepEquals(INode? other)
     {
@@ -194,6 +234,30 @@ public abstract class AbstractNode : INode
 
             sb.Append(')');
             return sb.ToString();
+        }
+
+    }
+
+    /// <summary>
+    /// Collects a node's attributes and inputs for the indented plan rendering.
+    /// </summary>
+    sealed class RenderWriter : INodeWriter
+    {
+
+        public List<(string Name, object? Value)> Items { get; } = new List<(string, object?)>();
+
+        public List<(string Name, INode Child)> Inputs { get; } = new List<(string, INode)>();
+
+        public INodeWriter Item(string name, object? value)
+        {
+            Items.Add((name, value));
+            return this;
+        }
+
+        public INodeWriter Input(string name, INode input)
+        {
+            Inputs.Add((name, input));
+            return this;
         }
 
     }

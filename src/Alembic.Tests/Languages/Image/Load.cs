@@ -6,9 +6,10 @@ using Alembic.Plan;
 namespace Alembic.Tests.Languages.Image;
 
 /// <summary>
-/// Loads an image from a named source. The leaf of an image pipeline.
+/// Loads an image from a named source. The leaf of an image pipeline. Loading reads into host memory,
+/// so it is CPU-only — a GPU pipeline must upload after it.
 /// </summary>
-sealed class Load : AbstractNode
+sealed class Load : AbstractNode, IImageOperation
 {
 
     readonly string _source;
@@ -20,6 +21,8 @@ sealed class Load : AbstractNode
     }
 
     public string Source => _source;
+
+    public bool SupportsGpu => false;
 
     public override ICost ComputeSelfCost(IPlanner planner)
     {

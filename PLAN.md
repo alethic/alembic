@@ -5,6 +5,10 @@ decisions that are already settled (do **not** re-open these without reason), th
 conventions, and the prioritized list of remaining work. A fresh session should be able to
 continue from here without re-deriving the design.
 
+For the conceptual model — what traits mean, logical vs. physical plans, how the planners and cost
+work — see [THEORY.md](THEORY.md). This file is *state and plan*; THEORY.md is *the durable mental
+model*.
+
 ---
 
 ## 1. What Alembic is
@@ -37,7 +41,7 @@ are features for downstream users.
 
 - Target framework `net8.0` (the chosen floor; the machine SDK is .NET 10, `global.json` rolls
   forward).
-- `dotnet test src/Alembic.Tests/Alembic.Tests.csproj` → **39/39 passing**.
+- `dotnet test src/Alembic.Tests/Alembic.Tests.csproj` → **41/41 passing**.
 - `dotnet build Alembic.sln` → clean (0 warnings, 0 errors).
 - The dist pipeline works: `Alembic.dist.msbuildproj` produces `dist/nuget/*.nupkg` (+ `.snupkg`)
   and a published `dist/tests/...` bundle. **Run dist/msbuild via PowerShell, not Git Bash** —
@@ -54,6 +58,8 @@ src/Alembic/
     INodeWriter.cs      collects a node's explain terms (attrs + inputs) — the RelWriter analog
     INodeDigest.cs      a node's structural digest (RelDigest analog); AbstractNode keeps an inner one (cached
                         hash, Done() renders the string); NodeDigest is the standalone default impl
+    NodePlan.cs         INode.ToPlanString() — renders a plan as an indented tree (type/traits/attrs,
+                        inputs nested) from the same Explain terms; for display/debugging
     SingleNode.cs       single-child AbstractNode (the SingleRel analog); lists its input as a term
     BiNode.cs           two-child AbstractNode with Left/Right (the BiRel analog); lists both inputs
     Convert/            (the rel.convert analog)
@@ -113,13 +119,16 @@ src/Alembic/
       ExpandConversionRule.cs  turns an AbstractConverter into real converters (auto-registered)
 
 src/Alembic.Tests/                 (one top-level type per file)
-  RelationalLoweringTests.cs   the relational lowering suite (plain Alembic.Tests namespace — tests do
-                           NOT live in the Languages namespace)
-  ExpressionLoweringTests.cs   the arithmetic-expression lowering suite (lower, fold, fuse, enforce)
-  VolcanoPlanningTests.cs   cost-based selection + lowering, an unsatisfiable case, non-convention trait
-                           enforcement (sort), SetTopDownOpt, and listener events
-  ExpressionVolcanoTests.cs   the binary-expression (BiNode) language lowered cost-based
-  ImagePlanningTests.cs   the image-processor language: cost-based CPU/GPU convention selection
+  Holistic/                end-to-end tests that drive a planner over a near-real implementation (a test
+                           language) to produce a plan; namespace Alembic.Tests.Holistic. Each prints
+                           its result via INode.ToPlanString() to the test output.
+    RelationalLoweringTests.cs   the relational lowering suite (HEP: lower, simplify, push down, enforce)
+    ExpressionLoweringTests.cs   the arithmetic-expression lowering suite (lower, fold, fuse, enforce)
+    VolcanoPlanningTests.cs   cost-based selection + lowering, an unsatisfiable case, non-convention trait
+                             enforcement (sort), SetTopDownOpt, and listener events
+    ExpressionVolcanoTests.cs   the binary-expression (BiNode) language lowered cost-based
+    ImagePlanningTests.cs   the image-processor language: cost-based CPU/GPU selection, crossing and back
+  (engine-feature / API tests, plain Alembic.Tests namespace:)
   ClusterTests.cs   Cluster.TraitSet / TraitSetOf
   ConventionInterfaceTests.cs   getInterface enforcement (a node must implement its convention's interface)
   CompositeTraitTests.cs + SortKey.cs + SortKeyTraitDef.cs   multi-valued dimensions via CompositeTrait
@@ -137,11 +146,14 @@ src/Alembic.Tests/                 (one top-level type per file)
                            SortEnforcer, a converter over the non-convention sortedness trait).
                            RelationalPhysical overrides Convention.Register to contribute its converters.
   Languages/Image/         an image-processing language exercising cost-based convention choice. One
-                           node class per operation (Load/Blur/Grayscale/Threshold) with the convention
-                           in the trait; Logical/CPU/GPU conventions (GPU ops cheap, CPU dear);
-                           Download/Upload transfer enforcers (ConverterImpl) with a transfer cost; Rules/
-                           (LowerToCpu/LowerToGpu + DownloadRule/UploadRule). The planner picks the
-                           all-GPU pipeline and downloads once when the result is wanted on the CPU.
+                           node class per operation, convention in the trait; Logical/CPU/GPU conventions
+                           (GPU ops cheap, CPU dear). Load and Inpaint are CPU-only (IImageOperation.
+                           SupportsGpu=false), so the planner must transfer around them; Blur/Grayscale/
+                           Threshold run on either. Download/Upload transfer enforcers (ConverterImpl)
+                           with a transfer cost; Rules/ (LowerToCpu/LowerToGpu + DownloadRule/UploadRule).
+                           ImagePlanningTests drives plans that cross CPU↔GPU and back (CPU→GPU→CPU,
+                           CPU→GPU→CPU→GPU→CPU), keep GPU output transfer-free, and decline to cross when
+                           a lone op isn't worth the transfer.
   Languages/Expression/    the toy arithmetic-expression language (a binary expression tree). Logical/
                            (Literal, Variable, Add/Multiply as BiNode) and Physical/ (counterparts plus
                            PhysicalFma — a 3-child fused multiply-add) models. Rules/ (converters +

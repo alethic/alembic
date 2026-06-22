@@ -9,11 +9,19 @@ using Alembic.Tests.Languages.Expression.Physical;
 using Alembic.Tests.Languages.Expression.Rules;
 
 using Xunit;
+using Xunit.Abstractions;
 
-namespace Alembic.Tests;
+namespace Alembic.Tests.Holistic;
 
 public class ExpressionLoweringTests
 {
+
+    readonly ITestOutputHelper _output;
+
+    public ExpressionLoweringTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
 
     [Fact]
     public void Lowers_a_sum_of_variables()
@@ -144,19 +152,25 @@ public class ExpressionLoweringTests
         return [new LiteralConverter(physical), new VariableConverter(physical), new AddConverter(physical), new MultiplyConverter(physical)];
     }
 
-    static INode Lower(INode root, TraitSet required, params IRule[] rules)
+    INode Lower(INode root, TraitSet required, params IRule[] rules)
     {
         var planner = BuildPlanner(rules);
         planner.SetRoot(root);
         planner.ChangeTraits(root, required);
-        return planner.FindBestPlan();
+        var best = planner.FindBestPlan();
+        _output.WriteLine("--- lowered ---");
+        _output.WriteLine(best.ToPlanString());
+        return best;
     }
 
-    static INode Simplify(INode root, params IRule[] rules)
+    INode Simplify(INode root, params IRule[] rules)
     {
         var planner = BuildPlanner(rules);
         planner.SetRoot(root);
-        return planner.FindBestPlan();
+        var best = planner.FindBestPlan();
+        _output.WriteLine("--- simplified ---");
+        _output.WriteLine(best.ToPlanString());
+        return best;
     }
 
     static HepPlanner BuildPlanner(IRule[] rules)

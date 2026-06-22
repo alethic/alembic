@@ -6,11 +6,19 @@ using Alembic.Tests.Languages.Relational;
 using Alembic.Tests.Languages.Relational.Logical;
 
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Alembic.Tests;
 
 public class TraitPlannerTests
 {
+
+    readonly ITestOutputHelper _output;
+
+    public TraitPlannerTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
 
     [Fact]
     public void A_new_trait_dimension_flows_through_the_planner()
@@ -28,6 +36,7 @@ public class TraitPlannerTests
         var planner = new HepPlanner(program);
         planner.SetRoot(root);
         var best = planner.FindBestPlan();
+        _output.WriteLine(best.ToPlanString());
 
         // The rule read and wrote the new dimension on every node, and the planner preserved both
         // dimensions through Copy. Convention is untouched.

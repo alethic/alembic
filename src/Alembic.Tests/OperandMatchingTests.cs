@@ -6,11 +6,19 @@ using Alembic.Tests.Languages.Relational;
 using Alembic.Tests.Languages.Relational.Logical;
 
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Alembic.Tests;
 
 public class OperandMatchingTests
 {
+
+    readonly ITestOutputHelper _output;
+
+    public OperandMatchingTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
 
     [Fact]
     public void Operand_rule_matches_only_the_nested_pattern()
@@ -31,6 +39,7 @@ public class OperandMatchingTests
         var planner = new HepPlanner(program);
         planner.SetRoot(root);
         var best = Assert.IsType<LogicalFilter>(planner.FindBestPlan());
+        _output.WriteLine(best.ToPlanString());
 
         // Outer filter's child is a filter, not a source — operand does not match, so it is untouched.
         Assert.Equal("outer", best.Predicate);

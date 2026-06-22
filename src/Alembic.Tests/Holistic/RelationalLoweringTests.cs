@@ -9,11 +9,19 @@ using Alembic.Tests.Languages.Relational.Physical;
 using Alembic.Tests.Languages.Relational.Rules;
 
 using Xunit;
+using Xunit.Abstractions;
 
-namespace Alembic.Tests;
+namespace Alembic.Tests.Holistic;
 
 public class RelationalLoweringTests
 {
+
+    readonly ITestOutputHelper _output;
+
+    public RelationalLoweringTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
 
     [Fact]
     public void Lowers_filter_over_source()
@@ -143,19 +151,25 @@ public class RelationalLoweringTests
         return [new SourceConverter(physical), new FilterConverter(physical), new ParameterConverter(physical)];
     }
 
-    static INode Lower(INode root, TraitSet required, params IRule[] rules)
+    INode Lower(INode root, TraitSet required, params IRule[] rules)
     {
         var planner = BuildPlanner(rules);
         planner.SetRoot(root);
         planner.ChangeTraits(root, required);
-        return planner.FindBestPlan();
+        var best = planner.FindBestPlan();
+        _output.WriteLine("--- lowered ---");
+        _output.WriteLine(best.ToPlanString());
+        return best;
     }
 
-    static INode Simplify(INode root, params IRule[] rules)
+    INode Simplify(INode root, params IRule[] rules)
     {
         var planner = BuildPlanner(rules);
         planner.SetRoot(root);
-        return planner.FindBestPlan();
+        var best = planner.FindBestPlan();
+        _output.WriteLine("--- simplified ---");
+        _output.WriteLine(best.ToPlanString());
+        return best;
     }
 
     static HepPlanner BuildPlanner(IRule[] rules)

@@ -18,6 +18,10 @@ sealed class LowerToGpu : ConverterRule
 
     public override INode? Convert(INode node)
     {
+        // A CPU-only operation has no GPU form; the planner reaches its result on the GPU by uploading.
+        if (node is IImageOperation op && !op.SupportsGpu)
+            return null;
+
         return node.Copy(node.Traits.Replace(ConventionTraitDef.Instance, ImageConventions.Gpu), node.Children);
     }
 

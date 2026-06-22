@@ -8,7 +8,7 @@ namespace Alembic.Tests.Languages.Image;
 /// whatever convention it currently carries, so the same operation is cheap on the GPU and dear on the
 /// CPU.
 /// </summary>
-abstract class ImageOp : SingleNode
+abstract class ImageOp : SingleNode, IImageOperation
 {
 
     protected ImageOp(TraitSet traits, INode input)
@@ -18,6 +18,11 @@ abstract class ImageOp : SingleNode
     }
 
     public INode Input => Child;
+
+    /// <summary>
+    /// Whether this operation has a GPU implementation. Most do; CPU-only operations override this.
+    /// </summary>
+    public virtual bool SupportsGpu => true;
 
     public override ICost ComputeSelfCost(IPlanner planner)
     {

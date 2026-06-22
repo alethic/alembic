@@ -8,11 +8,19 @@ using Alembic.Tests.Languages.Relational.Physical;
 using Alembic.Tests.Languages.Relational.Rules;
 
 using Xunit;
+using Xunit.Abstractions;
 
-namespace Alembic.Tests;
+namespace Alembic.Tests.Holistic;
 
 public class VolcanoPlanningTests
 {
+
+    readonly ITestOutputHelper _output;
+
+    public VolcanoPlanningTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
 
     [Fact]
     public void Returns_the_only_plan_when_no_rule_applies()
@@ -23,6 +31,7 @@ public class VolcanoPlanningTests
         var planner = new VolcanoPlanner();
         planner.SetRoot(root);
         var best = planner.FindBestPlan();
+        _output.WriteLine(best.ToPlanString());
 
         var filter = Assert.IsType<PhysicalFilter>(best);
         Assert.Equal("x > 5", filter.Predicate);
@@ -41,6 +50,7 @@ public class VolcanoPlanningTests
         planner.AddRule(new PushFilterIntoSource());
         planner.SetRoot(root);
         var best = planner.FindBestPlan();
+        _output.WriteLine(best.ToPlanString());
 
         var scan = Assert.IsType<PhysicalFilteredSource>(best);
         Assert.Equal("t", scan.Table);
@@ -59,6 +69,7 @@ public class VolcanoPlanningTests
         planner.SetRoot(root);
         planner.ChangeTraits(root, physical);
         var best = planner.FindBestPlan();
+        _output.WriteLine(best.ToPlanString());
 
         var filter = Assert.IsType<PhysicalFilter>(best);
         Assert.Equal("t", Assert.IsType<PhysicalSource>(filter.Input).Table);
@@ -77,6 +88,7 @@ public class VolcanoPlanningTests
         planner.SetRoot(root);
         planner.ChangeTraits(root, physical);
         var best = planner.FindBestPlan();
+        _output.WriteLine(best.ToPlanString());
 
         var scan = Assert.IsType<PhysicalFilteredSource>(best);
         Assert.Equal("t", scan.Table);
@@ -117,6 +129,7 @@ public class VolcanoPlanningTests
         planner.SetRoot(root);
         planner.ChangeTraits(root, sorted);
         var best = planner.FindBestPlan();
+        _output.WriteLine(best.ToPlanString());
 
         var sort = Assert.IsType<PhysicalSort>(best);
         Assert.Equal("t", Assert.IsType<PhysicalSource>(sort.Input).Table);

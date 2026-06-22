@@ -7,11 +7,19 @@ using Alembic.Tests.Languages.Expression.Logical;
 using Alembic.Tests.Languages.Expression.Physical;
 
 using Xunit;
+using Xunit.Abstractions;
 
-namespace Alembic.Tests;
+namespace Alembic.Tests.Holistic;
 
 public class ExpressionVolcanoTests
 {
+
+    readonly ITestOutputHelper _output;
+
+    public ExpressionVolcanoTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
 
     [Fact]
     public void Lowers_a_binary_expression_tree_cost_based()
@@ -27,6 +35,7 @@ public class ExpressionVolcanoTests
         planner.SetRoot(root);
         planner.ChangeTraits(root, physical);
         var best = planner.FindBestPlan();
+        _output.WriteLine(best.ToPlanString());
 
         var add = Assert.IsType<PhysicalAdd>(best);
         Assert.IsType<PhysicalMultiply>(add.Left);
