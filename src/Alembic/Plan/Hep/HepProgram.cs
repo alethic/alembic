@@ -5,8 +5,8 @@ using Alembic.Plan.Rules;
 namespace Alembic.Plan.Hep;
 
 /// <summary>
-/// The set of rules a <see cref="HepPlanner"/> applies, plus the order and a limit on how many
-/// passes it makes.
+/// The set of rules a heuristic planner applies, plus the order and a limit on how many passes it
+/// makes.
 /// </summary>
 public sealed class HepProgram
 {

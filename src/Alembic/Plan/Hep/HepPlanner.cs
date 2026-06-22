@@ -7,45 +7,63 @@ using Alembic.Plan.Rules;
 namespace Alembic.Plan.Hep;
 
 /// <summary>
-/// A heuristic planner: it applies the program's rules to a single tree, in the configured order,
-/// re-passing until no rule changes anything. Deterministic and program-driven.
+/// A heuristic planner: it applies its rules to a single tree, in the configured order, re-passing
+/// until no rule changes anything. Deterministic and program-driven.
 /// </summary>
 /// <remarks>
-/// This milestone rewrites the immutable tree directly, sharing untouched subtrees. A shared-DAG
-/// deduplication (one vertex per equivalent subtree) is a planned optimization; the identity
-/// machinery it needs — <see cref="INode.DeepEquals"/> / <see cref="INode.DeepHashCode"/> — is
-/// already in place.
+/// It rewrites the immutable tree directly, sharing untouched subtrees by reference. A shared-DAG
+/// deduplication is a planned optimization; the identity machinery it needs — <see cref="INode.DeepEquals"/>
+/// / <see cref="INode.DeepHashCode"/> — is already in place.
 /// </remarks>
-public sealed class HepPlanner : IPlanner
+public sealed class HepPlanner : AbstractPlanner
 {
 
     const int DefaultPassLimit = 1024;
 
-    readonly HepProgram _program;
+    readonly HepMatchOrder _matchOrder;
+    readonly int _matchLimit;
     INode? _root;
+    TraitSet? _requestedRootTraits;
 
     /// <summary>
-    /// Creates a planner driven by the given program.
+    /// Creates a planner seeded with the program's rules, order, and limit. More rules can be added
+    /// with <see cref="AbstractPlanner.AddRule"/> (e.g. by a convention's <see cref="ITrait.Register"/>).
     /// </summary>
     public HepPlanner(HepProgram program)
     {
-        _program = program;
+        _matchOrder = program.MatchOrder;
+        _matchLimit = program.MatchLimit;
+
+        foreach (var rule in program.Rules)
+            AddRule(rule);
     }
 
     /// <inheritdoc />
-    public void SetRoot(INode node)
+    public override void SetRoot(INode node)
     {
         _root = node;
     }
 
+    /// <summary>
+    /// Records the traits the final plan must carry. Like the heuristic planner it models, only the
+    /// root's request is remembered; it is enforced when <see cref="FindBestPlan"/> finishes.
+    /// </summary>
+    public override INode ChangeTraits(INode node, TraitSet toTraits)
+    {
+        if (ReferenceEquals(node, _root))
+            _requestedRootTraits = toTraits;
+
+        return node;
+    }
+
     /// <inheritdoc />
-    public INode FindBestPlan()
+    public override INode FindBestPlan()
     {
         if (_root is null)
             throw new InvalidOperationException("No root has been set.");
 
         var current = _root;
-        var limit = _program.MatchLimit == int.MaxValue ? DefaultPassLimit : _program.MatchLimit;
+        var limit = _matchLimit == int.MaxValue ? DefaultPassLimit : _matchLimit;
 
         for (int pass = 0; pass < limit; pass++)
         {
@@ -57,12 +75,30 @@ public sealed class HepPlanner : IPlanner
         }
 
         _root = current;
+
+        if (_requestedRootTraits is not null)
+            EnsureSatisfies(current, _requestedRootTraits);
+
         return current;
+    }
+
+    /// <summary>
+    /// Verifies that every node in the plan carries the requested traits. Because conversions rewrite
+    /// nodes in place rather than wrapping them, a complete plan is uniform throughout, so a single
+    /// surviving node that falls short means no rule chain could finish the job.
+    /// </summary>
+    static void EnsureSatisfies(INode node, TraitSet required)
+    {
+        if (!node.Traits.Satisfies(required))
+            throw new CannotPlanException($"No plan satisfies the requested traits; '{node.GetType().Name}' remained in convention '{node.Convention}'.");
+
+        foreach (var child in node.Children)
+            EnsureSatisfies(child, required);
     }
 
     INode Rewrite(INode node)
     {
-        if (_program.MatchOrder == HepMatchOrder.TopDown)
+        if (_matchOrder == HepMatchOrder.TopDown)
         {
             node = ApplyRules(node);
             node = RewriteChildren(node);
@@ -98,56 +134,20 @@ public sealed class HepPlanner : IPlanner
 
     INode ApplyRules(INode node)
     {
-        foreach (var rule in _program.Rules)
+        foreach (var rule in Rules)
         {
-            if (!TryMatch(rule, node, out var call))
+            var bound = OperandMatcher.Match(rule.Operand, node);
+            if (bound is null)
                 continue;
 
-            if (!rule.Matches(call))
-                continue;
-
+            var call = new HepRuleCall(bound.Value);
             rule.OnMatch(call);
 
-            if (call.Result is not null && !call.Result.DeepEquals(node))
+            if (call.HasResult && !call.Result.DeepEquals(node))
                 return call.Result;
         }
 
         return node;
-    }
-
-    static bool TryMatch(IRule rule, INode node, out RuleCall call)
-    {
-        var bound = ImmutableArray.CreateBuilder<INode>();
-        if (MatchOperand(rule.Operand, node, bound))
-        {
-            call = new RuleCall(bound.ToImmutable());
-            return true;
-        }
-
-        call = null!;
-        return false;
-    }
-
-    static bool MatchOperand(Operand operand, INode node, ImmutableArray<INode>.Builder bound)
-    {
-        if (!operand.Matches(node))
-            return false;
-
-        bound.Add(node);
-
-        if (operand.Children.IsEmpty)
-            return true;
-
-        if (node.Children.Length != operand.Children.Length)
-            return false;
-
-        for (int i = 0; i < operand.Children.Length; i++)
-        {
-            if (!MatchOperand(operand.Children[i], node.Children[i], bound))
-                return false;
-        }
-
-        return true;
     }
 
 }

@@ -1,30 +1,33 @@
 using Alembic.Algebra;
-using Alembic.Plan.Traits;
 
 namespace Alembic.Plan.Rules;
 
 /// <summary>
-/// A rule that lowers a node from one convention to another. The author supplies
-/// <see cref="In"/>, <see cref="Out"/>, the <see cref="IRule.Operand"/> and <see cref="Convert"/>;
-/// the match plumbing is provided here as a mixin rather than a base class.
+/// A rule that converts a node from one trait value to another — most commonly a convention, but any
+/// trait (sortedness, distribution, …). The author supplies <see cref="Source"/>, <see cref="Target"/>,
+/// and <see cref="Convert"/>; the operand (matching any node carrying the <see cref="Source"/> trait)
+/// and the match action are provided here as a mixin. <see cref="Convert"/> returns the converted node,
+/// or null to decline (when it does not handle this node's kind).
 /// </summary>
 public interface IConverterRule : IRule
 {
 
     /// <summary>
-    /// The convention this rule converts from.
+    /// The trait this rule converts from.
     /// </summary>
-    Convention In { get; }
+    ITrait Source { get; }
 
     /// <summary>
-    /// The convention this rule converts to.
+    /// The trait this rule converts to.
     /// </summary>
-    Convention Out { get; }
+    ITrait Target { get; }
 
     /// <summary>
-    /// Converts a matched node to <see cref="Out"/>, or returns null to decline.
+    /// Converts the node from <see cref="Source"/> to <see cref="Target"/>, or returns null to decline.
     /// </summary>
     INode? Convert(INode node);
+
+    Operand IRule.Operand => new Operand(node => node.Traits.Get(Source.Def).Equals(Source));
 
     void IRule.OnMatch(RuleCall call)
     {

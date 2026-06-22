@@ -20,13 +20,24 @@ conventions, rules, planner) but strips the relational parts. **Do not mention C
 the source code** (comments or XML docs). The README may mention it as a derivation; the code may
 not.
 
+**Design philosophy (important):** the goal is to give library *users* the same capabilities Calcite
+gives — so **replicate Calcite's design surface** (conventions that register rules, a cluster, rule
+calls subclassed per planner, single-child node bases, visitors, etc.), adapting only where Calcite is
+relational-algebra-specific or where our generic-over-`TNode` engine requires a different shape. Do
+**not** omit a Calcite design element merely because the current milestone doesn't need it yet — these
+are features for downstream users.
+
+> **Node model (executive decision):** the engine operates on **`INode` directly**, monomorphically,
+> exactly as Calcite operates on `RelNode`. An earlier generic-over-store design (`INodeStore<TNode>`)
+> was explored and **reverted** — `INode` *is* the node model; there is no store abstraction.
+
 ---
 
 ## 2. Current state (what is built and working)
 
 - Target framework `net8.0` (the chosen floor; the machine SDK is .NET 10, `global.json` rolls
   forward).
-- `dotnet test src/Alembic.Tests/Alembic.Tests.csproj` → **2/2 passing**.
+- `dotnet test src/Alembic.Tests/Alembic.Tests.csproj` → **39/39 passing**.
 - `dotnet build Alembic.sln` → clean (0 warnings, 0 errors).
 - The dist pipeline works: `Alembic.dist.msbuildproj` produces `dist/nuget/*.nupkg` (+ `.snupkg`)
   and a published `dist/tests/...` bundle. **Run dist/msbuild via PowerShell, not Git Bash** —
@@ -37,47 +48,155 @@ not.
 ```
 src/Alembic/
   Algebra/
-    INode.cs            interface: Traits, Children, Copy, DeepEquals, DeepHashCode
-                        + DIMs: Convention, IsLeaf, WithChild
-    NodeBase.cs         abstract base: one `Signature` override drives DeepEquals/DeepHashCode,
-                        caches the hash (the AbstractRelNode-style pattern)
-  Plan/
-    IPlanner.cs         SetRoot(node), FindBestPlan()
-    Traits/
-      ITrait.cs         Def; DIM Satisfies (defaults to equality)
-      ITraitDef.cs      Name, Default (non-generic, for the registry)
-      TraitDef.cs       abstract TraitDef<TTrait> : ITraitDef
-      Convention.cs     a trait; equal by name; Convention.None sentinel
-      ConventionTraitDef.cs  singleton def; always registered first (ordinal 0)
-      TraitContext.cs   owns ordinals + the TraitSet intern cache; exposes Empty
-      TraitSet.cs       interned, positional ImmutableArray<ITrait>; Get/Replace/Convention
+    INode.cs            interface (THE node model): Traits, Children, Copy, DeepEquals, DeepHashCode
+                        + DIMs: Convention, IsLeaf, WithChild, ComputeSelfCost (RelNode.computeSelfCost), GetDigest
+    AbstractNode.cs     abstract base: Explain(INodeWriter) lists terms; drives DeepEquals/DeepHashCode; keeps a digest
+    INodeWriter.cs      collects a node's explain terms (attrs + inputs) — the RelWriter analog
+    INodeDigest.cs      a node's structural digest (RelDigest analog); AbstractNode keeps an inner one (cached
+                        hash, Done() renders the string); NodeDigest is the standalone default impl
+    SingleNode.cs       single-child AbstractNode (the SingleRel analog); lists its input as a term
+    BiNode.cs           two-child AbstractNode with Left/Right (the BiRel analog); lists both inputs
+    Convert/            (the rel.convert analog)
+      IConverter.cs     a node that converts one trait of its input (Converter analog): InputTraits/TraitDef/Input
+      ConverterImpl.cs  abstract single-input converter base (ConverterImpl analog)
+  Plan/                 (traits live here, flat, mirroring Calcite's plan package)
+    IPlanner.cs         IPlanner: AddTraitDef / TraitDefs / EmptyTraitSet / CostFactory / AddRule /
+                        SetRoot / ChangeTraits / FindBestPlan — the RelOptPlanner analog
+    CannotPlanException.cs  thrown by FindBestPlan when the requested output traits can't be met
+    AbstractPlanner.cs  AbstractPlanner: shared trait-def registry + EmptyTraitSet + rules + cost factory
+                        — the AbstractRelOptPlanner analog
+    Cluster.cs          Cluster: session environment (wraps the planner) — the RelOptCluster analog
+    ICost.cs            ICost: IsInfinite / IsLessThanOrEqual / IsLessThan / Plus (the RelOptCost analog)
+    ICostFactory.cs     ICostFactory: MakeCost(cpu,io) + zero/infinite/huge/tiny (RelOptCostFactory analog)
+    Cost.cs             concrete scalar cost + factory (the RelOptCostImpl analog)
+    ITrait.cs           Def; DIM Satisfies; DIM Register(planner) — the RelTrait.register analog
+    IMultipleTrait.cs   a trait a node can have several of at once (RelMultipleTrait analog)
+    CompositeTrait.cs   a trait that bundles several same-dimension traits (RelCompositeTrait analog)
+    INodeImplementor.cs marker for a convention's plan-implementation callback (RelImplementor analog)
+    ITraitDef.cs        Name, Default (registered on the planner)
+    TraitDef.cs         abstract TraitDef<TTrait> : ITraitDef
+    IConvention.cs      the Convention interface: Name, Interface (getInterface), CanConvertConvention,
+                        UseAbstractConvertersForConversion, Enforce — the Convention (interface) analog
+    Convention.cs       the default IConvention impl (Convention.Impl analog): equal by name, unsealed,
+                        Convention.None sentinel, overrides ITrait.Register (Convention.register)
+    ConventionTraitDef.cs  singleton def; the always-present convention dimension
+    TraitSet.cs         interned, ordered ImmutableArray<ITrait>; CreateEmpty / Plus / Replace (single or
+                        a list → CompositeTrait) / Get / GetList / Convention / Satisfies; linear FindIndex;
+                        inner intern Cache (Calcite's RelTraitSet)
+    IPlannerListener.cs planning-event listener + nested events (RelOptListener analog)
     Rules/
-      IRule.cs          Operand, OnMatch; DIM Matches (defaults true)
-      Operand.cs        node-type + optional predicate + child operands; Operand.Of<T>(...)
-      RuleCall.cs       bound nodes (pre-order), Node<T>(i), Transform(equiv), Result
-      IConverterRule.cs mixin interface: supply In/Out/Operand/Convert, OnMatch provided via DIM
+      IRule.cs          IRule: Operand + OnMatch — every rule has an operand (Calcite's RelOptRule)
+      RuleCall.cs       RuleCall: abstract base — operand-bound Nodes + Node(i) (the rel(i) accessor), Transform
+      Operand.cs        Operand: predicate + child operands; Of<TNode>(...)
+      OperandMatcher.cs static matcher; Match returns the operand-bound nodes (or Matches: bool)
+      IConverterRule.cs mixin: Source/Target (any ITrait, not just a convention); Convert(node) returns
+                        null to decline; operand matches the Source trait, OnMatch = Convert (DIMs)
+      ConverterRule.cs  abstract base: holds Source/Target, leaves Convert abstract
     Hep/
       HepMatchOrder.cs  Arbitrary | BottomUp | TopDown | DepthFirst
-      HepProgram.cs     rules + match order + match limit; Builder()
+      HepProgram.cs     HepProgram: rules + match order + match limit; Builder()
       HepProgramBuilder.cs  fluent: AddRule / AddMatchOrder / AddMatchLimit / Build
-      HepPlanner.cs     the planner (see note below)
+      HepPlanner.cs     HepPlanner : AbstractPlanner (see note below)
+      HepRuleCall.cs    HepRuleCall : RuleCall — the HEP rule-call
+    Volcano/            the cost-based planner
+      NodeSet.cs        NodeSet: an equivalence set, partitioned into subsets (the RelSet analog)
+      NodeSubset.cs     NodeSubset: members sharing a trait set; tracks Best/BestCost (the RelSubset analog)
+      VolcanoCost.cs    VolcanoCost: cpu/io cost (compare on cpu) + factory; the planner default
+      VolcanoPlanner.cs VolcanoPlanner : AbstractPlanner — register/fire/propagate/extract; SetTopDownOpt (see §4)
+      VolcanoRuleCall.cs  VolcanoRuleCall : RuleCall — Rule + OnMatch + Transform (registers an equivalent)
+      VolcanoRuleMatch.cs  a queued match (rule + bound nodes), deduplicated (the VolcanoRuleMatch analog)
+      DeferringRuleCall.cs  fires a rule by deferring each match to the queue (the DeferringRuleCall analog)
+      RuleQueue.cs      RuleQueue: pending matches, duplicate-dropping
+      IRuleDriver.cs / IterativeRuleDriver.cs  the RuleDriver abstraction + the exhaustive iterative driver
+      AbstractConverter.cs  ConverterImpl-derived infinite-cost enforcer demanding its input in target traits
+                            (kept in the Volcano namespace; inherits the convert-package base)
+      ExpandConversionRule.cs  turns an AbstractConverter into real converters (auto-registered)
 
-src/Alembic.Tests/
-  Fixtures.cs           toy Logical/Physical conventions, 4 node types, 2 converter rules
-  LoweringTests.cs      bottom-up logical->physical lowering; trait-set interning
+src/Alembic.Tests/                 (one top-level type per file)
+  RelationalLoweringTests.cs   the relational lowering suite (plain Alembic.Tests namespace — tests do
+                           NOT live in the Languages namespace)
+  ExpressionLoweringTests.cs   the arithmetic-expression lowering suite (lower, fold, fuse, enforce)
+  VolcanoPlanningTests.cs   cost-based selection + lowering, an unsatisfiable case, non-convention trait
+                           enforcement (sort), SetTopDownOpt, and listener events
+  ExpressionVolcanoTests.cs   the binary-expression (BiNode) language lowered cost-based
+  ImagePlanningTests.cs   the image-processor language: cost-based CPU/GPU convention selection
+  ClusterTests.cs   Cluster.TraitSet / TraitSetOf
+  ConventionInterfaceTests.cs   getInterface enforcement (a node must implement its convention's interface)
+  CompositeTraitTests.cs + SortKey.cs + SortKeyTraitDef.cs   multi-valued dimensions via CompositeTrait
+  OperandMatchingTests.cs + TagFilterOverSource.cs   operand rule + nested operand matching
+  TraitDimensionTests.cs + Sortedness.cs + SortednessTraitDef.cs   a second trait dimension with
+                           a real Satisfies partial order
+  TraitPlannerTests.cs + MarkSorted.cs   a new trait dimension read/written by a rule, preserved
+                           through planning
+  Languages/Relational/    the toy relational language (namespace Alembic.Tests.Languages.Relational),
+                           nodes and rules in separate namespaces/dirs, logical/physical models in
+                           separate namespaces. Logical/ and Physical/ nodes (Source/Filter/Parameter;
+                           filters extend SingleNode; plus PhysicalFilteredSource — a push-down
+                           realization — and PhysicalSort, a sortedness enforcer), Rules/ (converters +
+                           RemoveTrueFilter/MergeFilters simplifications + PushFilterIntoSource +
+                           SortEnforcer, a converter over the non-convention sortedness trait).
+                           RelationalPhysical overrides Convention.Register to contribute its converters.
+  Languages/Image/         an image-processing language exercising cost-based convention choice. One
+                           node class per operation (Load/Blur/Grayscale/Threshold) with the convention
+                           in the trait; Logical/CPU/GPU conventions (GPU ops cheap, CPU dear);
+                           Download/Upload transfer enforcers (ConverterImpl) with a transfer cost; Rules/
+                           (LowerToCpu/LowerToGpu + DownloadRule/UploadRule). The planner picks the
+                           all-GPU pipeline and downloads once when the result is wanted on the CPU.
+  Languages/Expression/    the toy arithmetic-expression language (a binary expression tree). Logical/
+                           (Literal, Variable, Add/Multiply as BiNode) and Physical/ (counterparts plus
+                           PhysicalFma — a 3-child fused multiply-add) models. Rules/ (converters +
+                           FoldAdd/FoldMultiply constant folding + FuseMultiplyAdd, a physical fusion
+                           push-down). ExpressionPhysical contributes its converters via Convention.Register.
 ```
 
-### How the current HEP planner works (important)
+Both languages have leaf/parameter nodes, simplification rules that collapse static operations
+(filter merging / true-filter removal; constant folding), and a push-down rule (filter-into-source;
+multiply-add fusion). They are two independent proofs that the same engine drives a relational-shaped
+model and a binary-expression-shaped one.
 
-`HepPlanner` currently rewrites the **immutable tree directly** — it does NOT build the shared
-vertex DAG. Per pass it walks the tree in match order (bottom-up rewrites children first, then
-applies rules to the rebuilt parent), and re-passes until `DeepEquals` reports a fixed point (or
-the pass limit, default 1024). When a child changes, the parent is rebuilt with
-`node.Copy(node.Traits, newChildren)` (mechanical spine reconstruction, not rule-driven creation).
-`ApplyRules` applies at most one transform per node per pass; cascades are handled by re-passing.
+### How the HEP planner works (important)
+
+`HepPlanner` rewrites the **immutable tree directly** — it does NOT build the shared vertex DAG. Per
+pass it walks the tree in match order (bottom-up rewrites children first, then applies rules to the
+rebuilt parent), and re-passes until `INode.DeepEquals` reports a fixed point (or the pass limit,
+default 1024). When a child changes (detected by `ReferenceEquals`), the parent is rebuilt with
+`node.Copy(node.Traits, children)` (mechanical spine reconstruction, not rule-driven creation).
+`ApplyRules` matches each rule's operand (`OperandMatcher.Matches(rule.Operand, node)`) then calls
+`OnMatch`, applying at most one transform per node per pass; cascades are handled by re-passing.
+
+**Required output traits.** `ChangeTraits(root, toTraits)` records the traits the final plan must
+carry (only the root's request is remembered, as in the heuristic planner it models). After the
+rewrite reaches a fixed point, `FindBestPlan` verifies that **every** node satisfies the request
+(`TraitSet.Satisfies`) and throws `CannotPlanException` otherwise. Because conversions rewrite nodes
+in place rather than wrapping them in converter nodes, a complete plan is convention-uniform, so a
+single surviving node that falls short means no rule chain could finish the lowering. (This is the
+completeness guarantee the tests previously asserted by hand with an `AssertAllPhysical` walk.)
 
 This is correct but unoptimized. The shared-DAG dedup is the first roadmap item; the identity
 machinery it needs (`DeepEquals`/`DeepHashCode`) is already in place.
+
+### How the Volcano planner works (important)
+
+`VolcanoPlanner` keeps the shared graph HEP does not. **Registration** (`SetRoot` → `RegisterImpl`)
+replaces each node's children with their `NodeSubset` (via `OnRegister`), dedups by digest, places the
+node in a `NodeSet`, costs it (`PropagateCostImprovements`), and **fires rules** — a `DeferringRuleCall`
+defers each operand match as a `VolcanoRuleMatch` added to the `RuleQueue`. `FindBestPlan` hands the
+queue to the `IRuleDriver` (`IterativeRuleDriver`), which pops each match and applies it; the match's
+`Transform` registers the equivalent into the matched node's set. Each subset remembers its cheapest
+member; `BuildCheapestPlan` walks subsets→best to rebuild the concrete tree (throwing
+`CannotPlanException` if a needed subset is empty). `SetTopDownOpt(true)` is reserved for a future
+Cascades driver and currently throws.
+
+**Lowering / convention enforcement.** `OnRegister` makes every node require its inputs in *its own*
+convention (the "a consumer asks for the result in a particular convention" case), which propagates a
+lowering down the tree. The root has no consumer, so `ChangeTraits` records the requested traits and
+`EnsureRootConverters` puts an `AbstractConverter` into the root set; `ExpandConversionRule` (auto-
+registered) turns it into real converters via `ChangeTraitsUsingConverters`.
+
+**Operand matching over subsets.** Because a registered node's children are subsets, the matcher
+descends into each subset's members (and binds a subset directly for an "any" operand), enumerating all
+bindings. Rules read the bound nodes via `RuleCall.Node(i)`, never `node.Children` — which is why the
+same rule works under both planners.
 
 ---
 
@@ -85,40 +204,106 @@ machinery it needs (`DeepEquals`/`DeepHashCode`) is already in place.
 
 1. **`INode` is an interface, not a base class.** This lets a consumer implement it directly on a
    domain type they own (single-inheritance / record constraints make a base class hostile to
-   that). `NodeBase` is an optional convenience base.
+   that). `AbstractNode` is an optional convenience base.
 2. **Nodes are immutable.** Rewriting produces new nodes via `Copy(traits, children)`; untouched
    subtrees are shared by reference. This is what makes structural sharing, interning, and
    copy-on-write sound.
 3. **Identity is split two ways.** A node's own `Equals`/`GetHashCode` stay as reference identity.
    Structural equivalence (what the planner dedups on) is the separate `DeepEquals` / `DeepHashCode`
-   contract, derived on `NodeBase` from a single `Signature` member (the node's own attributes,
-   excluding children) plus the children. `NodeBase` caches the hash (`_hash`, `== 0` sentinel).
+   contract, derived on `AbstractNode` from the node's **explain terms** — the named attributes and
+   inputs a node lists in `Explain(INodeWriter)`, exactly as Calcite derives its digest from
+   `explainTerms` (`RelWriter`). Inputs are terms too (`SingleNode`/`BiNode` add them; custom-arity
+   nodes add their own), so the digest is one uniform list. Each node **keeps one `INodeDigest`** (a
+   nested `InnerNodeDigest`, the `InnerRelDigest` analog) that caches its hash and renders the digest
+   string via the writer's `Done`. (There is **no `Signature` property** — an earlier Alembic shortcut,
+   removed in favor of the Calcite mechanism.)
 4. **`Children` (not `Inputs`).** The engine needs to navigate and rebuild the tree generically;
    `Children` is the honest, non-dataflow name. This is engine navigation, not rule-driven creation.
-5. **Traits are interned and positional.** `TraitSet` is an `ImmutableArray<ITrait>` indexed by an
-   ordinal the `TraitContext` assigns each `ITraitDef`. Equal sets are canonicalized to one shared
-   instance, so a node's traits cost one pointer and common sets are singletons.
+5. **Traits are interned and ordered (Calcite's `RelTraitSet`).** `TraitSet` is an
+   `ImmutableArray<ITrait>`; a dimension is located by a **linear `FindIndex`** (few dimensions, so no
+   ordinals — matching Calcite, *not* the earlier ordinal design). The **intern cache lives inside
+   `TraitSet`** (an inner `Cache` shared by every set derived from one `CreateEmpty()`), so equal sets
+   are one shared instance and common sets are singletons. The **trait-def registry lives on the
+   planner** (`AddTraitDef`/`TraitDefs`/`EmptyTraitSet`), exactly as Calcite's `RelOptPlanner`. There
+   is **no `TraitContext`** — Calcite has none; it was an Alembic invention now removed.
 6. **Conventions are first-class traits.** Lowering between conventions is done by `IConverterRule`,
-   realized as a **mixin interface** (supply `In`/`Out`/`Operand`/`Convert`; `OnMatch` is a DIM) —
-   not a base class.
-7. **Default interface methods (DIMs) for contracts; concrete classes for state.** DIMs carry
-   derived/optional behavior (`Satisfies`, `Matches`, `IsLeaf`, `WithChild`, converter `OnMatch`).
-   Anything stateful (planner, caches, interning) is a concrete class. No abstract base classes in
-   the public API except `NodeBase`/`TraitDef<T>`.
+   a **mixin interface**: supply `Source`/`Target` and `Convert(node)` (returns null to decline);
+   `Matches` (by convention) and `OnMatch` are DIMs. `ConverterRule` is an optional base class.
+7. **Default interface methods (DIMs) for contracts; classes for state and convenience.** DIMs carry
+   derived/optional behavior (`Satisfies`, `Matches`, `IsLeaf`, `WithChild`, converter `Matches`/`OnMatch`).
+   Anything stateful (planner, caches, interning) is a concrete class. Abstract/base classes are used
+   as opt-in convenience over the interfaces: `AbstractNode`, `SingleNode` (a single-child node base, the
+   `SingleRel` analog), `TraitDef<T>`, `AbstractPlanner`, and `ConverterRule` (holds `Source`/`Target`,
+   leaves `Convert` abstract). `Convention` is an unsealed class so it can serve as a base for custom
+   conventions.
 8. **Node types are hand-written classes, not records.** Records were considered for ergonomics, but
-   `NodeBase` caches the digest in a field and a record's `with` copy would carry a stale hash to a
-   structurally different node. Caching-on-the-node + records are mutually exclusive; we chose
-   caching. (If a payload-wrapping option is added later for foreign types, revisit.)
-9. **HEP first, Volcano later.** Automatic trait enforcement (inserting converters to satisfy a
-   required output convention) is a Volcano feature and is deferred. HEP does lowering via explicit
-   converter rules and program order.
-10. **Namespaces:** `Alembic.Algebra` (node model), `Alembic.Plan` (planner core), `Alembic.Plan.Traits`,
-    `Alembic.Plan.Rules`, `Alembic.Plan.Hep`. `Alembic.Plan.Volcano` is reserved for the cost-based
-    planner.
+   each node keeps a digest that caches its hash, and a record's `with` copy would carry a stale digest
+   to a structurally different node. Caching + records are mutually exclusive; we chose caching. Nodes
+   are `INode`/`AbstractNode` classes with kept digests.
+9. **HEP first, Volcano later.** HEP does lowering via explicit converter rules and program order. It
+   *enforces* a required output trait set (`ChangeTraits` + a post-fixpoint completeness check that
+   throws `CannotPlanException`), but it does **not** *insert* converters to reach one — automatic
+   converter insertion (the `AbstractConverter` / `RelSubset` machinery) is cost-based search and stays
+   deferred to a future Volcano planner.
+10. **Namespaces:** `Alembic.Algebra` (node model), `Alembic.Plan` (planner core — **traits,
+    conventions, cost, cluster, base rule-call all live here, flat**, mirroring Calcite's `plan`
+    package), `Alembic.Plan.Rules`, `Alembic.Plan.Hep`. `Alembic.Plan.Volcano` is reserved for the
+    cost-based planner. (Rules could likewise flatten into `Alembic.Plan` to fully mirror Calcite;
+    not done yet.)
 
 ---
 
-## 4. Project conventions (must follow)
+## 4. Engine shape (the INode model)
+
+The engine operates on **`INode` directly**, monomorphically — `INode` is Calcite's `RelNode`. The
+planner, rules, operands, and `Convention.register` all take `INode`. (The generic-over-store
+`INodeStore<TNode>` design was explored and reverted; see the executive-decision note in §1.)
+
+### 4.1 Planner hierarchy (mirrors Calcite)
+
+- **`IPlanner`** = `RelOptPlanner`: `AddTraitDef` / `TraitDefs` / `EmptyTraitSet`, `AddRule`,
+  `SetRoot(INode)`, `FindBestPlan()`.
+- **`AbstractPlanner`** = `AbstractRelOptPlanner`: the shared trait-def registry (convention
+  auto-registered), `EmptyTraitSet` (built from registered defs, then sealed), and the rule registry.
+- **`HepPlanner : AbstractPlanner`** = `HepPlanner`: the heuristic rewrite loop — bottom-up (or
+  top-down) per pass, re-passing until `DeepEquals` reports a fixed point; rebuilds the spine with
+  `node.Copy(node.Traits, children)`, sharing untouched subtrees by `ReferenceEquals`.
+- **`Cluster`** = `RelOptCluster`: a thin per-session environment wrapping the planner (relational
+  pieces — row-expression builder, metadata query — omitted).
+
+### 4.2 Rules
+
+- **`IRule`** — `Operand Operand { get; }` + `OnMatch(RuleCall)`. Every rule has an operand (Calcite's
+  `RelOptRule`); the planner matches it and calls `OnMatch` on a hit.
+- **`RuleCall`** is an **abstract base** (`Node` + abstract `Transform`); **`HepRuleCall`** is the HEP
+  subclass that records the single replacement — the `RelOptRuleCall` + `HepRuleCall` split, extensible
+  so a future planner (or a consumer) supplies its own.
+- **`IConverterRule`** — declares `Source`/`Target` **traits** (named `Source`/`Target`, a deliberate
+  divergence from Calcite's `In`/`Out`/`getInTrait`/`getOutTrait`). They are `ITrait`, not just a
+  convention, so a rule can convert *any* dimension (sortedness, distribution, …); the operand matches
+  nodes carrying the `Source` trait on its dimension. `INode? Convert(INode)` returns the converted node
+  or **null to decline** (possible now that nodes are reference types). **`ConverterRule`** is the
+  abstract base supplying `Source`/`Target`.
+- **Matching** — every rule's `Operand` is matched by `OperandMatcher` (which navigates `node.Children`,
+  outside the planner). `HepPlanner.ApplyRules` does `OperandMatcher.Matches(rule.Operand, node)` then
+  `OnMatch`. As in Calcite, the operand *is* the match (a predicate refines it); there is no separate
+  `Matches` method and no `IOperandRule` capability.
+
+### 4.3 Kind / dispatch index — DEFERRED (Volcano-era)
+
+- Matching is **subtype + predicate** (a boolean); nothing returns a "kind" value just to match
+  (confirmed against Calcite: `RelOptRuleOperand.matches` → `clazz.isInstance`).
+- A rule-dispatch index (sorting rules by kind) matters only for a cost-based planner; brute-force HEP
+  doesn't build one. When built, subtype matching forces a **hierarchy-aware index** (expand each rule
+  over the subtype closure of its declared class, keyed by concrete class — Calcite's `classOperands`
+  + `onNewClass`).
+- **Rejected:** LINQ `Expression` trees for operands — pattern syntax is forbidden in expression trees,
+  and tree-introspection would re-couple matching to concrete node types. A source generator is the
+  path if ergonomic pattern authoring is wanted.
+
+---
+
+## 5. Project conventions (must follow)
 
 - **No "Calcite" in source** (comments/docs). README may reference it as a derivation only.
 - **`<summary>` XML docs are multi-line** — content on its own line(s) under `<summary>`, never
@@ -139,51 +324,115 @@ machinery it needs (`DeepEquals`/`DeepHashCode`) is already in place.
 
 ---
 
-## 5. Remaining work (roadmap, roughly prioritized)
+## 6. Remaining work (roadmap, roughly prioritized)
 
 ### Near-term (engine correctness/usefulness)
-1. **Shared-DAG HEP planner.** Introduce `HepVertex` (wraps an `INode`, has an id, caches the
-   structural hash). Build a DAG from the root bottom-up, dedup equivalent subtrees via a
-   `Dictionary<INode, HepVertex>` keyed on `DeepHashCode`/`DeepEquals` (plain dictionary, not
-   `ConditionalWeakTable`). Replace a matched vertex's contents on transform and propagate to
-   parents (copy-on-write up the spine). This is the main perf/architecture step.
-2. **`HepInstruction` model.** Replace the flat rule list with ordered instructions:
+1. **✅ Done — planner hierarchy on `INode` (§4).** `IPlanner` (`RelOptPlanner` analog) +
+   `AbstractPlanner` (`AbstractRelOptPlanner`) + `HepPlanner`; trait-def registry + `EmptyTraitSet` on
+   the planner; `Cluster` (`RelOptCluster`). All `INode`-monomorphic.
+2. **✅ Done — rule layering.** Every `IRule` has an `Operand` (Calcite-faithful); the planner matches
+   via `OperandMatcher`. `IConverterRule` (Source/Target, `Convert` returns null to decline) +
+   `ConverterRule` base supply a convention-matching operand. `RuleCall` abstract + `HepRuleCall`.
+3. **Shared-DAG HEP planner.** *(Next perf step.)* Introduce a vertex DAG that dedups equivalent
+   subtrees (keyed on `DeepHashCode`/`DeepEquals`) and propagates rewrites up the spine, instead of
+   rebuilding the immutable tree per pass.
+4. **`HepInstruction` model.** Replace the flat rule list with ordered instructions:
    `RuleInstance`, `RuleCollection`, `MatchLimit`, `Subprogram`, per-instruction match order. Build
    them via the program builder. Model as a sealed hierarchy / records + switch in the planner.
-3. **General (non-converter) rewrite rules + matcher coverage.** Add tests/examples that exercise
-   multi-level operand patterns, predicates, and rules that rewrite within a single convention
-   (e.g., a "push filter into source" style rule). Confirm the operand matcher handles arity and
-   nesting correctly.
-4. **`RuleCall` multiple equivalents.** Today `Transform` records a single `Result`. Decide whether
+5. **✅ Done — general rewrite rules + matcher coverage.** `OperandMatchingTests` exercises nested
+   operands + arity; the relational suite adds single-convention rewrites (true-filter removal, filter
+   merging) and a push-down rule.
+6. **✅ Done — `Cluster` + convention rule-registration.** `register` is declared on `ITrait`
+   (`RelTrait.register` analog), takes the planner — `void Register(IPlanner planner)` — and
+   `Convention` overrides it to add rules via `planner.AddRule`, reading `planner.EmptyTraitSet`.
+7. **`RuleCall` multiple equivalents.** Today `Transform` records a single `Result`. Decide whether
    a rule may register several equivalents (needed once cost selection exists) and adapt.
-5. **`RuleSet`** type — a named collection of rules, addable to a program in one call.
+8. **✅ Done — operand on the base rule.** `IRule.Operand` (Calcite-faithful); the planner matches via
+   `OperandMatcher.Matches(rule.Operand, node)`. `IOperandRule` retired.
+9. **✅ Done — two-child base + a second language.** `BiNode` (the `BiRel` analog) joins `SingleNode`;
+   a binary arithmetic-expression language (`Languages/Expression`) proves two conventions, two models,
+   converter-driven lowering, constant folding, and a fusion push-down on the same engine.
+10. **✅ Done — required output trait + completeness enforcement.** `IPlanner.ChangeTraits`
+    (`RelOptPlanner.changeTraits` analog) records the target traits; HEP enforces them across the
+    result and throws `CannotPlanException` when lowering is incomplete. Retired the tests'
+    `AssertAllPhysical` crutch. (Automatic converter *insertion* to reach the target remains Volcano —
+    see #11.)
 
 ### Mid-term (richer trait/convention model)
-6. **A second trait dimension** (e.g., an ordering or a "collation") to prove the generic trait
-   system beyond convention, including a trait with a real `Satisfies` partial order (not just
-   equality).
-7. **Trait conversion hooks** on `TraitDef` (canConvert / convert) and an optional built-in
+8. **✅ Mostly done — a second trait dimension.** Trait dims register on the planner
+   (`AddTraitDef`, convention auto-registered), sealed once `EmptyTraitSet` is materialized;
+   `TraitDimensionTests` proves a second dimension (`Sortedness`) with a real `Satisfies` partial
+   order and interning via `CreateEmpty`/`Plus`. Remaining: a built-in ordering/collation trait if
+   one is wanted in the library itself (the test's is a fixture).
+9. **Trait conversion hooks** on `TraitDef` (canConvert / convert) and an optional built-in
    converter node concept.
 
 ### Larger (cost + Volcano)
-8. **Cost model.** `ICost` / `ICostModel` (deferred so far). Needed to choose among equivalents and
-   for Volcano.
-9. **Volcano (cost-based) planner** under `Alembic.Plan.Volcano`: equivalence classes
-   (set / subset by trait), cost-based dynamic programming, and **automatic trait enforcement**
-   (insert converters to satisfy a required output convention). This is the big one and depends on
-   the cost model and the DAG work.
+10. **✅ Done — cost model in core.** `ICost` (the `RelOptCost` analog: `IsInfinite` /
+    `IsLessThanOrEqual` / `IsLessThan` / `Plus`), `ICostFactory` (the `RelOptCostFactory` analog:
+    `MakeCost(cpu,io)` + zero/infinite/huge/tiny — no `rowCount`, since the engine is not relational),
+    and a concrete scalar `Cost` (the
+    `RelOptCostImpl` analog) all live in `src/Alembic`. The planner carries the factory
+    (`IPlanner.CostFactory`, the `getCostFactory` analog); `INode.ComputeSelfCost(planner)` is the
+    `computeSelfCost` analog — a DIM on the node itself (with an `AbstractNode` virtual), **not** a separate
+    capability interface (there is no `ICostedNode`; Calcite has no such interface).
+11. **✅ Done — Volcano (cost-based) planner** under `Alembic.Plan.Volcano`: `NodeSet` / `NodeSubset`
+    (the `RelSet` / `RelSubset` analogs), bottom-up registration that fires rules and propagates cost
+    improvements, cheapest-plan extraction, and **converter insertion** to reach a requested output
+    convention — `AbstractConverter` + `ExpandConversionRule` (registered automatically) + `ChangeTraits`
+    / `ChangeTraitsUsingConverters` + `EnsureRootConverters`. Matches are deferred (`DeferringRuleCall`)
+    into a `RuleQueue` and applied by an `IRuleDriver` (`IterativeRuleDriver`). Rules are
+    planner-agnostic: they read operand-bound nodes via `RuleCall.Node(i)` (the `RelOptRuleCall.rel`
+    analog), so the same rule runs under HEP (concrete children) and Volcano (subset children).
+    Deliberately omitted: importance-based queue ordering and the top-down (Cascades) driver
+    (`SetTopDownOpt(true)` throws) — the search is exhaustive to a fixed point. `IConverterRule`'s
+    `Source`/`Target` are now `ITrait` (any dimension, not just convention). Still open: a
+    hierarchy-aware rule-dispatch index, and a top-down driver that exploits non-convention trait
+    enforcement.
+12. **✅ Done — multi-valued traits.** `IMultipleTrait` + `CompositeTrait<T>`, wired into `TraitSet`
+    (`Replace(def, list)` folds to a composite; `GetList` reads the members; `Satisfies` honours them).
+13. **✅ Done — planner listener.** `IPlannerListener` (+ nested events) and `IPlanner.AddListener`;
+    the planners fire equivalence/rule/chosen events.
+
+### Search & statistics (the big remaining subsystems)
+17. **Top-down (Cascades) search.** A guided alternative to the exhaustive iterative driver: demand
+    flows from the root down ("optimize this group for these required traits"), with branch-and-bound
+    pruning against the best full plan found so far. Needs the `passThrough`/`derive` trait-negotiation
+    hooks on physical nodes (a node declaring "I can deliver trait X if my input has trait Y") and a
+    `TopDownRuleDriver` selected by `SetTopDownOpt(true)` (which currently throws). The biggest
+    remaining piece for the planner to *scale*.
+18. **Importance-based rule queue.** The current `RuleQueue` is FIFO and exhaustive. Rank pending
+    matches by importance (how much the subset they touch could improve the best plan) so the planner
+    explores promising matches first and can stop early — the guided-search counterpart to #17.
+19. **Metadata / statistics framework** (the `RelMetadataQuery` analog). A provider-based system for
+    derived properties — cardinality/size estimates, selectivity, cumulative cost, etc. — that rules
+    and the cost model consult. Today costs come only from `INode.ComputeSelfCost`; this is where
+    realistic, statistics-driven costs would come from. A whole subsystem (medium-agnostic in shape,
+    even though Calcite's built-in metadata is relational).
+
+### Partial / hardening (started, not finished)
+20. **Shared-DAG HEP** (see near-term #3) and the **`HepInstruction` model** (see near-term #4) —
+    `HepPlanner` currently rewrites the immutable tree directly with a flat rule list.
+21. **Operand policies.** `Operand` supports a predicate, positional children, and an "any" wildcard,
+    but not the richer policies (unordered, some, leaf) a full rule-pattern language has.
+22. **Multi-step trait conversion.** `ChangeTraitsUsingConverters` looks up a single converter;
+    precompute the transitive closure of conversions so multi-hop trait changes (and cheapest chains)
+    are found.
+23. **Set-merge hardening.** Volcano's `Merge` handles the cases the tests exercise; harden it for the
+    full range of equivalence-set merges (re-registration, pruning, cycles) a mature planner hits.
+24. **`RuleCall` multiple equivalents** (see near-term #7) — a single match registering several
+    equivalents, useful under cost-based search.
 
 ### Cross-cutting / polish
-10. **Foreign-domain support (optional).** A payload-wrapping node option for third-party types that
-    cannot implement `INode` directly (the "opaque payload" path discussed in design). Decide if/when
-    this is worth it.
-11. **Complete XML docs** and remove the `CS1591` suppression in `Alembic.csproj`.
-12. **More tests:** match-limit/termination, deep trees, trait interning edge cases, top-down order.
-13. **Naming decision still open:** `IConverterRule.In` / `Out` vs `From` / `To`.
+14. **Complete XML docs** and remove the `CS1591` suppression in `Alembic.csproj`.
+15. **More tests:** match-limit/termination, deep trees, trait interning edge cases, top-down order.
+16. **Naming — settled.** `IConverterRule` converts `Source` → `Target` (not Calcite's `In`/`Out`,
+    a deliberate divergence). Children are `Children`, not `Inputs` (`Inputs` is dataflow-specific;
+    the engine's view is structural — decision #4).
 
 ---
 
-## 6. Build & test
+## 7. Build & test
 
 ```pwsh
 # from D:\alembic
@@ -201,9 +450,40 @@ GitVersion + NuGet trusted publishing). GitVersion config is `GitVersion.yml`
 
 ---
 
-## 7. Notes / gotchas
+## 8. Notes / gotchas
 
-- The repo is git-initialized; the scaffold is **not yet committed** (as of this writing). Build
-  output (`bin`/`obj`/`dist`) is gitignored.
+- Build output (`bin`/`obj`/`dist`) is gitignored.
 - `D:\geodesk-net` is the user's other .NET project and the canonical reference for house setup.
+- `D:\calcite` is a local checkout of Apache Calcite, used to verify the design (operand semantics,
+  the planner/trait/cluster placement). Reference only — **never** mention Calcite in Alembic source.
 - The user (Jerome Haltom) maintains `IKVM.Core.MSBuild`; reusing it here is intentional.
+
+### Calcite parallels — where things live (the guiding rule: match Calcite, strip relational only)
+
+- **`Convention.register`**: `register` is declared on `ITrait` (the `RelTrait` analog) and takes the
+  planner — `void Register(IPlanner planner)`, default no-op (a DIM). `Convention` overrides it; a
+  convention bringing lowering rules adds them via `planner.AddRule` and reads `planner.EmptyTraitSet`.
+  Non-generic, matching `RelTrait.register(RelOptPlanner)` exactly (the generic engine is gone, so no
+  runtime cast).
+- **`AbstractRelOptPlanner`**: `AbstractPlanner` — the abstract base holding the shared rule registry,
+  trait-def registry, and `EmptyTraitSet`; `HepPlanner` extends it (later `VolcanoPlanner` too).
+- **`RelOptCluster`**: `Cluster` — a thin per-session environment wrapping the planner (relational
+  pieces omitted). The trait registry/`EmptyTraitSet` live on the planner, as in Calcite.
+- **`TraitContext`**: removed. Calcite has none — the trait-def registry is on the planner
+  (`addRelTraitDef`/`emptyTraitSet`), the intern cache is inside `TraitSet`/`RelTraitSet`, and there are
+  no ordinals (linear `findIndex`). We match all three.
+- **Cost** (`RelNode.computeSelfCost` / `RelOptCost`): `ICost` is the cost value; `ICostFactory` is the
+  factory (`RelOptCostFactory`); `Cost` is the scalar default (`RelOptCostImpl`). Self-cost is
+  `INode.ComputeSelfCost(planner)` — a method on the node, as in Calcite — **not** a separate
+  `ICostedNode` interface (Calcite has none). HEP ignores cost; Volcano consults it.
+- **`AbstractNode.Explain(INodeWriter)`**: the analog of Calcite's `explainTerms` (`RelWriter`); its
+  terms feed the digest, i.e. `DeepEquals`/`DeepHashCode` — exactly as Calcite derives `deepEquals`
+  from `explainTerms`. (`INodeWriter` is the `RelWriter` analog.)
+- **`SingleRel`**: `Alembic.Algebra.SingleNode` (a single-child `AbstractNode`).
+- **Operand placement**: every `IRule` has an `Operand`, as in Calcite's `RelOptRule` (no separate
+  `Matches`, no `IOperandRule`). The planner matches via `OperandMatcher`.
+- **Visitor / `accept(RelShuttle)`**: not yet added. If wanted, it would go on `INode` (like Calcite's
+  `RelNode`), or as a helper that walks `INode.Children`.
+- **Push-down / multiple physical realizations**: the relational language shows two physical forms of
+  a filtered scan (`PhysicalFilter`-over-`PhysicalSource` vs the pushed-down `PhysicalFilteredSource`).
+  Push-down is a deterministic HEP rewrite; *choosing* among alternatives is cost-based (Volcano).

@@ -5,55 +5,41 @@ using Alembic.Algebra;
 namespace Alembic.Plan.Rules;
 
 /// <summary>
-/// The context of a single rule match: the nodes bound by the operand pattern (in pre-order, so
-/// node 0 is the matched root) and a sink for the equivalent the rule produces.
+/// The context of a single rule match: the nodes bound to each operand and <see cref="Transform"/> —
+/// the sink through which the rule registers an equivalent. This base is planner-agnostic; each
+/// planner provides a subclass that decides what <see cref="Transform"/> does.
 /// </summary>
-public sealed class RuleCall
+/// <remarks>
+/// A rule reaches its matched nodes through <see cref="Node"/>, not by navigating
+/// <see cref="INode.Children"/>: under a heuristic planner the children are the concrete nodes, but
+/// under a cost-based planner they are equivalence subsets, so only the operand-bound nodes are
+/// guaranteed to be the concrete types the rule expects.
+/// </remarks>
+public abstract class RuleCall
 {
 
-    readonly ImmutableArray<INode> _nodes;
-
     /// <summary>
-    /// Creates a call over the nodes bound by the match.
+    /// Creates a call over the nodes bound to the rule's operands, in operand order (the operand root
+    /// first, then a pre-order walk of the child operands).
     /// </summary>
-    public RuleCall(ImmutableArray<INode> nodes)
+    protected RuleCall(ImmutableArray<INode> nodes)
     {
-        _nodes = nodes;
+        Nodes = nodes;
     }
 
     /// <summary>
-    /// The bound nodes, in operand pre-order.
+    /// The nodes bound to the rule's operands, in operand order.
     /// </summary>
-    public ImmutableArray<INode> Nodes => _nodes;
+    public ImmutableArray<INode> Nodes { get; }
 
     /// <summary>
-    /// The equivalent registered by the rule, if any.
+    /// The node bound to the operand at the given ordinal. The operand root is ordinal 0.
     /// </summary>
-    public INode? Result { get; private set; }
+    public INode Node(int ordinal) => Nodes[ordinal];
 
     /// <summary>
-    /// The bound node at the given ordinal.
+    /// Registers an equivalent for the matched node. What this does is planner-specific.
     /// </summary>
-    public INode Node(int ordinal)
-    {
-        return _nodes[ordinal];
-    }
-
-    /// <summary>
-    /// The bound node at the given ordinal, typed.
-    /// </summary>
-    public TNode Node<TNode>(int ordinal)
-        where TNode : INode
-    {
-        return (TNode)_nodes[ordinal];
-    }
-
-    /// <summary>
-    /// Registers an equivalent for the matched subtree.
-    /// </summary>
-    public void Transform(INode equivalent)
-    {
-        Result = equivalent;
-    }
+    public abstract void Transform(INode equivalent);
 
 }

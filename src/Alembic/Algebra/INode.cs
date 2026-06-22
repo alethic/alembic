@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-using Alembic.Plan.Traits;
+using Alembic.Plan;
 
 namespace Alembic.Algebra;
 
@@ -43,9 +43,17 @@ public interface INode
     int DeepHashCode();
 
     /// <summary>
+    /// This node's structural digest — the key the planner deduplicates on.
+    /// </summary>
+    INodeDigest GetDigest()
+    {
+        return new NodeDigest(this);
+    }
+
+    /// <summary>
     /// This node's convention.
     /// </summary>
-    Convention Convention
+    IConvention Convention
     {
         get { return Traits.Convention; }
     }
@@ -64,6 +72,16 @@ public interface INode
     INode WithChild(int ordinal, INode child)
     {
         return Copy(Traits, Children.SetItem(ordinal, child));
+    }
+
+    /// <summary>
+    /// This node's own cost, not counting its inputs. A cost-based planner consults it; a heuristic
+    /// planner ignores it. The default is a small positive cost, so a node opts into a real cost model
+    /// only by overriding this.
+    /// </summary>
+    ICost ComputeSelfCost(IPlanner planner)
+    {
+        return planner.CostFactory.MakeTinyCost();
     }
 
 }
