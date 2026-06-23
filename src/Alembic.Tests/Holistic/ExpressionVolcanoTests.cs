@@ -35,7 +35,7 @@ public class ExpressionVolcanoTests
 
         ExpressionConventions.Physical.Register(planner);
         planner.SetRoot(root);
-        planner.ChangeTraits(root, physical);
+        planner.SetRoot(planner.ChangeTraits(root, physical));
         var best = planner.FindBestPlan();
         _output.WriteLine(PlanUtil.ToString(best));
 

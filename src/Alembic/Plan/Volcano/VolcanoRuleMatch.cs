@@ -12,11 +12,11 @@ namespace Alembic.Plan.Volcano;
 /// Applying it (<see cref="VolcanoRuleCall.OnMatch"/>) registers the rule's equivalents. Two matches
 /// are equal when they have the same rule and the same bound nodes, so duplicates are dropped.
 /// </summary>
-[Provenance("org.apache.calcite.plan.volcano.VolcanoRuleMatch")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch")]
 public sealed class VolcanoRuleMatch : VolcanoRuleCall
 {
 
-    [Provenance("org.apache.calcite.plan.volcano.VolcanoRuleMatch", "VolcanoRuleMatch(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "VolcanoRuleMatch(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
     internal VolcanoRuleMatch(VolcanoPlanner planner, RuleOperand operand0, ImmutableArray<INode> nodes)
         : base(planner, operand0, nodes)
     {
@@ -27,7 +27,7 @@ public sealed class VolcanoRuleMatch : VolcanoRuleCall
     }
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.volcano.VolcanoRuleMatch", "computeDigest()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "computeDigest()")]
     public override bool Equals(object? obj)
     {
         if (obj is not VolcanoRuleMatch other || !ReferenceEquals(Rule, other.Rule) || Nodes.Length != other.Nodes.Length)
@@ -41,7 +41,7 @@ public sealed class VolcanoRuleMatch : VolcanoRuleCall
     }
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.volcano.VolcanoRuleMatch", "computeDigest()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "computeDigest()")]
     public override int GetHashCode()
     {
         var hash = new HashCode();

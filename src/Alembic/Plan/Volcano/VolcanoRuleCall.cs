@@ -12,7 +12,7 @@ namespace Alembic.Plan.Volcano;
 /// node) and solved outward over the equivalence subsets; a rule then registers each equivalent it
 /// finds, and the planner keeps them all and later chooses the cheapest.
 /// </summary>
-[Provenance("org.apache.calcite.plan.volcano.VolcanoRuleCall")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall")]
 public class VolcanoRuleCall : RuleCall
 {
 
@@ -22,13 +22,13 @@ public class VolcanoRuleCall : RuleCall
     /// The nodes bound to each operand, indexed by <see cref="RuleOperand.OrdinalInRule"/>. Filled in as
     /// the match solves outward.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.VolcanoRuleCall", "rels")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "rels")]
     internal INode?[] Rels { get; }
 
     /// <summary>
     /// Creates a call seeded at <paramref name="operand0"/>, with no nodes bound yet.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand)")]
     internal VolcanoRuleCall(VolcanoPlanner planner, RuleOperand operand0)
         : base(planner, operand0, ImmutableArray<INode>.Empty)
     {
@@ -40,7 +40,7 @@ public class VolcanoRuleCall : RuleCall
     /// Creates a call over the already-bound nodes (in operand order) of a completed match seeded at
     /// <paramref name="operand0"/>.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
     internal VolcanoRuleCall(VolcanoPlanner planner, RuleOperand operand0, ImmutableArray<INode> nodes)
         : base(planner, operand0, nodes)
     {
@@ -53,7 +53,7 @@ public class VolcanoRuleCall : RuleCall
     /// <summary>
     /// Applies the rule to the bound nodes.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.VolcanoRuleCall", "onMatch()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "onMatch()")]
     public virtual void OnMatch()
     {
         if (_planner.IsRuleExcluded(Rule))
@@ -89,7 +89,7 @@ public class VolcanoRuleCall : RuleCall
     /// Registers <paramref name="equivalent"/> as another way to compute the matched node, plus any
     /// secondary equivalences in <paramref name="equiv"/>.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.VolcanoRuleCall", "transformTo(RelNode, Map<RelNode, RelNode>, RelHintsPropagator)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "transformTo(RelNode, Map<RelNode, RelNode>, RelHintsPropagator)")]
     public override void TransformTo(INode equivalent, IReadOnlyDictionary<INode, INode> equiv)
     {
         // A transformation rule stays logical; it may not produce a physical node.
@@ -108,7 +108,7 @@ public class VolcanoRuleCall : RuleCall
     /// <summary>
     /// Seeds the match with <paramref name="node"/> in <see cref="RuleCall.Operand0"/>'s slot and solves the rest.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.VolcanoRuleCall", "match(RelNode)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "match(RelNode)")]
     internal void Match(INode node)
     {
         const int solve = 0;
@@ -121,7 +121,7 @@ public class VolcanoRuleCall : RuleCall
     /// Recursively matches operands above a given solve order. When all operands are bound, the rule's
     /// side-condition is checked and, if satisfied, <see cref="OnMatch"/> is invoked.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.VolcanoRuleCall", "matchRecurse(int)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "matchRecurse(int)")]
     void MatchRecurse(int solve)
     {
         var operands = Rule.Operands;

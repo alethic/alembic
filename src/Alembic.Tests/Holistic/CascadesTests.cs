@@ -110,7 +110,7 @@ public class CascadesTests
         planner.SetTopDownOpt(true);
         planner.AddTraitDef(SortednessTraitDef.Instance);
         planner.SetRoot(root);
-        planner.ChangeTraits(root, sorted);
+        planner.SetRoot(planner.ChangeTraits(root, sorted));
         var best = planner.FindBestPlan();
         _output.WriteLine(PlanUtil.ToString(best));
 
@@ -138,7 +138,7 @@ public class CascadesTests
         // gains a delivered sorted subset that nobody asked for.
         planner.AddRule(new OfferSortedSource());
         planner.SetRoot(root);
-        planner.ChangeTraits(root, unsorted);
+        planner.SetRoot(planner.ChangeTraits(root, unsorted));
         var best = planner.FindBestPlan();
         _output.WriteLine(PlanUtil.ToString(best));
 

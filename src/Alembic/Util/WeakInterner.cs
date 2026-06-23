@@ -13,7 +13,7 @@ namespace Alembic.Util;
 /// value ever seen. Thread-safe via a single lock. Dead entries are swept periodically on insert.
 /// </summary>
 /// <typeparam name="T">The interned reference type.</typeparam>
-[Provenance("com.google.common.collect.Interners", "newWeakInterner()")]
+[Provenance(ProvenanceSource.Other, "com.google.common.collect.Interners", "newWeakInterner()")]
 public sealed class WeakInterner<T>
     where T : class
 {

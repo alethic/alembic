@@ -7,7 +7,7 @@ namespace Alembic.Plan.Volcano;
 /// A match identical to one already queued (same rule, same bound nodes) is dropped, so a rule fires at
 /// most once per match.
 /// </summary>
-[Provenance("org.apache.calcite.plan.volcano.IterativeRuleQueue")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue")]
 public sealed class IterativeRuleQueue : RuleQueue
 {
 
@@ -17,14 +17,14 @@ public sealed class IterativeRuleQueue : RuleQueue
     /// <summary>
     /// Creates a queue for the given planner.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.IterativeRuleQueue", "IterativeRuleQueue(VolcanoPlanner)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue", "IterativeRuleQueue(VolcanoPlanner)")]
     public IterativeRuleQueue(VolcanoPlanner planner)
         : base(planner)
     {
     }
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.volcano.IterativeRuleQueue", "addMatch(VolcanoRuleMatch)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue", "addMatch(VolcanoRuleMatch)")]
     public override void AddMatch(VolcanoRuleMatch match)
     {
         if (_seen.Add(match))
@@ -34,7 +34,7 @@ public sealed class IterativeRuleQueue : RuleQueue
     /// <summary>
     /// Removes and returns the next match, or <c>null</c> if the queue is empty.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.IterativeRuleQueue", "popMatch()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue", "popMatch()")]
     public VolcanoRuleMatch? PopMatch()
     {
         while (_matches.Count > 0)
@@ -48,7 +48,7 @@ public sealed class IterativeRuleQueue : RuleQueue
     }
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.volcano.IterativeRuleQueue", "clear()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue", "clear()")]
     public override void Clear()
     {
         _matches.Clear();

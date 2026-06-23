@@ -19,7 +19,7 @@ namespace Alembic.Algebra;
 /// converting each input; nodes that derive traits override the <c>…Traits</c> methods (or, for
 /// <see cref="DeriveMode.Omakase"/>, <see cref="Derive(IList{IList{TraitSet}})"/>).
 /// </remarks>
-[Provenance("org.apache.calcite.rel.PhysicalNode")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode")]
 public interface IPhysicalNode : INode
 {
 
@@ -27,7 +27,7 @@ public interface IPhysicalNode : INode
     /// Pushes <paramref name="required"/> down to the inputs, returning a node delivering it, or
     /// <c>null</c> if it cannot.
     /// </summary>
-    [Provenance("org.apache.calcite.rel.PhysicalNode", "passThrough(RelTraitSet)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "passThrough(RelTraitSet)")]
     INode? PassThrough(TraitSet required)
     {
         var pair = PassThroughTraits(required);
@@ -36,7 +36,7 @@ public interface IPhysicalNode : INode
 
         var inputs = ImmutableArray.CreateBuilder<INode>(Children.Length);
         for (int i = 0; i < Children.Length; i++)
-            inputs.Add(Cluster.Planner.Convert(Children[i], pair.Right[i]));
+            inputs.Add(Cluster.Planner.ChangeTraits(Children[i], pair.Right[i]));
 
         return Copy(pair.Left, inputs.MoveToImmutable());
     }
@@ -46,7 +46,7 @@ public interface IPhysicalNode : INode
     /// with the trait set each input must then deliver (the pair's right). Returns <c>null</c> if the
     /// requirement cannot be passed through.
     /// </summary>
-    [Provenance("org.apache.calcite.rel.PhysicalNode", "passThroughTraits(RelTraitSet)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "passThroughTraits(RelTraitSet)")]
     Pair<TraitSet, IList<TraitSet>>? PassThroughTraits(TraitSet required)
     {
         throw new NotSupportedException(GetType().Name + " does not implement PassThroughTraits.");
@@ -56,7 +56,7 @@ public interface IPhysicalNode : INode
     /// Derives a delivered trait set from the input at <paramref name="childId"/> (which already delivers
     /// <paramref name="childTraits"/>), returning the derived node, or <c>null</c>.
     /// </summary>
-    [Provenance("org.apache.calcite.rel.PhysicalNode", "derive(RelTraitSet, int)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "derive(RelTraitSet, int)")]
     INode? Derive(TraitSet childTraits, int childId)
     {
         var pair = DeriveTraits(childTraits, childId);
@@ -65,7 +65,7 @@ public interface IPhysicalNode : INode
 
         var inputs = ImmutableArray.CreateBuilder<INode>(Children.Length);
         for (int i = 0; i < Children.Length; i++)
-            inputs.Add(Cluster.Planner.Convert(Children[i], pair.Right[i]));
+            inputs.Add(Cluster.Planner.ChangeTraits(Children[i], pair.Right[i]));
 
         return Copy(pair.Left, inputs.MoveToImmutable());
     }
@@ -75,7 +75,7 @@ public interface IPhysicalNode : INode
     /// <paramref name="childTraits"/> (the pair's left), paired with the trait set each input must then
     /// deliver (the pair's right), or <c>null</c>.
     /// </summary>
-    [Provenance("org.apache.calcite.rel.PhysicalNode", "deriveTraits(RelTraitSet, int)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "deriveTraits(RelTraitSet, int)")]
     Pair<TraitSet, IList<TraitSet>>? DeriveTraits(TraitSet childTraits, int childId)
     {
         throw new NotSupportedException(GetType().Name + " does not implement DeriveTraits.");
@@ -85,7 +85,7 @@ public interface IPhysicalNode : INode
     /// Given a trait set for each input, returns the derived nodes. Called only under
     /// <see cref="DeriveMode.Omakase"/>.
     /// </summary>
-    [Provenance("org.apache.calcite.rel.PhysicalNode", "derive(List<List<RelTraitSet>>)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "derive(List<List<RelTraitSet>>)")]
     IList<INode> Derive(IList<IList<TraitSet>> inputTraits)
     {
         throw new NotSupportedException(GetType().Name + " does not implement Derive.");
@@ -94,7 +94,7 @@ public interface IPhysicalNode : INode
     /// <summary>
     /// How this node derives traits from its inputs. Defaults to <see cref="DeriveMode.LeftFirst"/>.
     /// </summary>
-    [Provenance("org.apache.calcite.rel.PhysicalNode", "getDeriveMode()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "getDeriveMode()")]
     DeriveMode DeriveMode => DeriveMode.LeftFirst;
 
 }

@@ -73,7 +73,7 @@ public class VolcanoPlanningTests
         RelationalConventions.Physical.Register(planner);
 
         planner.SetRoot(root);
-        planner.ChangeTraits(root, physical);
+        planner.SetRoot(planner.ChangeTraits(root, physical));
         var best = planner.FindBestPlan();
         _output.WriteLine(PlanUtil.ToString(best));
 
@@ -94,7 +94,7 @@ public class VolcanoPlanningTests
         planner.AddRule(new PushFilterIntoSource());
 
         planner.SetRoot(root);
-        planner.ChangeTraits(root, physical);
+        planner.SetRoot(planner.ChangeTraits(root, physical));
         var best = planner.FindBestPlan();
         _output.WriteLine(PlanUtil.ToString(best));
 
@@ -118,7 +118,7 @@ public class VolcanoPlanningTests
         planner.AddRule(new ParameterConverter(physical));
 
         planner.SetRoot(root);
-        planner.ChangeTraits(root, physical);
+        planner.SetRoot(planner.ChangeTraits(root, physical));
 
         Assert.Throws<CannotPlanException>(() => planner.FindBestPlan());
     }
@@ -138,7 +138,7 @@ public class VolcanoPlanningTests
         planner.AddTraitDef(SortednessTraitDef.Instance);
         planner.AddRule(new SortEnforcer());
         planner.SetRoot(root);
-        planner.ChangeTraits(root, sorted);
+        planner.SetRoot(planner.ChangeTraits(root, sorted));
         var best = planner.FindBestPlan();
         _output.WriteLine(PlanUtil.ToString(best));
 
@@ -161,7 +161,7 @@ public class VolcanoPlanningTests
         planner.AddRule(new PushFilterIntoSource());
 
         planner.SetRoot(root);
-        planner.ChangeTraits(root, physical);
+        planner.SetRoot(planner.ChangeTraits(root, physical));
         var best = planner.FindBestPlan();
         _output.WriteLine(PlanUtil.ToString(best));
 
@@ -185,7 +185,7 @@ public class VolcanoPlanningTests
         RelationalConventions.Physical.Register(planner);
         planner.AddListener(listener);
         planner.SetRoot(root);
-        planner.ChangeTraits(root, physical);
+        planner.SetRoot(planner.ChangeTraits(root, physical));
         planner.FindBestPlan();
 
         Assert.True(listener.EquivalencesFound > 0);

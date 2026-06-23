@@ -4,21 +4,21 @@ namespace Alembic.Plan;
 /// A single physical property of a node (a convention, an ordering, etc.). Traits are values:
 /// equal traits must be <c>Equals</c>-equal.
 /// </summary>
-[Provenance("org.apache.calcite.plan.RelTrait")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTrait")]
 public interface ITrait
 {
 
     /// <summary>
     /// The dimension this trait belongs to.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelTrait", "getTraitDef()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTrait", "getTraitDef()")]
     TraitDef TraitDef { get; }
 
     /// <summary>
     /// Whether a node carrying this trait also satisfies a requirement for <paramref name="other"/>.
     /// Defaults to equality; traits with a partial order (orderings, distributions) override it.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelTrait", "satisfies(RelTrait)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTrait", "satisfies(RelTrait)")]
     bool Satisfies(ITrait other)
     {
         return this.Equals(other);
@@ -28,7 +28,7 @@ public interface ITrait
     /// Registers this trait instance with the planner — an opportunity to add the rules that relate
     /// to it. Typical implementations do nothing.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelTrait", "register(RelOptPlanner)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTrait", "register(RelOptPlanner)")]
     void Register(IPlanner planner)
     {
 

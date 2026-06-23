@@ -9,14 +9,14 @@ namespace Alembic.Algebra;
 /// lists both as input terms; subclasses add their own attributes in <see cref="AbstractNode.ExplainTerms"/>
 /// and override <see cref="INode.Copy"/>.
 /// </summary>
-[Provenance("org.apache.calcite.rel.BiRel")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.BiRel")]
 public abstract class BiNode : AbstractNode
 {
 
     /// <summary>
     /// Initializes the node with its traits and its left and right children.
     /// </summary>
-    [Provenance("org.apache.calcite.rel.BiRel", "BiRel(RelOptCluster, RelTraitSet, RelNode, RelNode)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.BiRel", "BiRel(RelOptCluster, RelTraitSet, RelNode, RelNode)")]
     protected BiNode(TraitSet traits, INode left, INode right)
         : base(left.Cluster, traits, ImmutableArray.Create(left, right))
     {
@@ -26,13 +26,13 @@ public abstract class BiNode : AbstractNode
     /// <summary>
     /// This node's left child.
     /// </summary>
-    [Provenance("org.apache.calcite.rel.BiRel", "getLeft()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.BiRel", "getLeft()")]
     public INode Left => Children[0];
 
     /// <summary>
     /// This node's right child.
     /// </summary>
-    [Provenance("org.apache.calcite.rel.BiRel", "getRight()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.BiRel", "getRight()")]
     public INode Right => Children[1];
 
     /// <inheritdoc />

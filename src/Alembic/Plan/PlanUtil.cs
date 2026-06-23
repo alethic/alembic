@@ -9,7 +9,7 @@ namespace Alembic.Plan;
 /// comparison, cast creation, correlation-variable collection, type-equivalence checks) are out of
 /// scope here.
 /// </summary>
-[Provenance("org.apache.calcite.plan.RelOptUtil")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptUtil")]
 public static class PlanUtil
 {
 
@@ -17,7 +17,7 @@ public static class PlanUtil
     /// Renders a node and its inputs as an indented plan string: it news up a writer and drives the
     /// node's <see cref="INode.Explain"/>.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptUtil", "toString(RelNode)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptUtil", "toString(RelNode)")]
     public static string ToString(INode node)
     {
         var builder = new StringBuilder();

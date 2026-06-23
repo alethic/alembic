@@ -123,7 +123,7 @@ public class ImagePlanningTests
     INode Plan(VolcanoPlanner planner, INode root, TraitSet required)
     {
         planner.SetRoot(root);
-        planner.ChangeTraits(root, required);
+        planner.SetRoot(planner.ChangeTraits(root, required));
         var best = planner.FindBestPlan();
         _output.WriteLine(PlanUtil.ToString(best));
         return best;

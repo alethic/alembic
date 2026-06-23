@@ -17,13 +17,14 @@ public class CostTests
     {
         var c = new Cost(10.0);
 
-        Assert.Equal(20.0, ((Cost)c.MultiplyBy(2.0)).Value);
+        // The scalar magnitude is not exposed (no getRows analog), so costs are compared to each other.
+        Assert.True(c.MultiplyBy(2.0).IsEqWithEpsilon(new Cost(20.0)));
         Assert.Equal(2.0, c.DivideBy(new Cost(5.0)));
         Assert.True(c.IsEqWithEpsilon(new Cost(10.0 + 1e-9)));
         Assert.False(c.IsEqWithEpsilon(new Cost(11.0)));
 
-        // Scaling an infinite cost leaves it infinite (returns the same instance).
-        Assert.Same(Cost.Infinity, Cost.Infinity.MultiplyBy(2.0));
+        // Scaling an infinite cost leaves it infinite.
+        Assert.True(((Cost)new Cost(double.PositiveInfinity).MultiplyBy(2.0)).IsInfinite);
     }
 
     [Fact]

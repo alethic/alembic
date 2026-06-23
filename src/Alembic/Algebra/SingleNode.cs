@@ -9,14 +9,14 @@ namespace Alembic.Algebra;
 /// term; subclasses add their own attributes in <see cref="AbstractNode.ExplainTerms"/> and override
 /// <see cref="INode.Copy"/>.
 /// </summary>
-[Provenance("org.apache.calcite.rel.SingleRel")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel")]
 public abstract class SingleNode : AbstractNode
 {
 
     /// <summary>
     /// Initializes the node with its traits and single child.
     /// </summary>
-    [Provenance("org.apache.calcite.rel.SingleRel", "SingleRel(RelOptCluster, RelTraitSet, RelNode)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel", "SingleRel(RelOptCluster, RelTraitSet, RelNode)")]
     protected SingleNode(TraitSet traits, INode child)
         : base(child.Cluster, traits, ImmutableArray.Create(child))
     {
@@ -26,7 +26,7 @@ public abstract class SingleNode : AbstractNode
     /// <summary>
     /// This node's single child.
     /// </summary>
-    [Provenance("org.apache.calcite.rel.SingleRel", "getInput()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel", "getInput()")]
     public INode Child => Children[0];
 
     /// <inheritdoc />

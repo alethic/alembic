@@ -10,7 +10,7 @@ namespace Alembic.Util.Graph;
 /// yields a child before its parents. Also serves as its own iterable: enumerating it produces a fresh
 /// iterator.
 /// </summary>
-[Provenance("org.apache.calcite.util.graph.TopologicalOrderIterator")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator")]
 public sealed class TopologicalOrderIterator<V, E> : IEnumerator<V>
     where V : notnull
     where E : DefaultEdge
@@ -22,13 +22,13 @@ public sealed class TopologicalOrderIterator<V, E> : IEnumerator<V>
     readonly Queue<V> _empties = new Queue<V>();
     V _current = default!;
 
-    [Provenance("org.apache.calcite.util.graph.TopologicalOrderIterator", "TopologicalOrderIterator(DirectedGraph<V, E>)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator", "TopologicalOrderIterator(DirectedGraph<V, E>)")]
     public TopologicalOrderIterator(DirectedGraph<V, E> graph)
         : this(graph, HepMatchOrder.TopDown)
     {
     }
 
-    [Provenance("org.apache.calcite.util.graph.TopologicalOrderIterator", "TopologicalOrderIterator(DirectedGraph<V, E>, HepMatchOrder)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator", "TopologicalOrderIterator(DirectedGraph<V, E>, HepMatchOrder)")]
     public TopologicalOrderIterator(DirectedGraph<V, E> graph, HepMatchOrder order)
     {
         _graph = graph;
@@ -39,7 +39,7 @@ public sealed class TopologicalOrderIterator<V, E> : IEnumerator<V>
     /// <summary>
     /// The vertices in topological order, parents before children.
     /// </summary>
-    [Provenance("org.apache.calcite.util.graph.TopologicalOrderIterator", "of(DirectedGraph<V, E>)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator", "of(DirectedGraph<V, E>)")]
     public static IEnumerable<V> Of(DirectedGraph<V, E> graph)
     {
         return Of(graph, HepMatchOrder.TopDown);
@@ -49,7 +49,7 @@ public sealed class TopologicalOrderIterator<V, E> : IEnumerator<V>
     /// The vertices in topological order for the given <paramref name="order"/> (which must be
     /// <see cref="HepMatchOrder.TopDown"/> or <see cref="HepMatchOrder.BottomUp"/>).
     /// </summary>
-    [Provenance("org.apache.calcite.util.graph.TopologicalOrderIterator", "of(DirectedGraph<V, E>, HepMatchOrder)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator", "of(DirectedGraph<V, E>, HepMatchOrder)")]
     public static IEnumerable<V> Of(DirectedGraph<V, E> graph, HepMatchOrder order)
     {
         var iterator = new TopologicalOrderIterator<V, E>(graph, order);
@@ -57,7 +57,7 @@ public sealed class TopologicalOrderIterator<V, E> : IEnumerator<V>
             yield return iterator.Current;
     }
 
-    [Provenance("org.apache.calcite.util.graph.TopologicalOrderIterator", "populate(Map<V, int[]>, List<V>)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator", "populate(Map<V, int[]>, List<V>)")]
     void Populate()
     {
         foreach (var vertex in _graph.VertexSet)
@@ -84,12 +84,12 @@ public sealed class TopologicalOrderIterator<V, E> : IEnumerator<V>
         }
     }
 
-    [Provenance("org.apache.calcite.util.graph.TopologicalOrderIterator", "next()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator", "next()")]
     public V Current => _current;
 
     object IEnumerator.Current => Current!;
 
-    [Provenance("org.apache.calcite.util.graph.TopologicalOrderIterator", "hasNext()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator", "hasNext()")]
     public bool MoveNext()
     {
         if (_empties.Count == 0)
@@ -122,7 +122,7 @@ public sealed class TopologicalOrderIterator<V, E> : IEnumerator<V>
     /// Drains the iterator and returns the vertices that were never emitted — those still carrying
     /// unsatisfied incoming edges, i.e. the vertices that lie on a cycle.
     /// </summary>
-    [Provenance("org.apache.calcite.util.graph.TopologicalOrderIterator", "findCycles()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator", "findCycles()")]
     public IReadOnlyCollection<V> FindCycles()
     {
         while (MoveNext())

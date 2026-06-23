@@ -11,14 +11,14 @@ namespace Alembic.Algebra;
 /// concern onto a traversal; rewriting, if ever needed, belongs in a separate shuttle. The walk reads
 /// <see cref="INode.Children"/> directly rather than through a double-dispatch <c>accept</c>.
 /// </remarks>
-[Provenance("org.apache.calcite.rel.RelVisitor")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelVisitor")]
 public abstract class NodeVisitor
 {
 
     /// <summary>
     /// Visits the tree rooted at <paramref name="root"/>.
     /// </summary>
-    [Provenance("org.apache.calcite.rel.RelVisitor", "go(RelNode)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelVisitor", "go(RelNode)")]
     public void Visit(INode root)
     {
         Visit(root, 0, null);
@@ -29,7 +29,7 @@ public abstract class NodeVisitor
     /// or the root (ordinal 0, null parent). The default descends into the node's children; override to
     /// act on the node (call <see cref="VisitChildren"/> to continue the descent).
     /// </summary>
-    [Provenance("org.apache.calcite.rel.RelVisitor", "visit(RelNode, int, RelNode)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelVisitor", "visit(RelNode, int, RelNode)")]
     public virtual void Visit(INode node, int ordinal, INode? parent)
     {
         VisitChildren(node);
@@ -38,7 +38,7 @@ public abstract class NodeVisitor
     /// <summary>
     /// Visits each child of <paramref name="node"/> in order.
     /// </summary>
-    [Provenance("org.apache.calcite.rel.RelNode", "childrenAccept(RelVisitor)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "childrenAccept(RelVisitor)")]
     protected void VisitChildren(INode node)
     {
         var children = node.Children;

@@ -18,14 +18,14 @@ namespace Alembic.Plan.Rules;
 /// constructor. The <see cref="RuleOperand"/> constructor itself is not public, so only well-formed
 /// operand trees can exist.
 /// </remarks>
-[Provenance("org.apache.calcite.plan.RelOptRule")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule")]
 public abstract class Rule
 {
 
     /// <summary>
     /// Initializes the rule with its root operand (built from the factory methods below).
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "RelOptRule(RelOptRuleOperand)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "RelOptRule(RelOptRuleOperand)")]
     protected Rule(RuleOperand operand)
     {
         Operand = operand;
@@ -36,7 +36,7 @@ public abstract class Rule
     /// <summary>
     /// The pattern this rule matches.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "getOperand()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "getOperand()")]
     public RuleOperand Operand { get; }
 
     /// <summary>
@@ -44,21 +44,21 @@ public abstract class Rule
     /// its position. A planner indexes these by <see cref="RuleOperand.MatchedClass"/> so that a node
     /// can seed a match at any operand position.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "getOperands()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "getOperands()")]
     public ImmutableArray<RuleOperand> Operands { get; }
 
     /// <summary>
     /// A description identifying this rule (used to look it up from a program instruction). Defaults to
     /// the rule's type name.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "toString()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "toString()")]
     public virtual string Description => GetType().Name;
 
     /// <summary>
     /// A side-condition checked after the operand matches and before <see cref="OnMatch"/>. The default
     /// always allows the match.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "matches(RelOptRuleCall)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "matches(RelOptRuleCall)")]
     public virtual bool Matches(RuleCall call)
     {
         return true;
@@ -67,14 +67,14 @@ public abstract class Rule
     /// <summary>
     /// Invoked for a matched node; the rule registers equivalents on the call.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "onMatch(RelOptRuleCall)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "onMatch(RelOptRuleCall)")]
     public abstract void OnMatch(RuleCall call);
 
     /// <summary>
     /// Identifies the rule by its <see cref="Description"/> alone: a planner requires every registered
     /// rule to have a unique description, so the description is a sufficient hash.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "hashCode()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "hashCode()")]
     public override int GetHashCode()
     {
         return Description.GetHashCode();
@@ -85,7 +85,7 @@ public abstract class Rule
     /// equal root operands. The class and operand are included so that a poorly chosen (colliding)
     /// description does not make distinct rules compare equal.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "equals(Object)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "equals(Object)")]
     public override bool Equals(object? obj)
     {
         return ReferenceEquals(this, obj)
@@ -100,7 +100,7 @@ public abstract class Rule
     /// <summary>
     /// An operand matching a node of type <typeparamref name="TNode"/> regardless of its children.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "any()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "any()")]
     protected static RuleOperand Any<TNode>()
         where TNode : INode
     {
@@ -111,7 +111,7 @@ public abstract class Rule
     /// An operand matching a node of type <typeparamref name="TNode"/> that also satisfies a predicate,
     /// regardless of its children.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "any()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "any()")]
     protected static RuleOperand Any<TNode>(Func<INode, bool> predicate)
         where TNode : INode
     {
@@ -121,7 +121,7 @@ public abstract class Rule
     /// <summary>
     /// An operand matching a leaf node of type <typeparamref name="TNode"/> (one with no children).
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "none()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "none()")]
     protected static RuleOperand Leaf<TNode>()
         where TNode : INode
     {
@@ -132,7 +132,7 @@ public abstract class Rule
     /// An operand matching a node of type <typeparamref name="TNode"/> whose children match the given
     /// child operands positionally.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "some(RelOptRuleOperand, RelOptRuleOperand...)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "some(RelOptRuleOperand, RelOptRuleOperand...)")]
     protected static RuleOperand Some<TNode>(params RuleOperand[] children)
         where TNode : INode
     {
@@ -143,7 +143,7 @@ public abstract class Rule
     /// An operand matching a node of type <typeparamref name="TNode"/> whose children match the given
     /// child operands in any order.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "unordered(RelOptRuleOperand, RelOptRuleOperand...)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "unordered(RelOptRuleOperand, RelOptRuleOperand...)")]
     protected static RuleOperand Unordered<TNode>(params RuleOperand[] children)
         where TNode : INode
     {
@@ -154,7 +154,7 @@ public abstract class Rule
     /// An operand matching a node of type <typeparamref name="TNode"/> that carries <paramref name="trait"/>
     /// — used to match a node needing conversion.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "convertOperand(Class, Predicate, RelTrait)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "convertOperand(Class, Predicate, RelTrait)")]
     protected static RuleOperand ConvertOperand<TNode>(ITrait trait)
         where TNode : INode
     {
@@ -167,7 +167,7 @@ public abstract class Rule
     /// Flattens the operand tree into a list in prefix order, wiring each operand's rule, parent, and
     /// ordinals as it goes.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "flattenOperands(RelOptRuleOperand)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "flattenOperands(RelOptRuleOperand)")]
     ImmutableArray<RuleOperand> FlattenOperands(RuleOperand rootOperand)
     {
         var operandList = new List<RuleOperand>();
@@ -184,7 +184,7 @@ public abstract class Rule
     /// <summary>
     /// Adds the operand's descendants to the list in prefix order.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "flattenRecurse(List<RelOptRuleOperand>, RelOptRuleOperand)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "flattenRecurse(List<RelOptRuleOperand>, RelOptRuleOperand)")]
     void FlattenRecurse(List<RuleOperand> operandList, RuleOperand parentOperand)
     {
         int k = 0;
@@ -203,7 +203,7 @@ public abstract class Rule
     /// Builds each operand's solve order: itself, then its parents up to the root, then the remaining
     /// operands in prefix order.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRule", "assignSolveOrder(List<RelOptRuleOperand>)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "assignSolveOrder(List<RelOptRuleOperand>)")]
     static void AssignSolveOrder(ImmutableArray<RuleOperand> operands)
     {
         foreach (var operand in operands)

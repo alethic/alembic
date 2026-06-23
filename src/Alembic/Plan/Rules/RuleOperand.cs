@@ -9,7 +9,7 @@ namespace Alembic.Plan.Rules;
 /// <summary>
 /// How an operand treats the node's children.
 /// </summary>
-[Provenance("org.apache.calcite.plan.RelOptRuleOperandChildPolicy")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperandChildPolicy")]
 public enum RuleOperandChildPolicy
 {
 
@@ -43,7 +43,7 @@ public enum RuleOperandChildPolicy
 /// <see cref="Rule"/> has one; <see cref="Matches"/> tests a single node, while the recursive tree match
 /// against a node's children is performed by the planner as it fires rules.
 /// </summary>
-[Provenance("org.apache.calcite.plan.RelOptRuleOperand")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand")]
 public sealed class RuleOperand
 {
 
@@ -91,7 +91,7 @@ public sealed class RuleOperand
     /// The full form: a matched class, an optional required trait, an extra predicate, a child policy,
     /// and child operands.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "RelOptRuleOperand(Class, RelTrait, Predicate, RelOptRuleOperandChildPolicy, ImmutableList<RelOptRuleOperand>)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "RelOptRuleOperand(Class, RelTrait, Predicate, RelOptRuleOperandChildPolicy, ImmutableList<RelOptRuleOperand>)")]
     internal RuleOperand(Type matchedClass, ITrait? trait, Func<INode, bool> predicate, RuleOperandChildPolicy childPolicy, params RuleOperand[] children)
     {
         MatchedClass = matchedClass;
@@ -104,72 +104,72 @@ public sealed class RuleOperand
     /// <summary>
     /// The rule this operand belongs to. Assigned when the rule flattens its operand tree.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "getRule()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "getRule()")]
     public Rule Rule { get; internal set; } = null!;
 
     /// <summary>
     /// The operand directly above this one, or <c>null</c> for the root operand. Assigned during
     /// flattening.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "getParent()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "getParent()")]
     public RuleOperand? Parent { get; internal set; }
 
     /// <summary>
     /// This operand's position among its parent's child operands (0 for the root). Assigned during
     /// flattening.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "ordinalInParent")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "ordinalInParent")]
     public int OrdinalInParent { get; internal set; }
 
     /// <summary>
     /// This operand's position in the rule's flattened operand list. Assigned during flattening.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "ordinalInRule")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "ordinalInRule")]
     public int OrdinalInRule { get; internal set; }
 
     /// <summary>
     /// The order in which to solve operands when matching is seeded from this operand: itself, then its
     /// parents up to the root, then the remaining operands in prefix order. Assigned during flattening.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "solveOrder")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "solveOrder")]
     public int[] SolveOrder { get; internal set; } = Array.Empty<int>();
 
     /// <summary>
     /// The node type this operand matches.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "getMatchedClass()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "getMatchedClass()")]
     public Type MatchedClass { get; }
 
     /// <summary>
     /// A trait the node must carry, or <c>null</c> if the operand does not test traits.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "trait")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "trait")]
     public ITrait? Trait { get; }
 
     /// <summary>
     /// An extra condition applied after the class (and trait) test; defaults to always true.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "predicate")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "predicate")]
     public Func<INode, bool> Predicate { get; }
 
     /// <summary>
     /// How this operand treats the node's children.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "childPolicy")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "childPolicy")]
     public RuleOperandChildPolicy ChildPolicy { get; }
 
     /// <summary>
     /// The child operands (empty for <see cref="RuleOperandChildPolicy.Any"/> and
     /// <see cref="RuleOperandChildPolicy.Leaf"/>).
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "getChildOperands()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "getChildOperands()")]
     public ImmutableArray<RuleOperand> Children { get; }
 
     /// <summary>
     /// Whether <paramref name="node"/> matches this operand's class, trait, and predicate (the children
     /// are matched separately, by the matcher, per the <see cref="ChildPolicy"/>).
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "matches(RelNode)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "matches(RelNode)")]
     public bool Matches(INode node)
     {
         if (!MatchedClass.IsInstanceOfType(node))
@@ -186,7 +186,7 @@ public sealed class RuleOperand
     /// child operands. The predicate and child policy are not part of the identity (matching them is the
     /// rule's job, not the operand's).
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "equals(Object)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "equals(Object)")]
     public override bool Equals(object? obj)
     {
         if (ReferenceEquals(this, obj))
@@ -199,7 +199,7 @@ public sealed class RuleOperand
     }
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.RelOptRuleOperand", "hashCode()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "hashCode()")]
     public override int GetHashCode()
     {
         var hash = new HashCode();

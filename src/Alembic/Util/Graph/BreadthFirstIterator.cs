@@ -6,7 +6,7 @@ namespace Alembic.Util.Graph;
 /// <summary>
 /// Iterates the vertices reachable from a start vertex breadth-first.
 /// </summary>
-[Provenance("org.apache.calcite.util.graph.BreadthFirstIterator")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.BreadthFirstIterator")]
 public sealed class BreadthFirstIterator<V, E> : IEnumerator<V>
     where V : notnull
     where E : DefaultEdge
@@ -17,7 +17,7 @@ public sealed class BreadthFirstIterator<V, E> : IEnumerator<V>
     readonly HashSet<V> _set = new HashSet<V>();
     V _current = default!;
 
-    [Provenance("org.apache.calcite.util.graph.BreadthFirstIterator", "BreadthFirstIterator(DirectedGraph<V, E>, V)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.BreadthFirstIterator", "BreadthFirstIterator(DirectedGraph<V, E>, V)")]
     public BreadthFirstIterator(DirectedGraph<V, E> graph, V root)
     {
         _graph = graph;
@@ -27,7 +27,7 @@ public sealed class BreadthFirstIterator<V, E> : IEnumerator<V>
     /// <summary>
     /// The vertices reachable from <paramref name="root"/>, in breadth-first order.
     /// </summary>
-    [Provenance("org.apache.calcite.util.graph.BreadthFirstIterator", "of(DirectedGraph<V, E>, V)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.BreadthFirstIterator", "of(DirectedGraph<V, E>, V)")]
     public static IEnumerable<V> Of(DirectedGraph<V, E> graph, V root)
     {
         var iterator = new BreadthFirstIterator<V, E>(graph, root);
@@ -39,7 +39,7 @@ public sealed class BreadthFirstIterator<V, E> : IEnumerator<V>
     /// Populates <paramref name="set"/> with every vertex reachable from <paramref name="root"/>
     /// (including it).
     /// </summary>
-    [Provenance("org.apache.calcite.util.graph.BreadthFirstIterator", "reachable(Set<V>, DirectedGraph<V, E>, V)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.BreadthFirstIterator", "reachable(Set<V>, DirectedGraph<V, E>, V)")]
     public static void Reachable(HashSet<V> set, DirectedGraph<V, E> graph, V root)
     {
         var queue = new Queue<V>();
@@ -57,12 +57,12 @@ public sealed class BreadthFirstIterator<V, E> : IEnumerator<V>
         }
     }
 
-    [Provenance("org.apache.calcite.util.graph.BreadthFirstIterator", "next()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.BreadthFirstIterator", "next()")]
     public V Current => _current;
 
     object IEnumerator.Current => Current;
 
-    [Provenance("org.apache.calcite.util.graph.BreadthFirstIterator", "hasNext()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.BreadthFirstIterator", "hasNext()")]
     public bool MoveNext()
     {
         if (_queue.Count == 0)

@@ -10,25 +10,25 @@ namespace Alembic.Plan.Volcano;
 /// driver can pull only the matches relevant to the node it is currently optimizing, optionally filtered
 /// (e.g. to transformation rules while merely exploring).
 /// </summary>
-[Provenance("org.apache.calcite.plan.volcano.TopDownRuleQueue")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue")]
 public sealed class TopDownRuleQueue : RuleQueue
 {
 
-    [Provenance("org.apache.calcite.plan.volcano.TopDownRuleQueue", "matches")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue", "matches")]
     readonly Dictionary<INode, LinkedList<VolcanoRuleMatch>> _matches = new Dictionary<INode, LinkedList<VolcanoRuleMatch>>(ReferenceEqualityComparer.Instance);
     readonly HashSet<VolcanoRuleMatch> _seen = new HashSet<VolcanoRuleMatch>();
 
     /// <summary>
     /// Creates a queue for the given planner.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.TopDownRuleQueue", "TopDownRuleQueue(VolcanoPlanner)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue", "TopDownRuleQueue(VolcanoPlanner)")]
     public TopDownRuleQueue(VolcanoPlanner planner)
         : base(planner)
     {
     }
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.volcano.TopDownRuleQueue", "addMatch(VolcanoRuleMatch)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue", "addMatch(VolcanoRuleMatch)")]
     public override void AddMatch(VolcanoRuleMatch match)
     {
         var rel = match.Node(0);
@@ -54,7 +54,7 @@ public sealed class TopDownRuleQueue : RuleQueue
     /// Removes and returns the next match rooted at <paramref name="rel"/> that satisfies
     /// <paramref name="predicate"/> (if any), or <c>null</c>.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.TopDownRuleQueue", "popMatch(Pair<RelNode, Predicate<VolcanoRuleMatch>>)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue", "popMatch(Pair<RelNode, Predicate<VolcanoRuleMatch>>)")]
     public VolcanoRuleMatch? PopMatch(INode rel, Func<VolcanoRuleMatch, bool>? predicate)
     {
         if (!_matches.TryGetValue(rel, out var queue))
@@ -82,7 +82,7 @@ public sealed class TopDownRuleQueue : RuleQueue
     }
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.volcano.TopDownRuleQueue", "clear()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue", "clear()")]
     public override void Clear()
     {
         _matches.Clear();

@@ -10,13 +10,13 @@ namespace Alembic.Plan.Volcano;
 /// immediately, each completed match is deferred by adding a <see cref="VolcanoRuleMatch"/> to the
 /// planner's rule queue, for the <see cref="IRuleDriver"/> to apply later.
 /// </summary>
-[Provenance("org.apache.calcite.plan.volcano.VolcanoRuleCall.DeferringRuleCall")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall.DeferringRuleCall")]
 public sealed class DeferringRuleCall : VolcanoRuleCall
 {
 
     readonly VolcanoPlanner _planner;
 
-    [Provenance("org.apache.calcite.plan.volcano.VolcanoRuleCall.DeferringRuleCall", "DeferringRuleCall(VolcanoPlanner, RelOptRuleOperand)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall.DeferringRuleCall", "DeferringRuleCall(VolcanoPlanner, RelOptRuleOperand)")]
     internal DeferringRuleCall(VolcanoPlanner planner, RuleOperand operand0)
         : base(planner, operand0)
     {
@@ -26,7 +26,7 @@ public sealed class DeferringRuleCall : VolcanoRuleCall
     /// <summary>
     /// Queues the completed match rather than applying it.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.VolcanoRuleCall.DeferringRuleCall", "onMatch()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall.DeferringRuleCall", "onMatch()")]
     public override void OnMatch()
     {
         var builder = ImmutableArray.CreateBuilder<INode>(Rels.Length);

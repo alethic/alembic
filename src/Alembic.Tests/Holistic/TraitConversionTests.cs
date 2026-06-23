@@ -36,7 +36,7 @@ public class TraitConversionTests
 
         planner.AddTraitDef(SortednessTraitDef.Instance);
         planner.SetRoot(root);
-        planner.ChangeTraits(root, sorted);
+        planner.SetRoot(planner.ChangeTraits(root, sorted));
         var best = planner.FindBestPlan();
         _output.WriteLine(PlanUtil.ToString(best));
 
@@ -59,7 +59,7 @@ public class TraitConversionTests
         planner.AddRule(new LowerToCpu());
         planner.AddRule(new UploadRule());
         planner.SetRoot(root);
-        planner.ChangeTraits(root, gpu);
+        planner.SetRoot(planner.ChangeTraits(root, gpu));
         var best = planner.FindBestPlan();
         _output.WriteLine(PlanUtil.ToString(best));
 

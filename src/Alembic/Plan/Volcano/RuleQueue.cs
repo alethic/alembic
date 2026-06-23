@@ -11,14 +11,14 @@ namespace Alembic.Plan.Volcano;
 /// its own queue: the bottom-up search drains a FIFO (<see cref="IterativeRuleQueue"/>), the top-down
 /// search pulls matches per node and in a rule-priority order (<see cref="TopDownRuleQueue"/>).
 /// </summary>
-[Provenance("org.apache.calcite.plan.volcano.RuleQueue")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue")]
 public abstract class RuleQueue
 {
 
     /// <summary>
     /// The planner whose matches this queue holds.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.RuleQueue", "RuleQueue(VolcanoPlanner)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue", "RuleQueue(VolcanoPlanner)")]
     protected RuleQueue(VolcanoPlanner planner)
     {
         Planner = planner;
@@ -27,19 +27,19 @@ public abstract class RuleQueue
     /// <summary>
     /// The planner whose matches this queue holds.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.RuleQueue", "planner")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue", "planner")]
     protected VolcanoPlanner Planner { get; }
 
     /// <summary>
     /// Adds a match to the queue.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.RuleQueue", "addMatch(VolcanoRuleMatch)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue", "addMatch(VolcanoRuleMatch)")]
     public abstract void AddMatch(VolcanoRuleMatch match);
 
     /// <summary>
     /// Empties the queue.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.RuleQueue", "clear()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue", "clear()")]
     public abstract void Clear();
 
     /// <summary>
@@ -47,7 +47,7 @@ public abstract class RuleQueue
     /// same subset appears more than once along a path from the root operand to a leaf (a cycle — a node
     /// consuming its own output, which would only generate useless equivalents).
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.RuleQueue", "skipMatch(VolcanoRuleMatch)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue", "skipMatch(VolcanoRuleMatch)")]
     protected virtual bool SkipMatch(VolcanoRuleMatch match)
     {
         foreach (var rel in match.Nodes)
@@ -62,7 +62,7 @@ public abstract class RuleQueue
     /// path (held in <paramref name="subsets"/>); recurses into the operand's children. Duplicate subsets
     /// on different paths are fine — only a repeat along one path is a cycle.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.volcano.RuleQueue", "checkDuplicateSubsets(Deque<RelSubset>, RelOptRuleOperand, RelNode[])")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue", "checkDuplicateSubsets(Deque<RelSubset>, RelOptRuleOperand, RelNode[])")]
     bool HasDuplicateSubsetOnPath(Stack<NodeSubset> subsets, RuleOperand operand, ImmutableArray<INode> rels)
     {
         var subset = Planner.GetSubsetNonNull(rels[operand.OrdinalInRule]);

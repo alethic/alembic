@@ -29,10 +29,9 @@ a C# property `X`; `RelTrait*` → `*Trait*`.
 |---|---|---|
 | `getTraitSet()` | `Traits` | |
 | `getInputs()` | `Children` | |
-| `getInput(int)` | `Children[i]` | + `WithChild(i, child)` to replace one |
+| `getInput(int)` | `Children[i]` | |
 | `copy(traitSet, inputs)` | `Copy(traits, children)` | |
 | `getConvention()` | `Convention` | default member |
-| `isLeaf` (via inputs) | `IsLeaf` | default member |
 | `computeSelfCost(planner, mq)` | `ComputeSelfCost(planner)` | no `mq` (metadata) |
 | `getRelDigest()` | `GetDigest()` | returns `INodeDigest` |
 | `deepEquals(obj)` | `DeepEquals(other)` | |
@@ -224,8 +223,8 @@ Calcite has no such interface.)
 | `isLt(cost)` | `IsLessThan(other)` | |
 | `plus(cost)` | `Plus(other)` | |
 | `equals(cost)` | `Equals` | |
-| `getCpu()` / `getIo()` | `Cpu` / `Io` | on the interface; `Cost` reports its value as `Cpu`, `0` as `Io` |
-| `getRows()` | — | row count dropped (not a database) |
+| `getCpu()` / `getIo()` | `Cpu` / `Io` | on the interface; `Cost` reports `0` for both (as `RelOptCostImpl` does — the scalar is used only to compare/combine) |
+| `getRows()` | — | row count dropped (relational; not a database) |
 | `minus`, `multiplyBy`, `divideBy`, `isEqWithEpsilon` | `Minus`, `MultiplyBy`, `DivideBy`, `IsEqWithEpsilon` | all present on `ICost` |
 
 ### `RelOptCostFactory` (interface) → `ICostFactory` (`src/Alembic/Plan/ICostFactory.cs`)
@@ -240,8 +239,11 @@ Calcite has no such interface.)
 
 ### `RelOptCostImpl` → `Cost` (`src/Alembic/Plan/Cost.cs`)
 
-Scalar cost. `Zero`/`Tiny`/`Huge`/`Infinity` constants + `Factory`; implements the `ICost` and
-`ICostFactory` members above over a single `double`.
+Scalar cost mirroring `RelOptCostImpl` member-for-member over a single `double`: `Cpu`/`Io` report `0`;
+comparison and arithmetic (`plus`/`minus`/`multiplyBy` as plain `new Cost(...)`, `divideBy` as plain
+division) use the scalar, matching Calcite exactly (no infinite short-circuits). No `getRows()`
+(relational) and no public cost constants — the named cost singletons live on `VolcanoCost`. The inner
+`Factory` makes each named cost inline (`new Cost(0.0)`, `new Cost(double.PositiveInfinity)`, …).
 
 ### `VolcanoCost` → `VolcanoCost` (`src/Alembic/Plan/Volcano/VolcanoCost.cs`)
 
@@ -521,8 +523,7 @@ Marker interface; fired by `HepProgramBuilder.AddCommonRelSubExprInstruction()` 
 | Calcite | Alembic | Notes |
 |---|---|---|
 | `setRoot` / `findBestExp` | `SetRoot` / `FindBestPlan` | |
-| `changeTraits(rel, traits)` | `Convert(node, traits)` | the conversion primitive (no root side-effect); `RelOptRule.convert`'s target |
-| (setRoot + changeTraits convenience) | `ChangeTraits(node, traits)` | `Convert` plus recording the root request — Alembic packages the common `setRoot(changeTraits(...))` into one call |
+| `changeTraits(rel, traits)` | `ChangeTraits(node, traits)` | converts to the trait subset; no root side-effect (compose with `SetRoot`, as Calcite does); also `RelOptRule.convert`'s target |
 | `register` / `ensureRegistered` | `Register(node, equiv)` | |
 | `registerImpl` | `RegisterImpl` | |
 | `addRule` / `removeRule` | `AddRule` / `RemoveRule` | build/tear down the dispatch table; register converter rules with their trait def |
@@ -813,24 +814,25 @@ named file) · `EXTRA` (Alembic member with no Calcite counterpart).
 
 **Provenance is recorded in code.** Every Calcite-derived type and member carries a
 `[Provenance(className, member?)]` attribute — the authoritative, machine-readable record of what it
-derives from (the surface tables in §1–8 mirror the annotated member→Calcite mappings). An attribute
-can only assert derivation, not its *absence*, so the audit records that other half here: the
-**Alembic-original members that deliberately carry no `[Provenance]`** (no Calcite analog), listed in
-the subsection immediately below.
+derives from (the surface tables in §1–8 mirror the annotated member→Calcite mappings). Its `Source`
+property (a `ProvenanceSource` of `Calcite` / `Other` / `Local`) is the **required first constructor
+argument**, so it can never be omitted — all 885 carry it: 884 `Calcite`, and the lone `Other` is
+`WeakInterner` (Guava). `Local` is a human-only mark — an explicit "reviewed, intentionally
+Alembic-original" assertion, never added automatically. An ordinary attribute can only assert derivation,
+not its *absence*, so the audit records that other half here: the **Alembic-original members that
+deliberately carry no `[Provenance]`** (no Calcite analog), listed in the subsection immediately below.
 
 ### Alembic-original members (no `[Provenance]` — no Calcite analog)
 
 Compiled across the project; everything not listed here is annotated.
 
-- **`INode`**: `IsLeaf`, `WithChild` (convenience). **`AbstractNode`**: `DigestItems` + nested `DigestWriter` (the `DeepEquals`/digest-string helper).
-- **`Cost`**: the `Zero`/`Tiny`/`Huge`/`Infinity` constants and `Value` (Calcite's `getRows()` is dropped).
-- **`IPlanner`/`AbstractPlanner`**: `Convert` (its analog is `VolcanoPlanner.changeTraits`, on a different type), the `protected Rules` accessor, `HasListeners`. **`Cluster`**: its ctor (Calcite's `RelOptCluster` ctors are relational/package-private). **`IPlannerListener.PlannerEvent`**: `Source` (JDK `EventObject`).
-- **`TraitDef` / `CompositeTrait`**: the non-generic abstract base classes themselves are an Alembic structural device — Calcite has a single generic class (`RelTraitDef<T>` / `RelCompositeTrait<T>`) used raw, which C# can't express, so the non-generic base + generic subclass split stands in for it. Their members map to the Calcite class (annotated), but the *split into two types* has no Calcite analog. Also Alembic-original: **`TraitDef`**'s `_interned` field. **`TraitSet`**: the private ctor, explicit `IEnumerable.GetEnumerator`, the typed `Equals(TraitSet?)` overload, the nested `Cache`, `ReplaceAt`/`FindIndex`. **`IMultipleTrait`**: the inherited `IComparable<>`. **`Convention`**: the single-arg ctor and `Equals`/`GetHashCode` (by-name — Calcite's `Impl` uses identity).
+- **`IPlanner`/`AbstractPlanner`**: the `protected Rules` accessor, `HasListeners`. **`Cluster`**: its ctor (Calcite's `RelOptCluster` ctors are relational/package-private). **`IPlannerListener.PlannerEvent`**: `Source` (JDK `EventObject`).
+- **`TraitDef` / `CompositeTrait`**: the non-generic abstract base classes themselves are an Alembic structural device — Calcite has a single generic class (`RelTraitDef<T>` / `RelCompositeTrait<T>`) used raw, which C# can't express, so the non-generic base + generic subclass split stands in for it. Their members map to the Calcite class (annotated), but the *split into two types* has no Calcite analog. Also Alembic-original: **`TraitDef`**'s `_interned` field. **`TraitSet`**: the explicit non-generic `IEnumerable.GetEnumerator` and the typed `Equals(TraitSet?)` overload (the private ctor, nested `Cache`, `ReplaceAt`, and `FindIndex` are now annotated to their `RelTraitSet` analogs). **`IMultipleTrait`**: the inherited `IComparable<>`. **`Convention`**: the single-arg ctor and `Equals`/`GetHashCode` (by-name — Calcite's `Impl` uses identity).
 - **`RuleOperand`**: the convenience constructors (Calcite has only the two real ctors; ours add default-filling overloads). **`TraitMatchingRule`**: the `_converterRule` field.
 - **`NodeSet`**: the `Cluster` property and the single-arg `GetOrCreateSubset(traits)`. **`NodeSubset`**: `LiveSet` (EXTRA — equiv-root resolution). **`VolcanoPlanner`**: `ChangeTraits` (the `setRoot`+`changeTraits` convenience), `RootSubset`, `CostEquals`, `OperandsFor`, the multi-step conversion BFS (`FindConversionPath`/`ConversionEdges`/`Reconstruct`/`ConversionStep`), and `_classes`/`_cluster`. **Rule queues/drivers**: the `_seen` dedup sets (replace Calcite's `MatchList`/`names`). **`ExpandConversionRule`**: its public ctor (replaces Calcite's `Config`/singleton).
-- **`HepPlanner`**: `NoDag`, `Convert`, `EnsureSatisfies`, `ShallowEqual`, `RemoveFiredRules`, `Match`, and the nested **`FiredKey`** type (replaces Calcite's `ImmutableIntList` cache key). **`HepProgram`**: the `_program` back-ref. **`HepProgramBuilder`**: the `Check` helper. **`HepInstruction` states**: the explicit `Instruction` back-references (Java uses the implicit outer `this`).
+- **`HepPlanner`**: the `NoDag` property (a get/set accessor — the backing `_noDag` field maps to `noDag`), `EnsureSatisfies`, `ShallowEqual`, `RemoveFiredRules`, `Match`, and the nested **`FiredKey`** type (replaces Calcite's `ImmutableIntList` cache key). **`HepProgram`**: the `_program` back-ref. **`HepProgramBuilder`**: the `Check` helper. **`HepInstruction` states**: the explicit `Instruction` back-references (Java uses the implicit outer `this`).
 - **Graph iterators** (`DepthFirst`/`BreadthFirst`/`Topological`/`HepVertexIterator`): the `IEnumerator` plumbing (`Current`, `Reset`, `Dispose`). **`Pair`**: the non-generic `Pair` companion (a C# type-inference workaround — Alembic-original type). **`DefaultDirectedGraph`**: the `VertexSetView`. **`DefaultEdge`**: the `DefaultEdgeFactory` (Calcite uses a lambda).
-- **`WeakInterner`**: class-level provenance points to Guava `Interners.newWeakInterner` (not Calcite); its members are un-annotated (the .NET implementation is hand-rolled, not a member-for-member port). **`ProvenanceAttribute`**: Alembic-original infrastructure — no upstream analog.
+- **`WeakInterner`**: class-level provenance points to Guava `Interners.newWeakInterner` with `Source = ProvenanceSource.Other` (not Calcite); its members are un-annotated (the .NET implementation is hand-rolled, not a member-for-member port). **`ProvenanceAttribute`** / **`ProvenanceSource`**: Alembic-original infrastructure — no upstream analog.
 
 ### `RelSubset` → `NodeSubset` — ~50 members, all `FAITHFUL` except:
 
@@ -903,7 +905,7 @@ Three themes recur across the Volcano findings below and are worth fixing as uni
 |---|---|---|
 | `AbstractConverter.explainTerms` | **RESOLVED (ported)** | overridden to emit each enforced trait (`Item(trait.TraitDef.Name, trait)`) after the base terms, as Calcite. Required making `TraitSet` enumerable (`IEnumerable<ITrait>`) — the analog of `RelTraitSet` being `Iterable`. |
 | `ExpandConversionRule.INSTANCE` / `Config` | DIVERGENT-OK | singleton/Config plumbing replaced by a public ctor + inline operand. |
-| `IPhysicalNode.passThrough`/`derive` | FAITHFUL | compose via `IPlanner.Convert` (= `RelOptRule.convert`). |
+| `IPhysicalNode.passThrough`/`derive` | FAITHFUL | compose via `IPlanner.ChangeTraits` (= `changeTraits`, `RelOptRule.convert`'s target). |
 
 ### `HepPlanner` → `HepPlanner` — ~56 members; findings (PORT.md's "method-audited" claim was optimistic):
 
@@ -1009,7 +1011,7 @@ Three themes recur across the Volcano findings below and are worth fixing as uni
 | `Convention.Impl` placement (nested) → top-level `Convention` | **RESOLVED (decision: keep top-level)** | Calcite's concrete convention is `Convention.Impl`, a class nested in the `Convention` interface. Both are extension points for adapters: the interface is implemented directly (`EnumerableConvention`, `BindableConvention`, `InterpretableConvention`) and `Impl` is subclassed as a convenience base (`JdbcConvention extends Convention.Impl`). Alembic splits these into `IConvention` (the interface others implement) + a top-level `Convention` (the extensible concrete base others subclass). **Kept top-level by decision**: a top-level, openly-subclassable class is the idiomatic C# extension point; nesting it inside the interface (the Java form) would only hinder that. This is the chosen Alembic structure, not a deviation to reconcile later. |
 | `Convention.Impl` `equals`/`hashCode` | DIVERGENT-OK (intentional) | Calcite's `Impl` uses reference identity (conventions are singletons); Alembic compares by name. Deliberate, documented. |
 
-### `RelOptCost`/`Cost`/`VolcanoCost` — **no bugs.** rowCount dropped → comparison shifts to `Cpu` (DIVERGENT-OK); the `TINY` ctor-arg reorder is correct (FAITHFUL). `multiplyBy`/`divideBy`/`isEqWithEpsilon` now **RESOLVED (ported)** on `ICost`/`Cost`/`VolcanoCost`: `MultiplyBy` scales components (infinite stays infinite); `DivideBy` is the geometric mean of per-component ratios over the non-zero/finite components (1.0 if none); `IsEqWithEpsilon` compares each component within 1e-5. *Re-verification note:* `VolcanoCost`'s three helpers are faithful to Calcite's `VolcanoCost` (rowCount term dropped consistently). The scalar `Cost`'s three are intentionally **stronger** than Calcite's bare `RelOptCostImpl` (which has no zero/infinite/type guards): they carry the same guards as `VolcanoCost` so all `ICost` implementations behave uniformly — DIVERGENT-OK, by design.
+### `RelOptCost`/`Cost`/`VolcanoCost` — **no bugs.** `getRows()`/`Value` dropped (relational). The scalar `Cost` now mirrors `RelOptCostImpl` member-for-member: `getCpu()`/`getIo()` return `0`; `plus`/`minus`/`multiplyBy` are plain `new Cost(...)` (no infinite short-circuit) and `divideBy` is plain division, matching Calcite exactly; comparison is on the private scalar. `VolcanoCost` keeps its own component-wise behavior — `multiplyBy`/`minus` infinite short-circuits, geometric-mean `divideBy`, per-component `isEqWithEpsilon` — faithful to Calcite's `VolcanoCost`. The named cost singletons (`INFINITY`/`HUGE`/`ZERO`/`TINY`) live on `VolcanoCost` (annotated), as in Calcite; `RelOptCostImpl`/`Cost` have none and build costs inline in their factory.
 
 ### `RelNode`/`AbstractRelNode` → `INode`/`AbstractNode` — findings (structural core FAITHFUL):
 

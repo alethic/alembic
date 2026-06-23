@@ -9,28 +9,28 @@ namespace Alembic.Plan;
 /// The non-generic base of a <see cref="CompositeTrait{T}"/>, so a <see cref="TraitSet"/> can recognize
 /// and flatten composite traits without knowing the member type.
 /// </summary>
-[Provenance("org.apache.calcite.plan.RelCompositeTrait")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait")]
 public abstract class CompositeTrait : ITrait
 {
 
     /// <summary>
     /// The number of member traits.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelCompositeTrait", "size()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "size()")]
     public abstract int Count { get; }
 
     /// <summary>
     /// The member trait at the given index.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelCompositeTrait", "trait(int)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "trait(int)")]
     public abstract ITrait TraitAt(int index);
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.RelCompositeTrait", "getTraitDef()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "getTraitDef()")]
     public abstract TraitDef TraitDef { get; }
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.RelCompositeTrait", "satisfies(RelTrait)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "satisfies(RelTrait)")]
     public abstract bool Satisfies(ITrait other);
 
 }
@@ -40,7 +40,7 @@ public abstract class CompositeTrait : ITrait
 /// <see cref="TraitSet"/> hold several values on one dimension (e.g. several sort orders).
 /// </summary>
 /// <typeparam name="T">The member trait type.</typeparam>
-[Provenance("org.apache.calcite.plan.RelCompositeTrait")]
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait")]
 public sealed class CompositeTrait<T> : CompositeTrait
     where T : class, IMultipleTrait
 {
@@ -58,7 +58,7 @@ public sealed class CompositeTrait<T> : CompositeTrait
     /// Creates a trait from the members: the dimension's default when empty, the sole member when there
     /// is one, otherwise a composite.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelCompositeTrait", "of(RelTraitDef, List)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "of(RelTraitDef, List)")]
     public static ITrait Of(TraitDef<T> def, IReadOnlyList<T> traits)
     {
         if (traits.Count == 0)
@@ -77,23 +77,23 @@ public sealed class CompositeTrait<T> : CompositeTrait
     /// <summary>
     /// The member traits, in order.
     /// </summary>
-    [Provenance("org.apache.calcite.plan.RelCompositeTrait", "traitList()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "traitList()")]
     public ImmutableArray<T> Traits => _traits;
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.RelCompositeTrait", "size()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "size()")]
     public override int Count => _traits.Length;
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.RelCompositeTrait", "trait(int)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "trait(int)")]
     public override ITrait TraitAt(int index) => _traits[index];
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.RelCompositeTrait", "getTraitDef()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "getTraitDef()")]
     public override TraitDef TraitDef => _def;
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.RelCompositeTrait", "satisfies(RelTrait)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "satisfies(RelTrait)")]
     public override bool Satisfies(ITrait other)
     {
         if (other is CompositeTrait<T> composite)
@@ -103,14 +103,14 @@ public sealed class CompositeTrait<T> : CompositeTrait
     }
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.RelCompositeTrait", "equals(Object)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "equals(Object)")]
     public override bool Equals(object? obj)
     {
         return obj is CompositeTrait<T> other && _traits.SequenceEqual(other._traits);
     }
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.RelCompositeTrait", "hashCode()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "hashCode()")]
     public override int GetHashCode()
     {
         var hash = new HashCode();
@@ -121,7 +121,7 @@ public sealed class CompositeTrait<T> : CompositeTrait
     }
 
     /// <inheritdoc />
-    [Provenance("org.apache.calcite.plan.RelCompositeTrait", "toString()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "toString()")]
     public override string ToString()
     {
         return "[" + string.Join(", ", _traits) + "]";
