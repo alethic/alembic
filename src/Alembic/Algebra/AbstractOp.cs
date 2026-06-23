@@ -22,13 +22,21 @@ public abstract class AbstractOp : IOp
     /// <summary>
     /// Initializes the op with its cluster, traits, and children.
     /// </summary>
+    // The source of op ids, handed out in creation order. Atomic, as in Calcite's NEXT_ID.
+    static int _nextId;
+
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "AbstractRelNode(RelOptCluster, RelTraitSet)")]
     protected AbstractOp(OpCluster cluster, OpTraitSet traits)
     {
         Cluster = cluster;
         Traits = traits;
+        Id = System.Threading.Interlocked.Increment(ref _nextId) - 1;
         _digest = new InnerOpDigest(this);
     }
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getId()")]
+    public int Id { get; }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getCluster()")]

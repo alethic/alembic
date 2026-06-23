@@ -15,7 +15,9 @@ internal class TopDownRuleQueue : RuleQueue
 {
 
     readonly Dictionary<IOp, LinkedList<VolcanoRuleMatch>> _matches = new Dictionary<IOp, LinkedList<VolcanoRuleMatch>>(ReferenceEqualityComparer.Instance);
-    readonly HashSet<VolcanoRuleMatch> _seen = new HashSet<VolcanoRuleMatch>();
+
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue", "names")]
+    readonly HashSet<string> _names = new HashSet<string>();
 
     /// <summary>
     /// Creates a queue for the given planner.
@@ -37,7 +39,7 @@ internal class TopDownRuleQueue : RuleQueue
             _matches[rel] = queue;
         }
 
-        if (!_seen.Add(match))
+        if (!_names.Add(match.ToString()))
             return;
 
         // A substitution rule is applied first even though queued last: the driver pops from the front
@@ -85,7 +87,7 @@ internal class TopDownRuleQueue : RuleQueue
     public override void Clear()
     {
         _matches.Clear();
-        _seen.Clear();
+        _names.Clear();
     }
 
 }

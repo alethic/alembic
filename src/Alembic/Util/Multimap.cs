@@ -47,4 +47,10 @@ public sealed class Multimap<TKey, TValue>
         return _map.TryGetValue(key, out var values) ? values : System.Array.Empty<TValue>();
     }
 
+    /// <summary>
+    /// Removes every key→value association.
+    /// </summary>
+    [Provenance(ProvenanceSource.Other, "com.google.common.collect.Multimap", "clear()")]
+    public void Clear() => _map.Clear();
+
 }

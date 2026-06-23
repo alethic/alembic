@@ -20,6 +20,12 @@ public interface IOp
 {
 
     /// <summary>
+    /// This op's unique, stable id, assigned in creation order.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptNode", "getId()")]
+    int Id { get; }
+
+    /// <summary>
     /// The cluster this op belongs to — its shared planning context. Every op in a plan shares one.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getCluster()")]

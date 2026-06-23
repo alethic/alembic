@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Immutable;
-using System.Runtime.CompilerServices;
+using System.Text;
 
 using Alembic.Algebra;
 using Alembic.Plan.Rules;
@@ -9,12 +9,15 @@ namespace Alembic.Plan.Volcano;
 
 /// <summary>
 /// A rule match waiting in the <see cref="RuleQueue"/>: a rule plus the ops bound to its operands.
-/// Applying it (<see cref="VolcanoRuleCall.OnMatch"/>) registers the rule's equivalents. Two matches
-/// are equal when they have the same rule and the same bound ops, so duplicates are dropped.
+/// Applying it (<see cref="VolcanoRuleCall.OnMatch"/>) registers the rule's equivalents. A match's
+/// <see cref="ToString"/> is its digest — the rule plus its bound ops' ids — by which the queue drops
+/// duplicates.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch")]
 internal class VolcanoRuleMatch : VolcanoRuleCall
 {
+
+    string _digest;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "VolcanoRuleMatch(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
     internal VolcanoRuleMatch(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops)
@@ -24,32 +27,37 @@ internal class VolcanoRuleMatch : VolcanoRuleCall
         foreach (var op in ops)
             if (op is null)
                 throw new ArgumentException("A rule match must have an op bound to every operand.", nameof(ops));
+
+        _digest = ComputeDigest();
     }
 
     /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "toString()")]
+    public override string ToString() => _digest;
+
+    /// <summary>
+    /// Recomputes this match's digest (after its bound ops have changed).
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "recomputeDigest()")]
+    public void RecomputeDigest() => _digest = ComputeDigest();
+
+    /// <summary>
+    /// The digest by which two matches are deemed equivalent: the rule and the ids of its bound ops.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "computeDigest()")]
-    public override bool Equals(object? obj)
+    string ComputeDigest()
     {
-        if (obj is not VolcanoRuleMatch other || !ReferenceEquals(Rule, other.Rule) || Ops.Length != other.Ops.Length)
-            return false;
+        var buf = new StringBuilder("rule [" + Rule.Description + "] rels [");
+        for (int i = 0; i < Rels.Length; i++)
+        {
+            if (i > 0)
+                buf.Append(',');
 
-        for (int i = 0; i < Ops.Length; i++)
-            if (!ReferenceEquals(Ops[i], other.Ops[i]))
-                return false;
+            buf.Append('#').Append(Rels[i]!.Id);
+        }
 
-        return true;
-    }
-
-    /// <inheritdoc />
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "computeDigest()")]
-    public override int GetHashCode()
-    {
-        var hash = new HashCode();
-        hash.Add(RuntimeHelpers.GetHashCode(Rule));
-        foreach (var op in Ops)
-            hash.Add(RuntimeHelpers.GetHashCode(op));
-
-        return hash.ToHashCode();
+        buf.Append(']');
+        return buf.ToString();
     }
 
 }

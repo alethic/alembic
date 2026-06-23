@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 
+using Alembic.Util;
+
 namespace Alembic.Plan.Volcano;
 
 /// <summary>
@@ -27,10 +29,11 @@ internal class IterativeRuleQueue : RuleQueue
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue", "addMatch(VolcanoRuleMatch)")]
     internal override void AddMatch(VolcanoRuleMatch match)
     {
-        if (!_matchList.Names.Add(match))
+        if (!_matchList.Names.Add(match.ToString()))
             return;
 
         _matchList.Offer(match, Planner.IsSubstituteRule(match));
+        _matchList.MatchMap.Put(Planner.GetSubsetNonNull(match.Op(0)), match);
     }
 
     /// <summary>
@@ -47,7 +50,15 @@ internal class IterativeRuleQueue : RuleQueue
                 : _matchList.Queue.Dequeue();
 
             if (!SkipMatch(match))
+            {
+                // The op's set may have merged since the match was queued, so its subset may have changed;
+                // a stale entry is harmless and will be cleared at the end.
+                var subset = Planner.GetSubset(match.Op(0));
+                if (subset is not null)
+                    _matchList.MatchMap.Remove(subset, match);
+
                 return match;
+            }
         }
 
         return null;
@@ -71,15 +82,12 @@ internal class IterativeRuleQueue : RuleQueue
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue.MatchList", "queue")]
         internal readonly Queue<VolcanoRuleMatch> Queue = new Queue<VolcanoRuleMatch>();
 
-        // Calcite's `names` is a Set<String> of match.toString() digests, which embed each op's
-        // RelNode.getId(). Alembic doesn't port getId(), so it dedups by match identity instead
-        // (VolcanoRuleMatch equality — same rule, same bound ops by reference); equivalent, since both
-        // are per-instance.
+        // A set of the queued matches' digests (VolcanoRuleMatch.ToString()), for fast duplicate detection.
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue.MatchList", "names")]
-        internal readonly HashSet<VolcanoRuleMatch> Names = new HashSet<VolcanoRuleMatch>();
+        internal readonly HashSet<string> Names = new HashSet<string>();
 
-        // Calcite's `matchMap` (Multimap<RelSubset, VolcanoRuleMatch>) is not ported: it is put to and
-        // removed from but never read — vestigial bookkeeping.
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue.MatchList", "matchMap")]
+        internal readonly Multimap<OpSubset, VolcanoRuleMatch> MatchMap = new Multimap<OpSubset, VolcanoRuleMatch>();
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue.MatchList", "offer(VolcanoRuleMatch)")]
         internal void Offer(VolcanoRuleMatch match, bool isSubstitution)
@@ -96,6 +104,7 @@ internal class IterativeRuleQueue : RuleQueue
             PreQueue.Clear();
             Queue.Clear();
             Names.Clear();
+            MatchMap.Clear();
         }
 
     }
