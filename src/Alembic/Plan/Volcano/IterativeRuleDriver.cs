@@ -1,3 +1,5 @@
+using System;
+
 using Alembic.Algebra;
 
 namespace Alembic.Plan.Volcano;
@@ -10,7 +12,9 @@ namespace Alembic.Plan.Volcano;
 public sealed class IterativeRuleDriver : IRuleDriver
 {
 
-    readonly IterativeRuleQueue _queue;
+    readonly VolcanoPlanner _planner;
+
+    readonly IterativeRuleQueue _ruleQueue;
 
     /// <summary>
     /// Creates a driver for the given planner.
@@ -18,20 +22,33 @@ public sealed class IterativeRuleDriver : IRuleDriver
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleDriver", "IterativeRuleDriver(VolcanoPlanner)")]
     public IterativeRuleDriver(VolcanoPlanner planner)
     {
-        _queue = new IterativeRuleQueue(planner);
+        _planner = planner;
+        _ruleQueue = new IterativeRuleQueue(planner);
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleDriver", "getRuleQueue()")]
-    public RuleQueue Queue => _queue;
+    public RuleQueue Queue => _ruleQueue;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleDriver", "drive()")]
     public void Drive()
     {
-        VolcanoRuleMatch? match;
-        while ((match = _queue.PopMatch()) is not null)
+        while (true)
+        {
+            if (_planner.Root is null)
+                throw new InvalidOperationException("OpSubset must not be null at this point");
+
+            VolcanoRuleMatch? match = _ruleQueue.PopMatch();
+            if (match is null)
+                break;
+
             match.OnMatch();
+
+            // The root may have been merged with another
+            // subset. Find the new root subset.
+            _planner.Canonize();
+        }
     }
 
     /// <inheritdoc />
@@ -50,7 +67,7 @@ public sealed class IterativeRuleDriver : IRuleDriver
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleDriver", "clear()")]
     public void Clear()
     {
-        _queue.Clear();
+        _ruleQueue.Clear();
     }
 
 }

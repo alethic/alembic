@@ -272,11 +272,20 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     }
 
     /// <summary>
-    /// Resolves a subset to its live set: returns it unchanged if its set is still alive, else the
-    /// equivalent subset on the set it was merged into.
+    /// Find the new root subset in case the root is merged with another subset.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "canonize()")]
+    internal void Canonize()
+    {
+        _root = Canonize(_root!);
+    }
+
+    /// <summary>
+    /// If a subset has one or more equivalent subsets (owing to a set having merged with another),
+    /// returns the subset which is the leader of the equivalence class.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "canonize(RelSubset)")]
-    OpSubset Canonize(OpSubset subset)
+    static OpSubset Canonize(OpSubset subset)
     {
         if (subset.Set.EquivalentSet is null)
             return subset;
@@ -341,11 +350,12 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "registerSubset(RelSet, RelSubset)")]
     OpSubset RegisterSubset(OpSet? set, OpSubset subset)
     {
-        var live = EquivRoot(subset.Set);
-        if (set is not null && EquivRoot(set) != live)
-            Merge(set, live);
+        if (set != subset.Set
+            && set is not null
+            && set.EquivalentSet is null)
+            Merge(set, subset.Set);
 
-        return subset;
+        return Canonize(subset);
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "onRegister(RelOptPlanner)")]
