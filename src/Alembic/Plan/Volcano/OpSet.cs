@@ -19,7 +19,7 @@ public sealed class OpSet
 
     // NOTE: Calcite's RelSet(int, Set<CorrelationId>, Set<CorrelationId>) also records the correlation
     // variables propagated/used by the set; those parameters are omitted here until correlation (Rex) is
-    // ported. RelSet stores no cluster or cost factory — both are threaded in from the op/subset.
+    // ported.
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "RelSet(int, Set<CorrelationId>, Set<CorrelationId>)")]
     internal OpSet(int id)
     {
