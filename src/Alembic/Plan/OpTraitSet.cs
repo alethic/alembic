@@ -2,6 +2,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Text;
 
 namespace Alembic.Plan;
 
@@ -18,6 +20,7 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     readonly Cache _cache;
     readonly ImmutableArray<IOpTrait> _traits;
     int _hash;
+    string? _string;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "RelTraitSet(Cache, RelTrait[])")]
     OpTraitSet(Cache cache, ImmutableArray<IOpTrait> traits)
@@ -32,8 +35,7 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "createEmpty()")]
     public static OpTraitSet CreateEmpty()
     {
-        var cache = new Cache();
-        return cache.GetOrAdd(new OpTraitSet(cache, ImmutableArray<IOpTrait>.Empty));
+        return new OpTraitSet(new Cache(), ImmutableArray<IOpTrait>.Empty);
     }
 
     /// <summary>
@@ -91,10 +93,14 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "plus(RelTrait)")]
     public OpTraitSet Plus(IOpTrait trait)
     {
-        trait = Canonize(trait);
+        if (Contains(trait))
+            return this;
+
         var index = FindIndex(trait.TraitDef);
-        var next = index >= 0 ? _traits.SetItem(index, trait) : _traits.Add(trait);
-        return _cache.GetOrAdd(new OpTraitSet(_cache, next));
+        if (index >= 0)
+            return ReplaceAt(index, trait);
+
+        return _cache.GetOrAdd(new OpTraitSet(_cache, _traits.Add(Canonize(trait))));
     }
 
     /// <summary>
@@ -103,6 +109,10 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "canonize(RelTrait)")]
     public IOpTrait Canonize(IOpTrait trait)
     {
+        // Composite traits are canonized on creation (by OpCompositeTrait.Of), so return as-is.
+        if (trait is OpCompositeTrait)
+            return trait;
+
         return trait.TraitDef.Canonize(trait);
     }
 
@@ -176,7 +186,22 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "equalsSansConvention(RelTraitSet)")]
     public bool EqualsSansConvention(OpTraitSet other)
     {
-        return Replace(ConventionTraitDef.Instance, other.Convention).Equals(other);
+        if (ReferenceEquals(this, other))
+            return true;
+        if (Count != other.Count)
+            return false;
+
+        for (int i = 0; i < _traits.Length; i++)
+        {
+            if (ReferenceEquals(_traits[i].TraitDef, ConventionTraitDef.Instance))
+                continue;
+
+            // Each trait is canonized already, so reference identity is value equality.
+            if (!ReferenceEquals(_traits[i], other._traits[i]))
+                return false;
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -247,12 +272,26 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "replace(RelTrait)")]
     public OpTraitSet Replace(IOpTrait trait)
     {
-        trait = Canonize(trait);
+        // Quick check for the common case: the trait is already present by identity.
+        if (ContainsShallow(trait))
+            return this;
+
         var index = FindIndex(trait.TraitDef);
         if (index < 0)
             return this;
 
         return ReplaceAt(index, trait);
+    }
+
+    // Whether the (canonical) trait is present by reference identity — Calcite's containsShallow.
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "containsShallow(RelTrait[], RelTrait)")]
+    bool ContainsShallow(IOpTrait seek)
+    {
+        foreach (var t in _traits)
+            if (ReferenceEquals(t, seek))
+                return true;
+
+        return false;
     }
 
     /// <summary>
@@ -343,6 +382,9 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "replace(int, RelTrait)")]
     OpTraitSet ReplaceAt(int index, IOpTrait trait)
     {
+        Debug.Assert(ReferenceEquals(_traits[index].TraitDef, trait.TraitDef),
+            "trait has a different trait def than its replacement");
+
         trait = Canonize(trait);
         if (ReferenceEquals(_traits[index], trait))
             return this;
@@ -365,11 +407,18 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     {
         if (ReferenceEquals(this, other))
             return true;
-        if (other is null || other._traits.Length != _traits.Length)
+        if (other is null)
             return false;
 
+        // If both hashes are computed and differ, the sets differ.
+        if (_hash != 0 && other._hash != 0 && _hash != other._hash)
+            return false;
+        if (_traits.Length != other._traits.Length)
+            return false;
+
+        // Each trait is canonized, so reference identity is value equality.
         for (int i = 0; i < _traits.Length; i++)
-            if (!Equals(_traits[i], other._traits[i]))
+            if (!ReferenceEquals(_traits[i], other._traits[i]))
                 return false;
 
         return true;
@@ -402,7 +451,22 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "toString()")]
-    public override string ToString() => "[" + string.Join(", ", _traits) + "]";
+    public override string ToString() => _string ??= ComputeString();
+
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "computeString()")]
+    string ComputeString()
+    {
+        var s = new StringBuilder();
+        for (int i = 0; i < _traits.Length; i++)
+        {
+            if (i > 0)
+                s.Append('.');
+
+            s.Append(_traits[i]);
+        }
+
+        return s.ToString();
+    }
 
     /// <summary>
     /// The intern cache for one ancestral line of trait sets.

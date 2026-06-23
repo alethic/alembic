@@ -22,7 +22,7 @@ public static class PlanUtil
     {
         var builder = new StringBuilder();
         op.Explain(new OpWriterImpl(builder));
-        return builder.ToString().TrimEnd();
+        return builder.ToString();
     }
 
 }

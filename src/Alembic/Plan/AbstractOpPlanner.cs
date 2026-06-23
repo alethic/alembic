@@ -153,7 +153,13 @@ public abstract class AbstractOpPlanner : IOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "isRuleExcluded(RelOptRule)")]
     public bool IsRuleExcluded(OpRule rule)
     {
-        return _ruleDescExclusionFilter is not null && _ruleDescExclusionFilter.IsMatch(rule.Description);
+        if (_ruleDescExclusionFilter is null)
+            return false;
+
+        // Calcite uses Matcher.matches(), which requires the *entire* description to match (not a
+        // substring); replicate that whole-string anchoring.
+        var match = _ruleDescExclusionFilter.Match(rule.Description);
+        return match.Success && match.Index == 0 && match.Length == rule.Description.Length;
     }
 
     /// <inheritdoc />

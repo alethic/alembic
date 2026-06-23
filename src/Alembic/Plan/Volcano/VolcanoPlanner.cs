@@ -318,12 +318,16 @@ public class VolcanoPlanner : AbstractOpPlanner
         // Make sure the children are registered first, replacing each with its subset.
         op = op.OnRegister(this);
 
-        // If an equivalent expression already exists, join its set (and carry over its pruned state).
-        if (_digestToOp.TryGetValue(op.GetDigest(), out var equiv))
+        // If an equivalent expression already exists, return the set it belongs to.
+        if (_digestToOp.TryGetValue(op.GetDigest(), out var equivExp))
         {
-            CheckPruned(equiv, op);
-            var equivSubset = _opToSubset[equiv];
-            return RegisterSubset(set, equivSubset);
+            if (ReferenceEquals(equivExp, op))
+                // The same op is already registered, so return its subset.
+                return GetSubsetNonNull(equivExp);
+
+            // A different, equivalent op exists: carry over its pruned state and join its set.
+            CheckPruned(equivExp, op);
+            return RegisterSubset(set, GetSubsetNonNull(equivExp));
         }
 
         // Converters are in the same set as their children.
@@ -369,16 +373,30 @@ public class VolcanoPlanner : AbstractOpPlanner
 
         set = EquivRoot(set);
 
+        // Let the new class register its operands before the op joins a subset.
+        OnNewClass(op);
+
+        var subsetBeforeCount = set.Subsets.Count;
         var added = AddOpToSet(op, set);
-        _digestToOp[op.GetDigest()] = op;
+
+        // putIfAbsent: only the first op seen for this digest owns the mapping.
+        var firstForDigest = !_digestToOp.ContainsKey(op.GetDigest());
+        if (firstForDigest)
+            _digestToOp[op.GetDigest()] = op;
+
+        // The op may have been registered while we recursively registered its children. If so, done.
+        if (!firstForDigest)
+            return added;
 
         foreach (var child in op.Children)
             ((OpSubset)child).Set.Parents.Add(op);
 
-        OnNewClass(op);
+        // Queue up all rules triggered by this op's creation.
         FireRules(op);
 
-        _ruleDriver.OnProduce(op, added);
+        // If a new subset appeared (or the subset wants rules), fire its rule matches too.
+        if (set.Subsets.Count > subsetBeforeCount || added.TriggerRule)
+            FireRules(added);
 
         return added;
     }
@@ -400,6 +418,7 @@ public class VolcanoPlanner : AbstractOpPlanner
         var subset = set.Add(op);
         _opToSubset[op] = subset;
         PropagateCostImprovements(op);
+        _ruleDriver.OnProduce(op, subset);
         return subset;
     }
 
@@ -860,10 +879,32 @@ public class VolcanoPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "equivRoot(RelSet)")]
     internal static OpSet EquivRoot(OpSet set)
     {
+        var p = set; // iterates at twice the rate, to detect cycles
         while (set.EquivalentSet is not null)
+        {
+            p = Forward2(set, p);
             set = set.EquivalentSet;
+        }
 
         return set;
+    }
+
+    /// <summary>Moves <paramref name="p"/> forward two links, checking for a cycle at each.</summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "forward2(RelSet, RelSet)")]
+    static OpSet? Forward2(OpSet s, OpSet? p) => Forward1(s, Forward1(s, p));
+
+    /// <summary>Moves <paramref name="p"/> forward one link, checking for a cycle.</summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "forward1(RelSet, RelSet)")]
+    static OpSet? Forward1(OpSet s, OpSet? p)
+    {
+        if (p is not null)
+        {
+            p = p.EquivalentSet;
+            if (ReferenceEquals(p, s))
+                throw new InvalidOperationException("cycle in equivalence tree");
+        }
+
+        return p;
     }
 
 }

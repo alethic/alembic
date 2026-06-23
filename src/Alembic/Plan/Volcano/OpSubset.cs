@@ -20,8 +20,27 @@ public class OpSubset : AbstractOp
         : base(cluster, traits)
     {
         Set = set;
-        BestCost = cluster.Planner.CostFactory.MakeInfiniteCost();
+        ComputeBestCost((VolcanoPlanner)cluster.Planner);
         UpperBound = BestCost;
+    }
+
+    /// <summary>
+    /// Seeds <see cref="Best"/> / <see cref="BestCost"/> by scanning the members already present in this
+    /// subset (the set may already hold ops whose traits satisfy this subset's), picking the cheapest.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "computeBestCost(RelOptPlanner)")]
+    void ComputeBestCost(VolcanoPlanner planner)
+    {
+        BestCost = planner.CostFactory.MakeInfiniteCost();
+        foreach (var rel in GetRels())
+        {
+            var cost = planner.GetCost(rel);
+            if (cost.IsLessThan(BestCost))
+            {
+                BestCost = cost;
+                Best = rel;
+            }
+        }
     }
 
     /// <summary>
