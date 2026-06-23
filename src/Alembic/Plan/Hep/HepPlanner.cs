@@ -573,6 +573,7 @@ public class HepPlanner : AbstractOpPlanner
         }
 
         ++_nTransformations;
+        FireRuleProductionSucceeded(call, bestRel!, before: true);
 
         // Snapshot the parents before adding the result, so contraction only re-points existing parents,
         // not new ones (which would create loops). Filter by trait when this is a converter rule.
@@ -608,7 +609,7 @@ public class HepPlanner : AbstractOpPlanner
         else if (HasListeners)
             CollectGarbage();
 
-        FireRuleProductionSucceeded(call, bestRel!);
+        FireRuleProductionSucceeded(call, bestRel!, before: false);
 
         return newVertex;
     }

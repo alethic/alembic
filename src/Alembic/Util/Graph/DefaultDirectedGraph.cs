@@ -15,7 +15,9 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     where E : DefaultEdge
 {
 
-    readonly HashSet<E> _edges = new HashSet<E>();
+    // Calcite uses a LinkedHashSet here so edge iteration (e.g. when freezing the graph for conversion-
+    // path search) is deterministic; our LinkedHashSet is the insertion-ordered analog.
+    readonly Alembic.Util.LinkedHashSet<E> _edges = new Alembic.Util.LinkedHashSet<E>();
     readonly Dictionary<V, VertexInfo> _vertexMap = new Dictionary<V, VertexInfo>();
     readonly List<V> _order = new List<V>();
     readonly DirectedGraph<V, E>.EdgeFactory _edgeFactory;
@@ -124,18 +126,55 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultDirectedGraph", "removeAllVertices(Collection<V>)")]
     public void RemoveAllVertices(IEnumerable<V> collection)
     {
-        var set = collection as HashSet<V> ?? new HashSet<V>(collection);
-        foreach (var vertex in set)
+        var coll = collection as ICollection<V> ?? new List<V>(collection);
+
+        // The point at which the collection is large enough to make the 'majority' algorithm cheaper.
+        const float threshold = 0.35f;
+        int thresholdSize = (int)(_vertexMap.Count * threshold);
+        if (coll.Count > thresholdSize && coll is not ISet<V>)
+            coll = new HashSet<V>(coll); // faster Contains; also collapses any duplicates
+
+        if (coll.Count > thresholdSize)
+            RemoveMajorityVertices((ISet<V>)coll);
+        else
+            RemoveMinorityVertices(coll);
+
+        // remove all edges referencing a removed vertex from the global edge set
+        foreach (var v in coll)
+            _edges.RemoveWhere(e => e.Source.Equals(v) || e.Target.Equals(v));
+    }
+
+    void RemoveMinorityVertices(ICollection<V> collection)
+    {
+        foreach (var v in collection)
         {
-            if (_vertexMap.Remove(vertex))
-                _order.Remove(vertex);
+            if (!_vertexMap.TryGetValue(v, out var info))
+                continue;
+
+            // remove all edges pointing to v
+            foreach (var edge in info.InEdges)
+                GetVertex((V)edge.Source).OutEdges.RemoveAll(e => e.Target.Equals(v));
+
+            // remove all edges starting from v
+            foreach (var edge in info.OutEdges)
+                GetVertex((V)edge.Target).InEdges.RemoveAll(e => e.Source.Equals(v));
         }
 
-        _edges.RemoveWhere(e => set.Contains((V)e.Source) || set.Contains((V)e.Target));
+        foreach (var v in collection)
+            if (_vertexMap.Remove(v))
+                _order.Remove(v);
+    }
+
+    void RemoveMajorityVertices(ISet<V> vertexSet)
+    {
+        foreach (var v in vertexSet)
+            if (_vertexMap.Remove(v))
+                _order.Remove(v);
+
         foreach (var info in _vertexMap.Values)
         {
-            info.InEdges.RemoveAll(e => set.Contains((V)e.Source));
-            info.OutEdges.RemoveAll(e => set.Contains((V)e.Target));
+            info.OutEdges.RemoveAll(e => vertexSet.Contains((V)e.Target));
+            info.InEdges.RemoveAll(e => vertexSet.Contains((V)e.Source));
         }
     }
 

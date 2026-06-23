@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 using Alembic.Util;
 
@@ -95,8 +96,9 @@ public static class Graphs
                 list.Add(new List<V> { from });
 
             FindPaths(from, to, list);
-            list.Sort((a, b) => a.Count.CompareTo(b.Count));
-            return list;
+            // Calcite sorts with Collections.sort, which is stable; OrderBy is the stable .NET analog, so
+            // equal-length paths keep their discovery order (deterministic conversion-path selection).
+            return list.OrderBy(p => p.Count).ToList();
         }
 
         /// <summary>

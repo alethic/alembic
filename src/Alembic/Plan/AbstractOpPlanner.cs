@@ -199,10 +199,10 @@ public abstract class AbstractOpPlanner : IOpPlanner
     /// Notifies listeners that a rule produced an equivalent.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "notifyTransformation(RelOptRuleCall, RelNode, boolean)")]
-    protected internal void FireRuleProductionSucceeded(OpRuleCall call, IOp produced)
+    protected internal void FireRuleProductionSucceeded(OpRuleCall call, IOp produced, bool before)
     {
         foreach (var listener in _listeners)
-            listener.RuleProductionSucceeded(new IPlannerListener.RuleProductionEvent(this, produced, call, false));
+            listener.RuleProductionSucceeded(new IPlannerListener.RuleProductionEvent(this, produced, call, before));
     }
 
     /// <summary>

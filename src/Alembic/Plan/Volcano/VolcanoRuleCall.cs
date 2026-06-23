@@ -96,13 +96,16 @@ public class VolcanoRuleCall : OpRuleCall
         if (equivalent is IPhysicalOp && Rule is ITransformationRule)
             throw new InvalidOperationException($"'{equivalent.GetType().Name}' is a physical op, which the transformation rule '{Rule.Description}' may not produce.");
 
+        _planner.FireRuleProductionSucceeded(this, equivalent, before: true);
+
         // Register the explicit equivalences first, so registering the root below does not register them
         // twice and cause churn.
         foreach (var entry in equiv)
             _planner.EnsureRegistered(entry.Key, entry.Value);
 
         _planner.EnsureRegistered(equivalent, Op(0));
-        _planner.FireRuleProductionSucceeded(this, equivalent);
+
+        _planner.FireRuleProductionSucceeded(this, equivalent, before: false);
     }
 
     /// <summary>
