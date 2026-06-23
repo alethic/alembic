@@ -40,19 +40,17 @@ public class ConverterProgramTests
     }
 
     [Fact]
-    public void A_non_guaranteed_converter_fires_bottom_up_only_through_trait_matching()
+    public void A_non_guaranteed_converter_fires_when_forced_or_bottom_up_via_trait_matching()
     {
-        // The input is already physical, but the filter's converter is non-guaranteed and no parent
-        // requests the physical trait, so the raw converter never fires on its own.
         IOp Root(OpCluster cluster) => new LogicalFilter(Logical, new PhysicalSource(cluster, Physical, "t"), "x > 5");
 
-        // The raw converter alone: doesConverterApply is false (no parent wants physical, not the root
-        // request), so the filter stays logical.
-        var raw = new HepPlanner(HepProgram.Builder().AddRuleInstance(new UnguaranteedFilterConverter(Physical)).Build());
-        raw.SetRoot(Root(new OpCluster(raw)));
-        Assert.IsType<LogicalFilter>(raw.FindBestPlan());
+        // AddRuleInstance applies the rule with forceConversions = true, and Calcite skips the
+        // doesConverterApply gate for a force-converted non-guaranteed converter, so it fires directly.
+        var forced = new HepPlanner(HepProgram.Builder().AddRuleInstance(new UnguaranteedFilterConverter(Physical)).Build());
+        forced.SetRoot(Root(new OpCluster(forced)));
+        Assert.IsType<PhysicalFilter>(forced.FindBestPlan());
 
-        // AddConverters(false) also installs a TraitMatchingRule, which fires the converter bottom-up
+        // AddConverters(false) installs a TraitMatchingRule, which fires the converter bottom-up
         // because the single input is already physical.
         var matched = new HepPlanner(HepProgram.Builder().AddConverters(false).Build());
         matched.AddRule(new UnguaranteedFilterConverter(Physical));

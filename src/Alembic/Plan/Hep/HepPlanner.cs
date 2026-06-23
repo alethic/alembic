@@ -461,19 +461,29 @@ public sealed class HepPlanner : AbstractOpPlanner
             return null;
 
         IOpTrait? parentTrait = null;
+        List<IOp>? parents = null;
         if (rule is ConverterRule converter)
         {
-            // Converter rules fire only where the conversion is actually wanted, or they run away.
-            if (!DoesConverterApply(converter, vertex))
-                return null;
+            // Guaranteed converter rules require special casing to make sure they only fire where
+            // actually needed, otherwise they tend to fire to infinity and beyond.
+            if (converter.IsGuaranteed || !forceConversions)
+            {
+                if (!DoesConverterApply(converter, vertex))
+                    return null;
 
-            parentTrait = converter.Target;
+                parentTrait = converter.Target;
+            }
         }
         else if (rule is ICommonSubExprRule)
         {
-            // Only fire on a genuine common subexpression — a vertex with more than one parent.
-            if (GetVertexParents(vertex).Count < 2)
+            // Only fire CommonRelSubExprRules if the vertex is a common subexpression.
+            var parentVertices = GetVertexParents(vertex);
+            if (parentVertices.Count < 2)
                 return null;
+
+            parents = new List<IOp>();
+            foreach (var pVertex in parentVertices)
+                parents.Add(pVertex.CurrentOp);
         }
 
         var bindings = Match(rule.Operand, vertex.CurrentOp);
@@ -488,7 +498,7 @@ public sealed class HepPlanner : AbstractOpPlanner
                 return null;
         }
 
-        var call = new HepRuleCall(this, rule.Operand, bindings.Value);
+        var call = new HepRuleCall(this, rule.Operand, bindings.Value, parents);
 
         // Let the rule apply its own side-condition.
         if (!rule.Matches(call))

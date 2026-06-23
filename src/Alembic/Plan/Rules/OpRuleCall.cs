@@ -27,14 +27,21 @@ public abstract class OpRuleCall
     /// in operand order (the operand root first, then a pre-order walk of the child operands). The rule
     /// is taken from the seed operand.
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "RelOptRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops)
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "RelOptRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>, List<RelNode>)")]
+    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops, IReadOnlyList<IOp>? parents)
     {
         Id = _nextId++;
         Planner = planner;
         Operand0 = operand0;
         Rule = operand0.Rule;
         Ops = ops;
+        Parents = parents;
+    }
+
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "RelOptRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
+    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops)
+        : this(planner, operand0, ops, null)
+    {
     }
 
     /// <summary>
@@ -67,6 +74,13 @@ public abstract class OpRuleCall
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "getRelList()")]
     public ImmutableArray<IOp> Ops { get; }
+
+    /// <summary>
+    /// The parents of the first matched op — the common-subexpression context for a
+    /// <see cref="ICommonSubExprRule"/>; <c>null</c> otherwise.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "getParents()")]
+    public IReadOnlyList<IOp>? Parents { get; }
 
     /// <summary>
     /// The op bound to the operand at the given ordinal. The operand root is ordinal 0.
