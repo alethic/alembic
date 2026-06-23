@@ -25,7 +25,7 @@ sealed class OfferTwoScans : Rule
 
     public override void OnMatch(RuleCall call)
     {
-        var source = (LogicalSource)call.Node(0);
+        var source = (LogicalSource)call.Op(0);
 
         // Register the cheaper option first, so that picking it proves the choice is by cost — not by
         // the order the equivalents were registered.

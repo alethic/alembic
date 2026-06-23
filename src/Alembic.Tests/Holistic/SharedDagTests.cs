@@ -34,8 +34,8 @@ public class SharedDagTests
         var cluster = new Cluster(planner);
 
         // (2 * 3) + (2 * 3): the two multiplies are the same subexpression, so the graph interns them to
-        // one vertex. Folding it once rewrites both occurrences, and the result shares one node.
-        INode root = new Add(
+        // one vertex. Folding it once rewrites both occurrences, and the result shares one op.
+        IOpNode root = new Add(
             logical,
             new Multiply(logical, new Literal(cluster, logical, 2), new Literal(cluster, logical, 3)),
             new Multiply(logical, new Literal(cluster, logical, 2), new Literal(cluster, logical, 3)));
@@ -48,7 +48,7 @@ public class SharedDagTests
         Assert.Equal(6, Assert.IsType<Literal>(add.Left).Value);
         Assert.Equal(6, Assert.IsType<Literal>(add.Right).Value);
 
-        // The shared subexpression yields one node, not two equal copies — proof the graph is a DAG.
+        // The shared subexpression yields one op, not two equal copies — proof the graph is a DAG.
         Assert.Same(add.Left, add.Right);
     }
 

@@ -11,14 +11,14 @@ namespace Alembic.Tests.Languages.Relational.Physical;
 /// realization of the "filter over a scan" situation (the other being a separate filter over a
 /// plain source); choosing between them is a cost-based concern for a future Volcano planner.
 /// </summary>
-sealed class PhysicalFilteredSource : AbstractNode
+sealed class PhysicalFilteredSource : AbstractOp
 {
 
     readonly string _table;
     readonly string _predicate;
 
     public PhysicalFilteredSource(Cluster cluster, TraitSet traits, string table, string predicate)
-        : base(cluster, traits, ImmutableArray<INode>.Empty)
+        : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         _table = table;
         _predicate = predicate;
@@ -31,7 +31,7 @@ sealed class PhysicalFilteredSource : AbstractNode
     // A fused scan-and-filter is cheaper than a separate filter over a separate scan (10 + 100).
     public override ICost ComputeSelfCost(IPlanner planner) => planner.CostFactory.MakeCost(100, 0);
 
-    public override INodeWriter ExplainTerms(INodeWriter writer)
+    public override IOpWriter ExplainTerms(IOpWriter writer)
     {
         base.ExplainTerms(writer);
         writer.Item("table", _table);
@@ -39,7 +39,7 @@ sealed class PhysicalFilteredSource : AbstractNode
         return writer;
     }
 
-    public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
+    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new PhysicalFilteredSource(Cluster, traits, _table, _predicate);
     }

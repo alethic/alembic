@@ -5,79 +5,79 @@ using Alembic.Algebra;
 namespace Alembic.Plan.Hep;
 
 /// <summary>
-/// Wraps a real node as a vertex in a DAG representing the whole plan. Several parents can reference
-/// one vertex (sharing common subexpressions), and replacing the wrapped node is seen by all of them.
+/// Wraps a real op as a vertex in a DAG representing the whole plan. Several parents can reference
+/// one vertex (sharing common subexpressions), and replacing the wrapped op is seen by all of them.
 /// </summary>
 /// <remarks>
 /// A vertex has no children of its own; the graph edges are the vertices that appear among
-/// <see cref="CurrentNode"/>'s children. The heuristic planner's matching sees through a vertex to its
-/// current node.
+/// <see cref="CurrentOp"/>'s children. The heuristic planner's matching sees through a vertex to its
+/// current op.
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex")]
-sealed class HepNodeVertex : AbstractNode
+sealed class HepOpVertex : AbstractOp
 {
 
-    INode _currentNode;
+    IOpNode _currentOp;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "HepRelVertex(RelNode)")]
-    public HepNodeVertex(INode currentNode)
-        : base(currentNode.Cluster, currentNode.Traits, ImmutableArray<INode>.Empty)
+    public HepOpVertex(IOpNode currentOp)
+        : base(currentOp.Cluster, currentOp.Traits, ImmutableArray<IOpNode>.Empty)
     {
-        _currentNode = currentNode;
+        _currentOp = currentOp;
     }
 
     /// <summary>
-    /// The node currently chosen as the implementation of this vertex.
+    /// The op currently chosen as the implementation of this vertex.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "getCurrentRel()")]
-    public INode CurrentNode => _currentNode;
+    public IOpNode CurrentOp => _currentOp;
 
     /// <summary>
-    /// This vertex with its wrapping stripped away — its current node.
+    /// This vertex with its wrapping stripped away — its current op.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "stripped()")]
-    public INode Stripped => _currentNode;
+    public IOpNode Stripped => _currentOp;
 
     /// <summary>
-    /// Replaces the implementation for this vertex with a new node.
+    /// Replaces the implementation for this vertex with a new op.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "replaceRel(RelNode)")]
-    public void ReplaceNode(INode newNode)
+    public void ReplaceOp(IOpNode newOp)
     {
-        _currentNode = newNode;
+        _currentOp = newOp;
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "copy(RelTraitSet, List<RelNode>)")]
-    public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
+    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
     {
         return this;
     }
 
     /// <summary>
-    /// A vertex explains itself in terms of the node it currently stands in for.
+    /// A vertex explains itself in terms of the op it currently stands in for.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "explain(RelWriter)")]
-    public override INodeWriter ExplainTerms(INodeWriter writer)
+    public override IOpWriter ExplainTerms(IOpWriter writer)
     {
         base.ExplainTerms(writer);
-        writer.Input("current", _currentNode);
+        writer.Input("current", _currentOp);
         return writer;
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "deepEquals(Object)")]
-    public override bool DeepEquals(INode? other)
+    public override bool DeepEquals(IOpNode? other)
     {
         return ReferenceEquals(this, other)
-            || (other is HepNodeVertex vertex && ReferenceEquals(_currentNode, vertex._currentNode));
+            || (other is HepOpVertex vertex && ReferenceEquals(_currentOp, vertex._currentOp));
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "deepHashCode()")]
     public override int DeepHashCode()
     {
-        return _currentNode.GetHashCode();
+        return _currentOp.GetHashCode();
     }
 
 }

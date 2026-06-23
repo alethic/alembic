@@ -5,7 +5,7 @@ using Alembic.Plan;
 namespace Alembic.Tests;
 
 /// <summary>
-/// A toy multi-valued trait: a single sort key. A node may carry several at once (sorted by more than
+/// A toy multi-valued trait: a single sort key. An op may carry several at once (sorted by more than
 /// one key), so several can live on one dimension via a composite.
 /// </summary>
 sealed class SortKey : IMultipleTrait

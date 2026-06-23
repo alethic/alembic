@@ -5,48 +5,48 @@ using Alembic.Plan;
 namespace Alembic.Algebra;
 
 /// <summary>
-/// A node in a plan. Alembic attaches no meaning to a node; the user supplies the
+/// An op in a plan. Alembic attaches no meaning to an op; the user supplies the
 /// concrete types and the rules that rewrite them.
 /// </summary>
 /// <remarks>
-/// Nodes are immutable. The planner rewrites by producing new nodes via <see cref="Copy"/>,
-/// sharing the subtrees it does not touch. A node's own <c>Equals</c>/<c>GetHashCode</c> are
+/// Ops are immutable. The planner rewrites by producing new ops via <see cref="Copy"/>,
+/// sharing the subtrees it does not touch. An op's own <c>Equals</c>/<c>GetHashCode</c> are
 /// left as reference identity; structural equivalence — the value the planner deduplicates on —
 /// is the separate <see cref="DeepEquals"/> / <see cref="DeepHashCode"/> contract.
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode")]
-public interface INode
+public interface IOpNode
 {
 
     /// <summary>
-    /// The cluster this node belongs to — its shared planning context. Every node in a plan shares one.
+    /// The cluster this op belongs to — its shared planning context. Every op in a plan shares one.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getCluster()")]
     Cluster Cluster { get; }
 
     /// <summary>
-    /// The physical properties (convention, etc.) carried by this node.
+    /// The physical properties (convention, etc.) carried by this op.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getTraitSet()")]
     TraitSet Traits { get; }
 
     /// <summary>
-    /// This node's child nodes, in order.
+    /// This op's child ops, in order.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getInputs()")]
-    ImmutableArray<INode> Children { get; }
+    ImmutableArray<IOpNode> Children { get; }
 
     /// <summary>
-    /// Produces a copy of this node with the given traits and children.
+    /// Produces a copy of this op with the given traits and children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "copy(RelTraitSet, List<RelNode>)")]
-    INode Copy(TraitSet traits, ImmutableArray<INode> children);
+    IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children);
 
     /// <summary>
-    /// Whether this node is structurally equivalent to <paramref name="other"/>.
+    /// Whether this op is structurally equivalent to <paramref name="other"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "deepEquals(Object)")]
-    bool DeepEquals(INode? other);
+    bool DeepEquals(IOpNode? other);
 
     /// <summary>
     /// A hash consistent with <see cref="DeepEquals"/>.
@@ -55,24 +55,24 @@ public interface INode
     int DeepHashCode();
 
     /// <summary>
-    /// Describes this node to <paramref name="writer"/> — its attributes and inputs. The plan-rendering
+    /// Describes this op to <paramref name="writer"/> — its attributes and inputs. The plan-rendering
     /// and digest machinery drive this.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "explain(RelWriter)")]
-    void Explain(INodeWriter writer);
+    void Explain(IOpWriter writer);
 
     /// <summary>
-    /// This node's structural digest — the key the planner deduplicates on.
+    /// This op's structural digest — the key the planner deduplicates on.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getRelDigest()")]
-    INodeDigest GetDigest()
+    IOpDigest GetDigest()
     {
-        return new NodeDigest(this);
+        return new OpDigest(this);
     }
 
     /// <summary>
-    /// Recomputes this node's digest, discarding any cached value. A planner calls this after something
-    /// a node's digest depends on has changed underneath it (e.g. a shared child's content).
+    /// Recomputes this op's digest, discarding any cached value. A planner calls this after something
+    /// an op's digest depends on has changed underneath it (e.g. a shared child's content).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "recomputeDigest()")]
     void RecomputeDigest()
@@ -81,7 +81,7 @@ public interface INode
     }
 
     /// <summary>
-    /// This node's convention.
+    /// This op's convention.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getConvention()")]
     IConvention Convention
@@ -90,22 +90,22 @@ public interface INode
     }
 
     /// <summary>
-    /// Whether this node only enforces a physical property on its input (e.g. a converter) rather than
+    /// Whether this op only enforces a physical property on its input (e.g. a converter) rather than
     /// computing a result. The top-down search gives enforcers lower priority. Defaults to <c>false</c>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "isEnforcer()")]
     bool IsEnforcer => false;
 
     /// <summary>
-    /// This node with any planner wrapping removed — a placeholder node (an equivalence subset, a graph
-    /// vertex) returns the concrete node it stands for; an ordinary node returns itself.
+    /// This op with any planner wrapping removed — a placeholder op (an equivalence subset, a graph
+    /// vertex) returns the concrete op it stands for; an ordinary op returns itself.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "stripped()")]
-    INode Stripped => this;
+    IOpNode Stripped => this;
 
     /// <summary>
-    /// This node's own cost, not counting its inputs. A cost-based planner consults it; a heuristic
-    /// planner ignores it. The default is a small positive cost, so a node opts into a real cost model
+    /// This op's own cost, not counting its inputs. A cost-based planner consults it; a heuristic
+    /// planner ignores it. The default is a small positive cost, so an op opts into a real cost model
     /// only by overriding this.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]

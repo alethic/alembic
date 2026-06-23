@@ -9,13 +9,13 @@ namespace Alembic.Tests.Languages.Relational.Physical;
 /// A cheaper physical scan that reads through an index rather than scanning the whole source — an
 /// alternative realization of a source scan.
 /// </summary>
-sealed class PhysicalIndexSource : AbstractNode
+sealed class PhysicalIndexSource : AbstractOp
 {
 
     readonly string _table;
 
     public PhysicalIndexSource(Cluster cluster, TraitSet traits, string table)
-        : base(cluster, traits, ImmutableArray<INode>.Empty)
+        : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         _table = table;
     }
@@ -24,14 +24,14 @@ sealed class PhysicalIndexSource : AbstractNode
 
     public override ICost ComputeSelfCost(IPlanner planner) => planner.CostFactory.MakeCost(50, 0);
 
-    public override INodeWriter ExplainTerms(INodeWriter writer)
+    public override IOpWriter ExplainTerms(IOpWriter writer)
     {
         base.ExplainTerms(writer);
         writer.Item("table", _table);
         return writer;
     }
 
-    public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
+    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new PhysicalIndexSource(Cluster, traits, _table);
     }

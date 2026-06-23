@@ -40,14 +40,14 @@ public interface ICost
     bool IsLessThan(ICost other);
 
     /// <summary>
-    /// This cost combined with <paramref name="other"/> (e.g. a node's self-cost plus its inputs').
+    /// This cost combined with <paramref name="other"/> (e.g. an op's self-cost plus its inputs').
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCost", "plus(RelOptCost)")]
     ICost Plus(ICost other);
 
     /// <summary>
     /// This cost with <paramref name="other"/> removed (the inverse of <see cref="Plus"/>); used by the
-    /// top-down search to apportion an upper bound across a node and its inputs.
+    /// top-down search to apportion an upper bound across an op and its inputs.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCost", "minus(RelOptCost)")]
     ICost Minus(ICost other);

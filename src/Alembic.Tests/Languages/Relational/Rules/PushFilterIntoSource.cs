@@ -19,8 +19,8 @@ sealed class PushFilterIntoSource : Rule
 
     public override void OnMatch(RuleCall call)
     {
-        var filter = (PhysicalFilter)call.Node(0);
-        var source = (PhysicalSource)call.Node(1);
+        var filter = (PhysicalFilter)call.Op(0);
+        var source = (PhysicalSource)call.Op(1);
         call.TransformTo(new PhysicalFilteredSource(source.Cluster, filter.Traits, source.Table, filter.Predicate));
     }
 

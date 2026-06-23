@@ -9,7 +9,7 @@ namespace Alembic.Plan.Volcano;
 
 /// <summary>
 /// The rule call used by the cost-based planner. A match is seeded at one operand (the just-registered
-/// node) and solved outward over the equivalence subsets; a rule then registers each equivalent it
+/// op) and solved outward over the equivalence subsets; a rule then registers each equivalent it
 /// finds, and the planner keeps them all and later chooses the cheapest.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall")]
@@ -19,39 +19,39 @@ public class VolcanoRuleCall : RuleCall
     readonly VolcanoPlanner _planner;
 
     /// <summary>
-    /// The nodes bound to each operand, indexed by <see cref="RuleOperand.OrdinalInRule"/>. Filled in as
+    /// The ops bound to each operand, indexed by <see cref="RuleOperand.OrdinalInRule"/>. Filled in as
     /// the match solves outward.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "rels")]
-    internal INode?[] Rels { get; }
+    internal IOpNode?[] Rels { get; }
 
     /// <summary>
-    /// Creates a call seeded at <paramref name="operand0"/>, with no nodes bound yet.
+    /// Creates a call seeded at <paramref name="operand0"/>, with no ops bound yet.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand)")]
     internal VolcanoRuleCall(VolcanoPlanner planner, RuleOperand operand0)
-        : base(planner, operand0, ImmutableArray<INode>.Empty)
+        : base(planner, operand0, ImmutableArray<IOpNode>.Empty)
     {
         _planner = planner;
-        Rels = new INode?[operand0.Rule.Operands.Length];
+        Rels = new IOpNode?[operand0.Rule.Operands.Length];
     }
 
     /// <summary>
-    /// Creates a call over the already-bound nodes (in operand order) of a completed match seeded at
+    /// Creates a call over the already-bound ops (in operand order) of a completed match seeded at
     /// <paramref name="operand0"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    internal VolcanoRuleCall(VolcanoPlanner planner, RuleOperand operand0, ImmutableArray<INode> nodes)
-        : base(planner, operand0, nodes)
+    internal VolcanoRuleCall(VolcanoPlanner planner, RuleOperand operand0, ImmutableArray<IOpNode> ops)
+        : base(planner, operand0, ops)
     {
         _planner = planner;
-        Rels = new INode?[operand0.Rule.Operands.Length];
-        for (int i = 0; i < nodes.Length; i++)
-            Rels[i] = nodes[i];
+        Rels = new IOpNode?[operand0.Rule.Operands.Length];
+        for (int i = 0; i < ops.Length; i++)
+            Rels[i] = ops[i];
     }
 
     /// <summary>
-    /// Applies the rule to the bound nodes.
+    /// Applies the rule to the bound ops.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "onMatch()")]
     public virtual void OnMatch()
@@ -59,7 +59,7 @@ public class VolcanoRuleCall : RuleCall
         if (_planner.IsRuleExcluded(Rule))
             return;
 
-        // Skip the match if any bound node has gone stale since it was queued: its set was merged away, it
+        // Skip the match if any bound op has gone stale since it was queued: its set was merged away, it
         // was removed from its subset (during a rename), or it has been pruned.
         foreach (var rel in Rels)
         {
@@ -86,34 +86,34 @@ public class VolcanoRuleCall : RuleCall
     }
 
     /// <summary>
-    /// Registers <paramref name="equivalent"/> as another way to compute the matched node, plus any
+    /// Registers <paramref name="equivalent"/> as another way to compute the matched op, plus any
     /// secondary equivalences in <paramref name="equiv"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "transformTo(RelNode, Map<RelNode, RelNode>, RelHintsPropagator)")]
-    public override void TransformTo(INode equivalent, IReadOnlyDictionary<INode, INode> equiv)
+    public override void TransformTo(IOpNode equivalent, IReadOnlyDictionary<IOpNode, IOpNode> equiv)
     {
-        // A transformation rule stays logical; it may not produce a physical node.
+        // A transformation rule stays logical; it may not produce a physical op.
         if (equivalent is IPhysicalNode && Rule is ITransformationRule)
-            throw new InvalidOperationException($"'{equivalent.GetType().Name}' is a physical node, which the transformation rule '{Rule.Description}' may not produce.");
+            throw new InvalidOperationException($"'{equivalent.GetType().Name}' is a physical op, which the transformation rule '{Rule.Description}' may not produce.");
 
         // Register the explicit equivalences first, so registering the root below does not register them
         // twice and cause churn.
         foreach (var entry in equiv)
             _planner.EnsureRegistered(entry.Key, entry.Value);
 
-        _planner.EnsureRegistered(equivalent, Node(0));
+        _planner.EnsureRegistered(equivalent, Op(0));
         _planner.FireRuleProductionSucceeded(this, equivalent);
     }
 
     /// <summary>
-    /// Seeds the match with <paramref name="node"/> in <see cref="RuleCall.Operand0"/>'s slot and solves the rest.
+    /// Seeds the match with <paramref name="op"/> in <see cref="RuleCall.Operand0"/>'s slot and solves the rest.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "match(RelNode)")]
-    internal void Match(INode node)
+    internal void Match(IOpNode op)
     {
         const int solve = 0;
         int operandOrdinal = Operand0.SolveOrder[solve];
-        Rels[operandOrdinal] = node;
+        Rels[operandOrdinal] = op;
         MatchRecurse(solve + 1);
     }
 
@@ -142,10 +142,10 @@ public class VolcanoRuleCall : RuleCall
         var previous = Rels[previousOperandOrdinal]!;
 
         RuleOperand parentOperand;
-        IEnumerable<INode> successors;
+        IEnumerable<IOpNode> successors;
         if (ascending)
         {
-            // The operand being solved is an ancestor of the previous one; climb to the previous node's
+            // The operand being solved is an ancestor of the previous one; climb to the previous op's
             // parents.
             parentOperand = operand;
             var subset = _planner.GetSubsetNonNull(previous);
@@ -160,23 +160,23 @@ public class VolcanoRuleCall : RuleCall
             {
                 // An unordered child can bind any input, so all members of all input subsets are
                 // candidates.
-                successors = AllNodesInInputs(inputs);
+                successors = AllOpsInInputs(inputs);
             }
             else if (operand.OrdinalInParent < inputs.Length)
             {
-                var subset = (NodeSubset)inputs[operand.OrdinalInParent];
+                var subset = (OpSubset)inputs[operand.OrdinalInParent];
                 successors = subset.GetRels();
             }
             else
             {
                 // The parent does not have the input this operand expects.
-                successors = Array.Empty<INode>();
+                successors = Array.Empty<IOpNode>();
             }
         }
 
         foreach (var rel in successors)
         {
-            // A transformation rule stays within one convention: don't bind a node whose convention
+            // A transformation rule stays within one convention: don't bind an op whose convention
             // differs from the operand we came from.
             if (Rule is ITransformationRule && !rel.Convention.Equals(previous.Convention))
                 continue;
@@ -191,7 +191,7 @@ public class VolcanoRuleCall : RuleCall
                 if (previousOperand.OrdinalInParent >= rel.Children.Length)
                     continue;
 
-                var input = (NodeSubset)rel.Children[previousOperand.OrdinalInParent];
+                var input = (OpSubset)rel.Children[previousOperand.OrdinalInParent];
                 if (!input.Contains(previous))
                     continue;
             }
@@ -201,15 +201,15 @@ public class VolcanoRuleCall : RuleCall
         }
     }
 
-    IEnumerable<INode> AllNodesInInputs(ImmutableArray<INode> inputs)
+    IEnumerable<IOpNode> AllOpsInInputs(ImmutableArray<IOpNode> inputs)
     {
-        var seen = new HashSet<INode>(ReferenceEqualityComparer.Instance);
+        var seen = new HashSet<IOpNode>(ReferenceEqualityComparer.Instance);
         foreach (var input in inputs)
         {
             if (!seen.Add(input))
                 continue;
 
-            foreach (var rel in ((NodeSubset)input).GetRels())
+            foreach (var rel in ((OpSubset)input).GetRels())
                 if (seen.Add(rel))
                     yield return rel;
         }

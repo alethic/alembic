@@ -1,7 +1,7 @@
 namespace Alembic.Plan;
 
 /// <summary>
-/// A single physical property of a node (a convention, an ordering, etc.). Traits are values:
+/// A single physical property of an op (a convention, an ordering, etc.). Traits are values:
 /// equal traits must be <c>Equals</c>-equal.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTrait")]
@@ -15,7 +15,7 @@ public interface ITrait
     TraitDef TraitDef { get; }
 
     /// <summary>
-    /// Whether a node carrying this trait also satisfies a requirement for <paramref name="other"/>.
+    /// Whether an op carrying this trait also satisfies a requirement for <paramref name="other"/>.
     /// Defaults to equality; traits with a partial order (orderings, distributions) override it.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTrait", "satisfies(RelTrait)")]

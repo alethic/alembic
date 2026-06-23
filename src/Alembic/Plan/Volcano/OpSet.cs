@@ -7,11 +7,11 @@ using Alembic.Util;
 namespace Alembic.Plan.Volcano;
 
 /// <summary>
-/// An equivalence set: a group of nodes that all produce the same result, partitioned into
-/// <see cref="NodeSubset"/>s by trait set. The planner keeps the cheapest member of each subset.
+/// An equivalence set: a group of ops that all produce the same result, partitioned into
+/// <see cref="OpSubset"/>s by trait set. The planner keeps the cheapest member of each subset.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet")]
-public sealed class NodeSet
+public sealed class OpSet
 {
 
     readonly ICostFactory _costFactory;
@@ -20,7 +20,7 @@ public sealed class NodeSet
     readonly HashSet<Pair<TraitSet, TraitSet>> _conversions = new HashSet<Pair<TraitSet, TraitSet>>();
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "RelSet(int, Set<CorrelationId>, Set<CorrelationId>)")]
-    internal NodeSet(int id, ICostFactory costFactory, Cluster cluster)
+    internal OpSet(int id, ICostFactory costFactory, Cluster cluster)
     {
         Id = id;
         _costFactory = costFactory;
@@ -34,33 +34,33 @@ public sealed class NodeSet
     public int Id { get; }
 
     /// <summary>
-    /// The cluster the set's nodes belong to.
+    /// The cluster the set's ops belong to.
     /// </summary>
     public Cluster Cluster { get; }
 
     /// <summary>
-    /// Every node in the set (across all subsets).
+    /// Every op in the set (across all subsets).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "rels")]
-    public List<INode> Nodes { get; } = new List<INode>();
+    public List<IOpNode> Ops { get; } = new List<IOpNode>();
 
     /// <summary>
     /// The subsets of this set, one per distinct trait set.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "subsets")]
-    public List<NodeSubset> Subsets { get; } = new List<NodeSubset>();
+    public List<OpSubset> Subsets { get; } = new List<OpSubset>();
 
     /// <summary>
-    /// Nodes (in other sets) that reference a subset of this set as a child.
+    /// Ops (in other sets) that reference a subset of this set as a child.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "parents")]
-    public List<INode> Parents { get; } = new List<INode>();
+    public List<IOpNode> Parents { get; } = new List<IOpNode>();
 
     /// <summary>
     /// Set when this set is merged into another; the live set is reached by following the chain.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "equivalentSet")]
-    public NodeSet? EquivalentSet { get; internal set; }
+    public OpSet? EquivalentSet { get; internal set; }
 
     /// <summary>
     /// How far the top-down search has explored this set (applied transformation rules to its members).
@@ -90,17 +90,17 @@ public sealed class NodeSet
     internal ExploringState? Exploring { get; set; }
 
     /// <summary>
-    /// The first node registered in this set — its representative expression, used as a fallback when a
+    /// The first op registered in this set — its representative expression, used as a fallback when a
     /// subset has no best member yet.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "rel")]
-    public INode? Rel { get; private set; }
+    public IOpNode? Rel { get; private set; }
 
     /// <summary>
     /// The subset with exactly the given traits, or <c>null</c>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "getSubset(RelTraitSet)")]
-    public NodeSubset? GetSubset(TraitSet traits)
+    public OpSubset? GetSubset(TraitSet traits)
     {
         foreach (var subset in Subsets)
             if (subset.Traits.Equals(traits))
@@ -109,12 +109,12 @@ public sealed class NodeSet
         return null;
     }
 
-    internal NodeSubset GetOrCreateSubset(TraitSet traits)
+    internal OpSubset GetOrCreateSubset(TraitSet traits)
     {
         var subset = GetSubset(traits);
         if (subset is null)
         {
-            subset = new NodeSubset(this, traits, _costFactory.MakeInfiniteCost());
+            subset = new OpSubset(this, traits, _costFactory.MakeInfiniteCost());
             Subsets.Add(subset);
         }
 
@@ -128,14 +128,14 @@ public sealed class NodeSet
     /// seeded between it and the complementary subsets so the planner can convert between them.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "getOrCreateSubset(RelOptCluster, RelTraitSet, boolean)")]
-    internal NodeSubset GetOrCreateSubset(TraitSet traits, bool required)
+    internal OpSubset GetOrCreateSubset(TraitSet traits, bool required)
     {
         var needsConverter = false;
         var subset = GetSubset(traits);
         if (subset is null)
         {
             needsConverter = true;
-            subset = new NodeSubset(this, traits, _costFactory.MakeInfiniteCost());
+            subset = new OpSubset(this, traits, _costFactory.MakeInfiniteCost());
             Subsets.Add(subset);
         }
         else if ((required && !subset.IsRequired) || (!required && !subset.IsDelivered))
@@ -163,11 +163,11 @@ public sealed class NodeSet
     /// pair, and only when the dimensions actually differ and the trait dimension can convert.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "addConverters(RelSubset, boolean, boolean)")]
-    void AddConverters(NodeSubset subset, bool required, bool useAbstractConverter)
+    void AddConverters(OpSubset subset, bool required, bool useAbstractConverter)
     {
         var planner = (VolcanoPlanner)Cluster.Planner;
 
-        var others = new List<NodeSubset>();
+        var others = new List<OpSubset>();
         foreach (var n in Subsets)
             if (required ? n.IsDelivered : n.IsRequired)
                 others.Add(n);
@@ -222,54 +222,54 @@ public sealed class NodeSet
     }
 
     /// <summary>
-    /// Adds <paramref name="node"/> to the set, placing it in the subset for its traits (creating that
+    /// Adds <paramref name="op"/> to the set, placing it in the subset for its traits (creating that
     /// subset if needed) and returning the subset.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "add(RelNode)")]
-    internal NodeSubset Add(INode node)
+    internal OpSubset Add(IOpNode op)
     {
-        var subset = GetOrCreateSubset(node.Traits, node.IsEnforcer);
-        subset.Add(node);
+        var subset = GetOrCreateSubset(op.Traits, op.IsEnforcer);
+        subset.Add(op);
         return subset;
     }
 
     /// <summary>
-    /// Appends <paramref name="node"/> to the set's node list (if not already present) and records it as
+    /// Appends <paramref name="op"/> to the set's op list (if not already present) and records it as
     /// the set's representative when the set has none yet. The equivalence-found notification is fired by
-    /// the caller, <see cref="NodeSubset.Add"/>.
+    /// the caller, <see cref="OpSubset.Add"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "addInternal(RelNode)")]
-    internal void AddInternal(INode node)
+    internal void AddInternal(IOpNode op)
     {
-        if (!Nodes.Contains(node))
-            Nodes.Add(node);
+        if (!Ops.Contains(op))
+            Ops.Add(op);
 
-        Rel ??= node;
+        Rel ??= op;
     }
 
     /// <summary>
-    /// Drops <paramref name="node"/> from this set's parent list (called when the node is being removed
+    /// Drops <paramref name="op"/> from this set's parent list (called when the op is being removed
     /// from the planner).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "obliterateRelNode(RelNode)")]
-    internal void ObliterateNode(INode node) => Parents.Remove(node);
+    internal void ObliterateOp(IOpNode op) => Parents.Remove(op);
 
     /// <summary>
     /// The live sets this set's (non-converter) members consume as inputs — its child sets in the
     /// equivalence-set graph. Used by the merge to decide the swap direction.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "getChildSets(VolcanoPlanner)")]
-    internal HashSet<NodeSet> GetChildSets()
+    internal HashSet<OpSet> GetChildSets()
     {
-        var childSets = new HashSet<NodeSet>();
-        foreach (var node in Nodes)
+        var childSets = new HashSet<OpSet>();
+        foreach (var op in Ops)
         {
-            if (node is IConverter)
+            if (op is IConverter)
                 continue;
 
-            foreach (var child in node.Children)
+            foreach (var child in op.Children)
             {
-                var childSet = VolcanoPlanner.EquivRoot(((NodeSubset)child).Set);
+                var childSet = VolcanoPlanner.EquivRoot(((OpSubset)child).Set);
                 if (!ReferenceEquals(childSet, this))
                     childSets.Add(childSet);
             }
@@ -280,32 +280,32 @@ public sealed class NodeSet
 
     /// <summary>
     /// Absorbs <paramref name="other"/> into this set: <paramref name="other"/> becomes equivalent to
-    /// this set, its nodes and parents move here, and the parents are re-registered to point at the
+    /// this set, its ops and parents move here, and the parents are re-registered to point at the
     /// surviving set. The caller (<see cref="VolcanoPlanner.Merge"/>) has already resolved both sets to
     /// their equivalence roots.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "mergeWith(VolcanoPlanner, RelSet)")]
-    internal void MergeWith(VolcanoPlanner planner, NodeSet other)
+    internal void MergeWith(VolcanoPlanner planner, OpSet other)
     {
         other.EquivalentSet = this;
         planner.RemoveSet(other);
 
-        foreach (var node in other.Nodes)
+        foreach (var op in other.Ops)
         {
-            var subset = GetOrCreateSubset(node.Traits, node.IsEnforcer);
-            AddInternal(node);
-            planner.MapNodeToSubset(node, subset);
-            planner.PropagateCostImprovements(node);
+            var subset = GetOrCreateSubset(op.Traits, op.IsEnforcer);
+            AddInternal(op);
+            planner.MapOpToSubset(op, subset);
+            planner.PropagateCostImprovements(op);
         }
 
         // Parents referenced subsets of the now-dead set as children; re-point them at the surviving
         // set, recomputing their digests. Snapshot first, since re-pointing mutates the parent lists.
-        var parents = new List<INode>(other.Parents);
+        var parents = new List<IOpNode>(other.Parents);
         Parents.AddRange(other.Parents);
         other.Parents.Clear();
 
-        foreach (var node in other.Nodes)
-            planner.FireRules(node);
+        foreach (var op in other.Ops)
+            planner.FireRules(op);
 
         foreach (var parent in parents)
             planner.Rename(parent);

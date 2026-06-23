@@ -23,9 +23,9 @@ sealed class FilterConverter : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override INode? Convert(INode node)
+    public override IOpNode? Convert(IOpNode op)
     {
-        if (node is LogicalFilter filter)
+        if (op is LogicalFilter filter)
             return new PhysicalFilter(_physical, filter.Input, filter.Predicate);
 
         return null;

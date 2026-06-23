@@ -8,7 +8,7 @@ using Alembic.Util;
 namespace Alembic.Plan;
 
 /// <summary>
-/// A trait dimension — the set of mutually exclusive values a node may carry along one axis
+/// A trait dimension — the set of mutually exclusive values an op may carry along one axis
 /// (e.g. convention). Defs are singletons and are registered with the planner
 /// (<see cref="IPlanner.AddTraitDef"/>), which builds the empty trait set from them. The strongly-typed
 /// <see cref="TraitDef{TTrait}"/> subclass yields its trait type from a <see cref="TraitSet"/>; this
@@ -33,13 +33,13 @@ public abstract class TraitDef
     public abstract Type TraitClass { get; }
 
     /// <summary>
-    /// The value a node carries on this dimension when none is specified.
+    /// The value an op carries on this dimension when none is specified.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "getDefault()")]
     public abstract ITrait Default { get; }
 
     /// <summary>
-    /// Whether a node may carry several values on this dimension at once (folded into a composite). The
+    /// Whether an op may carry several values on this dimension at once (folded into a composite). The
     /// default is no.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "multiple()")]
@@ -66,13 +66,13 @@ public abstract class TraitDef
     }
 
     /// <summary>
-    /// Converts <paramref name="node"/> to <paramref name="toTrait"/> on this dimension, returning the
-    /// converted node (e.g. wrapping it in an enforcer) or <c>null</c> to decline. Consulted only when
+    /// Converts <paramref name="op"/> to <paramref name="toTrait"/> on this dimension, returning the
+    /// converted op (e.g. wrapping it in an enforcer) or <c>null</c> to decline. Consulted only when
     /// <see cref="CanConvert"/> allows it. <paramref name="allowInfiniteCostConverters"/> permits a
     /// converter even when it would carry an infinite cost.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "convert(RelOptPlanner, RelNode, RelTrait, boolean)")]
-    public virtual INode? Convert(IPlanner planner, INode node, ITrait toTrait, bool allowInfiniteCostConverters)
+    public virtual IOpNode? Convert(IPlanner planner, IOpNode op, ITrait toTrait, bool allowInfiniteCostConverters)
     {
         return null;
     }
@@ -110,7 +110,7 @@ public abstract class TraitDef<TTrait> : TraitDef
     public override Type TraitClass => typeof(TTrait);
 
     /// <summary>
-    /// The value a node carries on this dimension when none is specified.
+    /// The value an op carries on this dimension when none is specified.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "getDefault()")]
     public abstract override TTrait Default { get; }

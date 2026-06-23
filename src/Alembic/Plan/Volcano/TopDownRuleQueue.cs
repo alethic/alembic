@@ -6,15 +6,15 @@ using Alembic.Algebra;
 namespace Alembic.Plan.Volcano;
 
 /// <summary>
-/// The rule queue for the top-down search. Matches are bucketed by the node they are rooted at, so the
-/// driver can pull only the matches relevant to the node it is currently optimizing, optionally filtered
+/// The rule queue for the top-down search. Matches are bucketed by the op they are rooted at, so the
+/// driver can pull only the matches relevant to the op it is currently optimizing, optionally filtered
 /// (e.g. to transformation rules while merely exploring).
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue")]
 public sealed class TopDownRuleQueue : RuleQueue
 {
 
-    readonly Dictionary<INode, LinkedList<VolcanoRuleMatch>> _matches = new Dictionary<INode, LinkedList<VolcanoRuleMatch>>(ReferenceEqualityComparer.Instance);
+    readonly Dictionary<IOpNode, LinkedList<VolcanoRuleMatch>> _matches = new Dictionary<IOpNode, LinkedList<VolcanoRuleMatch>>(ReferenceEqualityComparer.Instance);
     readonly HashSet<VolcanoRuleMatch> _seen = new HashSet<VolcanoRuleMatch>();
 
     /// <summary>
@@ -30,7 +30,7 @@ public sealed class TopDownRuleQueue : RuleQueue
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue", "addMatch(VolcanoRuleMatch)")]
     public override void AddMatch(VolcanoRuleMatch match)
     {
-        var rel = match.Node(0);
+        var rel = match.Op(0);
         if (!_matches.TryGetValue(rel, out var queue))
         {
             queue = new LinkedList<VolcanoRuleMatch>();
@@ -54,27 +54,27 @@ public sealed class TopDownRuleQueue : RuleQueue
     /// <paramref name="predicate"/> (if any), or <c>null</c>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue", "popMatch(Pair<RelNode, Predicate<VolcanoRuleMatch>>)")]
-    public VolcanoRuleMatch? PopMatch(INode rel, Func<VolcanoRuleMatch, bool>? predicate)
+    public VolcanoRuleMatch? PopMatch(IOpNode rel, Func<VolcanoRuleMatch, bool>? predicate)
     {
         if (!_matches.TryGetValue(rel, out var queue))
             return null;
 
-        var node = queue.First;
-        while (node is not null)
+        var op = queue.First;
+        while (op is not null)
         {
-            var next = node.Next;
-            var match = node.Value;
+            var next = op.Next;
+            var match = op.Value;
             if (predicate is not null && !predicate(match))
             {
-                node = next;
+                op = next;
                 continue;
             }
 
-            queue.Remove(node);
+            queue.Remove(op);
             if (!SkipMatch(match))
                 return match;
 
-            node = next;
+            op = next;
         }
 
         return null;

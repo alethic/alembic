@@ -4,7 +4,7 @@ namespace Alembic.Plan.Volcano;
 
 /// <summary>
 /// The FIFO queue used by the bottom-up search: matches are applied in the order they were discovered.
-/// A match identical to one already queued (same rule, same bound nodes) is dropped, so a rule fires at
+/// A match identical to one already queued (same rule, same bound ops) is dropped, so a rule fires at
 /// most once per match.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue")]

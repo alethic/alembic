@@ -14,7 +14,7 @@ namespace Alembic.Plan.Hep;
 /// order, until no rule changes anything. Deterministic and program-driven.
 /// </summary>
 /// <remarks>
-/// The plan is a single-rooted DAG of <see cref="HepNodeVertex"/>: equal subexpressions are interned to
+/// The plan is a single-rooted DAG of <see cref="HepOpVertex"/>: equal subexpressions are interned to
 /// one vertex, so a rule fires once per distinct subexpression and a rewrite is shared by every parent.
 /// A rewrite replaces a vertex's content and re-points its parents; discarded vertices are reclaimed by
 /// mark-and-sweep garbage collection.
@@ -24,13 +24,13 @@ public sealed class HepPlanner : AbstractPlanner
 {
 
     readonly HepProgram _mainProgram;
-    readonly Dictionary<INodeDigest, HepNodeVertex> _mapDigestToVertex = new Dictionary<INodeDigest, HepNodeVertex>();
-    readonly DirectedGraph<HepNodeVertex, DefaultEdge> _graph = DefaultDirectedGraph<HepNodeVertex, DefaultEdge>.Create();
+    readonly Dictionary<IOpDigest, HepOpVertex> _mapDigestToVertex = new Dictionary<IOpDigest, HepOpVertex>();
+    readonly DirectedGraph<HepOpVertex, DefaultEdge> _graph = DefaultDirectedGraph<HepOpVertex, DefaultEdge>.Create();
     readonly Dictionary<FiredKey, HashSet<Rule>> _firedRulesCache = new Dictionary<FiredKey, HashSet<Rule>>();
-    readonly Dictionary<INode, HashSet<FiredKey>> _firedRulesCacheIndex = new Dictionary<INode, HashSet<FiredKey>>();
+    readonly Dictionary<IOpNode, HashSet<FiredKey>> _firedRulesCacheIndex = new Dictionary<IOpNode, HashSet<FiredKey>>();
 
-    HepNodeVertex? _root;
-    INode? _rootNode;
+    HepOpVertex? _root;
+    IOpNode? _rootOp;
     TraitSet? _requestedRootTraits;
     int _nTransformations;
     int _graphSizeLastGC;
@@ -50,7 +50,7 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     /// <summary>
-    /// Creates a planner driven by the given program, costing nodes with <paramref name="costFactory"/>.
+    /// Creates a planner driven by the given program, costing ops with <paramref name="costFactory"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "HepPlanner(HepProgram, Context, boolean, Function2<RelNode, RelNode, Void>, RelOptCostFactory)")]
     public HepPlanner(HepProgram program, ICostFactory costFactory)
@@ -101,15 +101,15 @@ public sealed class HepPlanner : AbstractPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "setRoot(RelNode)")]
-    public override void SetRoot(INode node)
+    public override void SetRoot(IOpNode op)
     {
-        _rootNode = node;
-        _root = AddNodeToGraph(node);
+        _rootOp = op;
+        _root = AddOpToGraph(op);
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "getRoot()")]
-    public override INode? Root => _root;
+    public override IOpNode? Root => _root;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "clear()")]
@@ -137,17 +137,17 @@ public sealed class HepPlanner : AbstractPlanner
     /// request is enforced when <see cref="FindBestPlan"/> finishes.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "changeTraits(RelNode, RelTraitSet)")]
-    public override INode ChangeTraits(INode node, TraitSet toTraits)
+    public override IOpNode ChangeTraits(IOpNode op, TraitSet toTraits)
     {
-        if (ReferenceEquals(node, _rootNode) || (_root is not null && ReferenceEquals(node, _root.CurrentNode)))
+        if (ReferenceEquals(op, _rootOp) || (_root is not null && ReferenceEquals(op, _root.CurrentOp)))
             _requestedRootTraits = toTraits;
 
-        return node;
+        return op;
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "findBestExp()")]
-    public override INode FindBestPlan()
+    public override IOpNode FindBestPlan()
     {
         if (_root is null)
             throw new InvalidOperationException("No root has been set.");
@@ -157,7 +157,7 @@ public sealed class HepPlanner : AbstractPlanner
         // Get rid of everything except what's in the final plan.
         CollectGarbage();
 
-        var plan = BuildFinalPlan(_root, new Dictionary<HepNodeVertex, INode>());
+        var plan = BuildFinalPlan(_root, new Dictionary<HepOpVertex, IOpNode>());
 
         if (_requestedRootTraits is not null)
             EnsureSatisfies(plan, _requestedRootTraits);
@@ -166,16 +166,16 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     /// <summary>
-    /// Verifies that every node in the plan carries the requested traits. Because conversions rewrite
-    /// nodes in place rather than wrapping them, a complete plan is uniform throughout, so a single
-    /// surviving node that falls short means no rule chain could finish the job.
+    /// Verifies that every op in the plan carries the requested traits. Because conversions rewrite
+    /// ops in place rather than wrapping them, a complete plan is uniform throughout, so a single
+    /// surviving op that falls short means no rule chain could finish the job.
     /// </summary>
-    static void EnsureSatisfies(INode node, TraitSet required)
+    static void EnsureSatisfies(IOpNode op, TraitSet required)
     {
-        if (!node.Traits.Satisfies(required))
-            throw new CannotPlanException($"No plan satisfies the requested traits; '{node.GetType().Name}' remained in convention '{node.Convention}'.");
+        if (!op.Traits.Satisfies(required))
+            throw new CannotPlanException($"No plan satisfies the requested traits; '{op.GetType().Name}' remained in convention '{op.Convention}'.");
 
-        foreach (var child in node.Children)
+        foreach (var child in op.Children)
             EnsureSatisfies(child, required);
     }
 
@@ -334,7 +334,7 @@ public sealed class HepPlanner : AbstractPlanner
     // ~ Rule application -----------------------------------------------------
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "depthFirstApply(HepProgram.State, Iterator<HepRelVertex>, Collection<RelOptRule>, boolean, int)")]
-    int DepthFirstApply(HepProgram.State programState, IEnumerator<HepNodeVertex> iter, IReadOnlyList<Rule> rules, bool forceConversions, int nMatches)
+    int DepthFirstApply(HepProgram.State programState, IEnumerator<HepOpVertex> iter, IReadOnlyList<Rule> rules, bool forceConversions, int nMatches)
     {
         while (iter.MoveNext())
         {
@@ -382,8 +382,8 @@ public sealed class HepPlanner : AbstractPlanner
         bool fixedPoint;
         do
         {
-            IEnumerator<HepNodeVertex> iter = useHepVertexIterator
-                ? new HepVertexIterator(_root!, new HashSet<HepNodeVertex>())
+            IEnumerator<HepOpVertex> iter = useHepVertexIterator
+                ? new HepVertexIterator(_root!, new HashSet<HepOpVertex>())
                 : GetGraphIterator(programState, _root!);
             fixedPoint = true;
             while (iter.MoveNext())
@@ -428,15 +428,15 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "getGraphIterator(HepProgram.State, HepRelVertex)")]
-    IEnumerator<HepNodeVertex> GetGraphIterator(HepProgram.State programState, HepNodeVertex start)
+    IEnumerator<HepOpVertex> GetGraphIterator(HepProgram.State programState, HepOpVertex start)
     {
         switch (programState.MatchOrder)
         {
             case HepMatchOrder.Arbitrary:
             case HepMatchOrder.DepthFirst:
                 if (_largePlanMode)
-                    return new HepVertexIterator(start, new HashSet<HepNodeVertex>());
-                return new DepthFirstIterator<HepNodeVertex, DefaultEdge>(_graph, start);
+                    return new HepVertexIterator(start, new HashSet<HepOpVertex>());
+                return new DepthFirstIterator<HepOpVertex, DefaultEdge>(_graph, start);
 
             case HepMatchOrder.TopDown:
             case HepMatchOrder.BottomUp:
@@ -444,7 +444,7 @@ public sealed class HepPlanner : AbstractPlanner
                 // topological order is over the live graph.
                 if (!_largePlanMode)
                     CollectGarbage();
-                return new TopologicalOrderIterator<HepNodeVertex, DefaultEdge>(_graph, programState.MatchOrder);
+                return new TopologicalOrderIterator<HepOpVertex, DefaultEdge>(_graph, programState.MatchOrder);
 
             default:
                 throw new NotSupportedException("Unsupported match order: " + programState.MatchOrder);
@@ -452,7 +452,7 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "applyRule(RelOptRule, HepRelVertex, boolean)")]
-    HepNodeVertex? ApplyRule(Rule rule, HepNodeVertex vertex, bool forceConversions)
+    HepOpVertex? ApplyRule(Rule rule, HepOpVertex vertex, bool forceConversions)
     {
         if (IsRuleExcluded(rule))
             return null;
@@ -476,7 +476,7 @@ public sealed class HepPlanner : AbstractPlanner
                 return null;
         }
 
-        var bindings = Match(rule.Operand, vertex.CurrentNode);
+        var bindings = Match(rule.Operand, vertex.CurrentOp);
         if (bindings is null)
             return null;
 
@@ -504,10 +504,10 @@ public sealed class HepPlanner : AbstractPlanner
                 _firedRulesCache[key] = fired = new HashSet<Rule>();
             fired.Add(rule);
 
-            foreach (var node in bindings.Value)
+            foreach (var op in bindings.Value)
             {
-                if (!_firedRulesCacheIndex.TryGetValue(node, out var keys))
-                    _firedRulesCacheIndex[node] = keys = new HashSet<FiredKey>();
+                if (!_firedRulesCacheIndex.TryGetValue(op, out var keys))
+                    _firedRulesCacheIndex[op] = keys = new HashSet<FiredKey>();
                 keys.Add(key);
             }
         }
@@ -519,12 +519,12 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "doesConverterApply(ConverterRule, HepRelVertex)")]
-    bool DoesConverterApply(ConverterRule converter, HepNodeVertex vertex)
+    bool DoesConverterApply(ConverterRule converter, HepOpVertex vertex)
     {
         var outTrait = converter.Target;
         foreach (var parent in Graphs.PredecessorListOf(_graph, vertex))
         {
-            var parentRel = parent.CurrentNode;
+            var parentRel = parent.CurrentOp;
             if (parentRel is IConverter)
                 continue; // We don't support converter chains.
 
@@ -541,12 +541,12 @@ public sealed class HepPlanner : AbstractPlanner
     /// The parent vertices of a vertex, counted once per input reference.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "getVertexParents(HepRelVertex)")]
-    List<HepNodeVertex> GetVertexParents(HepNodeVertex vertex)
+    List<HepOpVertex> GetVertexParents(HepOpVertex vertex)
     {
-        var parents = new List<HepNodeVertex>();
+        var parents = new List<HepOpVertex>();
         foreach (var parentVertex in Graphs.PredecessorListOf(_graph, vertex))
         {
-            var parent = parentVertex.CurrentNode;
+            var parent = parentVertex.CurrentOp;
             foreach (var child in parent.Children)
                 if (ReferenceEquals(child, vertex))
                     parents.Add(parentVertex);
@@ -556,9 +556,9 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "applyTransformationResults(HepRelVertex, HepRuleCall, RelTrait)")]
-    HepNodeVertex ApplyTransformationResults(HepNodeVertex vertex, HepRuleCall call, ITrait? parentTrait)
+    HepOpVertex ApplyTransformationResults(HepOpVertex vertex, HepRuleCall call, ITrait? parentTrait)
     {
-        INode? bestRel;
+        IOpNode? bestRel;
         if (call.Results.Count == 1)
         {
             bestRel = call.Results[0];
@@ -582,12 +582,12 @@ public sealed class HepPlanner : AbstractPlanner
 
         // Snapshot the parents before adding the result, so contraction only re-points existing parents,
         // not new ones (which would create loops). Filter by trait when this is a converter rule.
-        var parents = new List<HepNodeVertex>();
+        var parents = new List<HepOpVertex>();
         foreach (var parent in Graphs.PredecessorListOf(_graph, vertex))
         {
             if (parentTrait is not null)
             {
-                var parentRel = parent.CurrentNode;
+                var parentRel = parent.CurrentOp;
                 if (parentRel is IConverter)
                     continue;
 
@@ -598,8 +598,8 @@ public sealed class HepPlanner : AbstractPlanner
             parents.Add(parent);
         }
 
-        var newVertex = AddNodeToGraph(bestRel!);
-        var garbage = new HashSet<HepNodeVertex>();
+        var newVertex = AddOpToGraph(bestRel!);
+        var garbage = new HashSet<HepOpVertex>();
 
         // The new vertex may already be one of the parents (common subexpression); treat that as a nop
         // to avoid creating a loop.
@@ -619,7 +619,7 @@ public sealed class HepPlanner : AbstractPlanner
         return newVertex;
     }
 
-    static bool ShallowEqual(ImmutableArray<INode> a, IReadOnlyList<INode> b)
+    static bool ShallowEqual(ImmutableArray<IOpNode> a, IReadOnlyList<IOpNode> b)
     {
         if (a.Length != b.Count)
             return false;
@@ -632,15 +632,15 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "addRelToGraph(RelNode, IdentityHashMap<RelNode, HepRelVertex>)")]
-    HepNodeVertex AddNodeToGraph(INode rel)
+    HepOpVertex AddOpToGraph(IOpNode rel)
     {
-        if (rel is HepNodeVertex existing && _graph.VertexSet.Contains(existing))
+        if (rel is HepOpVertex existing && _graph.VertexSet.Contains(existing))
             return existing;
 
-        // Recursively add children, replacing this node's inputs with their vertices.
-        var newInputs = new List<INode>(rel.Children.Length);
+        // Recursively add children, replacing this op's inputs with their vertices.
+        var newInputs = new List<IOpNode>(rel.Children.Length);
         foreach (var input in rel.Children)
-            newInputs.Add(AddNodeToGraph(input));
+            newInputs.Add(AddOpToGraph(input));
 
         if (!ShallowEqual(rel.Children, newInputs))
             rel = rel.Copy(rel.Traits, newInputs.ToImmutableArray());
@@ -648,30 +648,30 @@ public sealed class HepPlanner : AbstractPlanner
         if (!_noDag && _mapDigestToVertex.TryGetValue(rel.GetDigest(), out var equivVertex))
             return equivVertex; // Use the existing equivalent vertex.
 
-        var newVertex = new HepNodeVertex(rel);
+        var newVertex = new HepOpVertex(rel);
         _graph.AddVertex(newVertex);
         UpdateVertex(newVertex, rel);
 
         foreach (var input in rel.Children)
-            _graph.AddEdge(newVertex, (HepNodeVertex)input);
+            _graph.AddEdge(newVertex, (HepOpVertex)input);
 
         _nTransformations++;
         return newVertex;
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "contractVertices(HepRelVertex, HepRelVertex, List<HepRelVertex>, Set<HepRelVertex>)")]
-    void ContractVertices(HepNodeVertex preservedVertex, HepNodeVertex discardedVertex, List<HepNodeVertex> parents, HashSet<HepNodeVertex> garbage)
+    void ContractVertices(HepOpVertex preservedVertex, HepOpVertex discardedVertex, List<HepOpVertex> parents, HashSet<HepOpVertex> garbage)
     {
         if (ReferenceEquals(preservedVertex, discardedVertex))
             return;
 
-        UpdateVertex(preservedVertex, preservedVertex.CurrentNode);
+        UpdateVertex(preservedVertex, preservedVertex.CurrentOp);
 
         foreach (var parent in parents)
         {
-            var parentRel = parent.CurrentNode;
+            var parentRel = parent.CurrentOp;
             var inputs = parentRel.Children;
-            ImmutableArray<INode>.Builder? builder = null;
+            ImmutableArray<IOpNode>.Builder? builder = null;
             for (int i = 0; i < inputs.Length; i++)
             {
                 if (ReferenceEquals(inputs[i], discardedVertex))
@@ -681,7 +681,7 @@ public sealed class HepPlanner : AbstractPlanner
                 }
             }
 
-            // Nodes are immutable, so re-point a parent by rebuilding it rather than mutating in place.
+            // Ops are immutable, so re-point a parent by rebuilding it rather than mutating in place.
             if (builder is not null)
                 parentRel = parentRel.Copy(parentRel.Traits, builder.ToImmutable());
 
@@ -704,20 +704,20 @@ public sealed class HepPlanner : AbstractPlanner
     /// content changed.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "clearCache(HepRelVertex)")]
-    void ClearCache(HepNodeVertex vertex)
+    void ClearCache(HepOpVertex vertex)
     {
-        vertex.CurrentNode.RecomputeDigest();
+        vertex.CurrentOp.RecomputeDigest();
         vertex.RecomputeDigest();
 
-        var seen = new HashSet<HepNodeVertex>();
+        var seen = new HashSet<HepOpVertex>();
         var queue = new Queue<DefaultEdge>(_graph.GetInwardEdges(vertex));
         while (queue.Count > 0)
         {
-            var source = (HepNodeVertex)queue.Dequeue().Source;
+            var source = (HepOpVertex)queue.Dequeue().Source;
             if (!seen.Add(source))
                 continue;
 
-            source.CurrentNode.RecomputeDigest();
+            source.CurrentOp.RecomputeDigest();
             source.RecomputeDigest();
             foreach (var edge in _graph.GetInwardEdges(source))
                 queue.Enqueue(edge);
@@ -725,36 +725,36 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "updateVertex(HepRelVertex, RelNode)")]
-    void UpdateVertex(HepNodeVertex vertex, INode rel)
+    void UpdateVertex(HepOpVertex vertex, IOpNode rel)
     {
-        if (!ReferenceEquals(rel, vertex.CurrentNode))
-            FireNodeDiscarded(vertex.CurrentNode);
+        if (!ReferenceEquals(rel, vertex.CurrentOp))
+            FireOpDiscarded(vertex.CurrentOp);
 
-        var oldKey = vertex.CurrentNode.GetDigest();
+        var oldKey = vertex.CurrentOp.GetDigest();
         if (_mapDigestToVertex.TryGetValue(oldKey, out var mapped) && ReferenceEquals(mapped, vertex))
             _mapDigestToVertex.Remove(oldKey);
 
         _mapDigestToVertex[rel.GetDigest()] = vertex;
-        if (!ReferenceEquals(rel, vertex.CurrentNode))
-            vertex.ReplaceNode(rel);
+        if (!ReferenceEquals(rel, vertex.CurrentOp))
+            vertex.ReplaceOp(rel);
 
-        FireNodeEquivalenceFound(rel);
+        FireOpEquivalenceFound(rel);
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "buildFinalPlan(HepRelVertex)")]
-    INode BuildFinalPlan(HepNodeVertex vertex, Dictionary<HepNodeVertex, INode> memo)
+    IOpNode BuildFinalPlan(HepOpVertex vertex, Dictionary<HepOpVertex, IOpNode> memo)
     {
         if (memo.TryGetValue(vertex, out var done))
             return done;
 
-        var rel = vertex.CurrentNode;
-        FireNodeChosen(rel);
+        var rel = vertex.CurrentOp;
+        FireOpChosen(rel);
 
         var children = rel.Children;
-        ImmutableArray<INode>.Builder? builder = null;
+        ImmutableArray<IOpNode>.Builder? builder = null;
         for (int i = 0; i < children.Length; i++)
         {
-            if (children[i] is HepNodeVertex childVertex)
+            if (children[i] is HepOpVertex childVertex)
             {
                 builder ??= children.ToBuilder();
                 builder[i] = BuildFinalPlan(childVertex, memo);
@@ -769,17 +769,17 @@ public sealed class HepPlanner : AbstractPlanner
     // ~ Garbage collection ---------------------------------------------------
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "tryCleanVertices(HepRelVertex)")]
-    void TryCleanVertices(HepNodeVertex vertex)
+    void TryCleanVertices(HepOpVertex vertex)
     {
         if (ReferenceEquals(vertex, _root) || !_graph.VertexSet.Contains(vertex) || _graph.GetInwardEdges(vertex).Count != 0)
             return;
 
-        var rel = vertex.CurrentNode;
-        FireNodeDiscarded(rel);
+        var rel = vertex.CurrentOp;
+        FireOpDiscarded(rel);
 
-        var outVertices = new List<HepNodeVertex>();
+        var outVertices = new List<HepOpVertex>();
         foreach (var edge in _graph.GetOutwardEdges(vertex))
-            outVertices.Add((HepNodeVertex)edge.Target);
+            outVertices.Add((HepOpVertex)edge.Target);
 
         foreach (var child in outVertices)
             _graph.RemoveEdge(vertex, child);
@@ -795,7 +795,7 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "collectGarbage(Set<HepRelVertex>)")]
-    void CollectGarbage(HashSet<HepNodeVertex> garbage)
+    void CollectGarbage(HashSet<HepOpVertex> garbage)
     {
         foreach (var vertex in garbage)
             TryCleanVertices(vertex);
@@ -810,21 +810,21 @@ public sealed class HepPlanner : AbstractPlanner
         _nTransformationsLastGC = _nTransformations;
 
         // Basic mark-and-sweep.
-        var rootSet = new HashSet<HepNodeVertex>();
+        var rootSet = new HashSet<HepOpVertex>();
         var root = _root ?? throw new InvalidOperationException("root");
         if (_graph.VertexSet.Contains(root))
-            BreadthFirstIterator<HepNodeVertex, DefaultEdge>.Reachable(rootSet, _graph, root);
+            BreadthFirstIterator<HepOpVertex, DefaultEdge>.Reachable(rootSet, _graph, root);
 
         if (rootSet.Count == _graph.VertexSet.Count)
             return; // Everything is reachable: no garbage.
 
-        var sweepSet = new HashSet<HepNodeVertex>();
+        var sweepSet = new HashSet<HepOpVertex>();
         foreach (var vertex in _graph.VertexSet)
         {
             if (!rootSet.Contains(vertex))
             {
                 sweepSet.Add(vertex);
-                FireNodeDiscarded(vertex.CurrentNode);
+                FireOpDiscarded(vertex.CurrentOp);
             }
         }
 
@@ -833,17 +833,17 @@ public sealed class HepPlanner : AbstractPlanner
 
         foreach (var vertex in sweepSet)
         {
-            var key = vertex.CurrentNode.GetDigest();
+            var key = vertex.CurrentOp.GetDigest();
             if (_mapDigestToVertex.TryGetValue(key, out var mapped) && sweepSet.Contains(mapped))
                 _mapDigestToVertex.Remove(key);
         }
 
         if (_enableFiredRulesCache)
             foreach (var vertex in sweepSet)
-                RemoveFiredRules(vertex.CurrentNode);
+                RemoveFiredRules(vertex.CurrentOp);
     }
 
-    void RemoveFiredRules(INode rel)
+    void RemoveFiredRules(IOpNode rel)
     {
         if (!_firedRulesCacheIndex.TryGetValue(rel, out var keys))
             return;
@@ -855,9 +855,9 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getCost(RelNode, RelMetadataQuery)")]
-    ICost GetCost(INode node)
+    ICost GetCost(IOpNode op)
     {
-        var current = node is HepNodeVertex vertex ? vertex.CurrentNode : node;
+        var current = op is HepOpVertex vertex ? vertex.CurrentOp : op;
         var cost = current.ComputeSelfCost(this);
         foreach (var child in current.Children)
             cost = cost.Plus(GetCost(child));
@@ -867,52 +867,52 @@ public sealed class HepPlanner : AbstractPlanner
 
     // ~ RuleOperand matching (sees through vertices) -----------------------------
 
-    static ImmutableArray<INode>? Match(RuleOperand operand, INode node)
+    static ImmutableArray<IOpNode>? Match(RuleOperand operand, IOpNode op)
     {
-        var bound = new List<INode>();
-        return MatchOperand(operand, node, bound) ? bound.ToImmutableArray() : null;
+        var bound = new List<IOpNode>();
+        return MatchOperand(operand, op, bound) ? bound.ToImmutableArray() : null;
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "matchOperands(RelOptRuleOperand, RelNode, List<RelNode>, Map<RelNode, List<RelNode>>)")]
-    static bool MatchOperand(RuleOperand operand, INode node, List<INode> bound)
+    static bool MatchOperand(RuleOperand operand, IOpNode op, List<IOpNode> bound)
     {
-        while (node is HepNodeVertex vertex)
-            node = vertex.CurrentNode;
+        while (op is HepOpVertex vertex)
+            op = vertex.CurrentOp;
 
-        if (!operand.Matches(node))
+        if (!operand.Matches(op))
             return false;
 
         switch (operand.ChildPolicy)
         {
             case RuleOperandChildPolicy.Any:
-                bound.Add(node);
+                bound.Add(op);
                 return true;
 
             case RuleOperandChildPolicy.Leaf:
-                if (!node.Children.IsEmpty)
+                if (!op.Children.IsEmpty)
                     return false;
-                bound.Add(node);
+                bound.Add(op);
                 return true;
 
             case RuleOperandChildPolicy.Some:
-                // The node must have at least as many children as the operand; the operand binds the
-                // first n positionally (a node may have more children than the pattern names).
-                if (node.Children.Length < operand.Children.Length)
+                // The op must have at least as many children as the operand; the operand binds the
+                // first n positionally (an op may have more children than the pattern names).
+                if (op.Children.Length < operand.Children.Length)
                     return false;
-                bound.Add(node);
+                bound.Add(op);
                 for (int i = 0; i < operand.Children.Length; i++)
-                    if (!MatchOperand(operand.Children[i], node.Children[i], bound))
+                    if (!MatchOperand(operand.Children[i], op.Children[i], bound))
                         return false;
                 return true;
 
             case RuleOperandChildPolicy.Unordered:
-                // Each child operand matches any one of the node's children; the node's child count is
+                // Each child operand matches any one of the op's children; the op's child count is
                 // unconstrained (a parent may have more children than the pattern names).
-                bound.Add(node);
+                bound.Add(op);
                 foreach (var childOperand in operand.Children)
                 {
                     var matched = false;
-                    foreach (var child in node.Children)
+                    foreach (var child in op.Children)
                     {
                         var mark = bound.Count;
                         if (MatchOperand(childOperand, child, bound))
@@ -936,30 +936,30 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     /// <summary>
-    /// The key for the fired-rules cache: the identity of the matched nodes, in order.
+    /// The key for the fired-rules cache: the identity of the matched ops, in order.
     /// </summary>
     sealed class FiredKey : IEquatable<FiredKey>
     {
 
-        readonly ImmutableArray<INode> _nodes;
+        readonly ImmutableArray<IOpNode> _ops;
         readonly int _hash;
 
-        public FiredKey(ImmutableArray<INode> nodes)
+        public FiredKey(ImmutableArray<IOpNode> ops)
         {
-            _nodes = nodes;
+            _ops = ops;
             var hash = new HashCode();
-            foreach (var node in nodes)
-                hash.Add(node, ReferenceEqualityComparer.Instance);
+            foreach (var op in ops)
+                hash.Add(op, ReferenceEqualityComparer.Instance);
             _hash = hash.ToHashCode();
         }
 
         public bool Equals(FiredKey? other)
         {
-            if (other is null || other._nodes.Length != _nodes.Length)
+            if (other is null || other._ops.Length != _ops.Length)
                 return false;
 
-            for (int i = 0; i < _nodes.Length; i++)
-                if (!ReferenceEquals(_nodes[i], other._nodes[i]))
+            for (int i = 0; i < _ops.Length; i++)
+                if (!ReferenceEquals(_ops[i], other._ops[i]))
                     return false;
 
             return true;

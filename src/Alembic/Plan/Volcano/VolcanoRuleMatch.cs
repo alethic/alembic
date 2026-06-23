@@ -8,33 +8,33 @@ using Alembic.Plan.Rules;
 namespace Alembic.Plan.Volcano;
 
 /// <summary>
-/// A rule match waiting in the <see cref="RuleQueue"/>: a rule plus the nodes bound to its operands.
+/// A rule match waiting in the <see cref="RuleQueue"/>: a rule plus the ops bound to its operands.
 /// Applying it (<see cref="VolcanoRuleCall.OnMatch"/>) registers the rule's equivalents. Two matches
-/// are equal when they have the same rule and the same bound nodes, so duplicates are dropped.
+/// are equal when they have the same rule and the same bound ops, so duplicates are dropped.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch")]
 public sealed class VolcanoRuleMatch : VolcanoRuleCall
 {
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "VolcanoRuleMatch(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    internal VolcanoRuleMatch(VolcanoPlanner planner, RuleOperand operand0, ImmutableArray<INode> nodes)
-        : base(planner, operand0, nodes)
+    internal VolcanoRuleMatch(VolcanoPlanner planner, RuleOperand operand0, ImmutableArray<IOpNode> ops)
+        : base(planner, operand0, ops)
     {
-        // A completed match must have bound a node to every operand.
-        foreach (var node in nodes)
-            if (node is null)
-                throw new ArgumentException("A rule match must have a node bound to every operand.", nameof(nodes));
+        // A completed match must have bound an op to every operand.
+        foreach (var op in ops)
+            if (op is null)
+                throw new ArgumentException("A rule match must have an op bound to every operand.", nameof(ops));
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "computeDigest()")]
     public override bool Equals(object? obj)
     {
-        if (obj is not VolcanoRuleMatch other || !ReferenceEquals(Rule, other.Rule) || Nodes.Length != other.Nodes.Length)
+        if (obj is not VolcanoRuleMatch other || !ReferenceEquals(Rule, other.Rule) || Ops.Length != other.Ops.Length)
             return false;
 
-        for (int i = 0; i < Nodes.Length; i++)
-            if (!ReferenceEquals(Nodes[i], other.Nodes[i]))
+        for (int i = 0; i < Ops.Length; i++)
+            if (!ReferenceEquals(Ops[i], other.Ops[i]))
                 return false;
 
         return true;
@@ -46,8 +46,8 @@ public sealed class VolcanoRuleMatch : VolcanoRuleCall
     {
         var hash = new HashCode();
         hash.Add(RuntimeHelpers.GetHashCode(Rule));
-        foreach (var node in Nodes)
-            hash.Add(RuntimeHelpers.GetHashCode(node));
+        foreach (var op in Ops)
+            hash.Add(RuntimeHelpers.GetHashCode(op));
 
         return hash.ToHashCode();
     }

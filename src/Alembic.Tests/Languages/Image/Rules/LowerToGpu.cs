@@ -18,13 +18,13 @@ sealed class LowerToGpu : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override INode? Convert(INode node)
+    public override IOpNode? Convert(IOpNode op)
     {
         // A CPU-only operation has no GPU form; the planner reaches its result on the GPU by uploading.
-        if (node is IImageOperation op && !op.SupportsGpu)
+        if (op is IImageOperation image && !image.SupportsGpu)
             return null;
 
-        return node.Copy(node.Traits.Replace(ConventionTraitDef.Instance, ImageConventions.Gpu), node.Children);
+        return op.Copy(op.Traits.Replace(ConventionTraitDef.Instance, ImageConventions.Gpu), op.Children);
     }
 
 }

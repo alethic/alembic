@@ -3,11 +3,11 @@ using Alembic.Algebra;
 namespace Alembic.Plan.Rules;
 
 /// <summary>
-/// A rule that converts a node from one trait value to another — most commonly a convention, but any
+/// A rule that converts an op from one trait value to another — most commonly a convention, but any
 /// trait (sortedness, distribution, …). The author supplies <see cref="Source"/>, <see cref="Target"/>,
-/// and <see cref="Convert"/>; the operand (matching any node carrying the <see cref="Source"/> trait) and
-/// the match action are provided here. <see cref="Convert"/> returns the converted node, or null to
-/// decline (when it does not handle this node's kind).
+/// and <see cref="Convert"/>; the operand (matching any op carrying the <see cref="Source"/> trait) and
+/// the match action are provided here. <see cref="Convert"/> returns the converted op, or null to
+/// decline (when it does not handle this op's kind).
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule")]
 public abstract class ConverterRule : Rule
@@ -18,7 +18,7 @@ public abstract class ConverterRule : Rule
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "ConverterRule(Class<? extends RelNode>, RelTrait, RelTrait, String)")]
     protected ConverterRule(ITrait source, ITrait target)
-        : base(ConvertOperand<INode>(source))
+        : base(ConvertOperand<IOpNode>(source))
     {
         Source = source;
         Target = target;
@@ -52,16 +52,16 @@ public abstract class ConverterRule : Rule
     public virtual bool IsGuaranteed => false;
 
     /// <summary>
-    /// Converts the node from <see cref="Source"/> to <see cref="Target"/>, or returns null to decline.
+    /// Converts the op from <see cref="Source"/> to <see cref="Target"/>, or returns null to decline.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "convert(RelNode)")]
-    public abstract INode? Convert(INode node);
+    public abstract IOpNode? Convert(IOpNode op);
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "onMatch(RelOptRuleCall)")]
     public override void OnMatch(RuleCall call)
     {
-        var converted = Convert(call.Node(0));
+        var converted = Convert(call.Op(0));
         if (converted is not null)
             call.TransformTo(converted);
     }

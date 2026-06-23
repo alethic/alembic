@@ -23,7 +23,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
     readonly VolcanoPlanner _planner;
     readonly TopDownRuleQueue _ruleQueue;
     readonly Stack<ITask> _tasks = new Stack<ITask>();
-    readonly HashSet<INode> _passThroughCache = new HashSet<INode>(ReferenceEqualityComparer.Instance);
+    readonly HashSet<IOpNode> _passThroughCache = new HashSet<IOpNode>(ReferenceEqualityComparer.Instance);
 
     IGeneratorTask? _applying;
 
@@ -79,7 +79,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver", "onSetMerged(RelSet)")]
-    public void OnSetMerged(NodeSet set)
+    public void OnSetMerged(OpSet set)
     {
         // Merging may open new opportunities for an optimized group; clear the optimized state of the
         // set's subsets and their ancestors so they are optimized again.
@@ -87,7 +87,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver", "clearProcessed(RelSet)")]
-    void ClearProcessed(NodeSet set)
+    void ClearProcessed(OpSet set)
     {
         bool explored = set.Exploring is not null;
         set.Exploring = null;
@@ -107,20 +107,20 @@ public sealed class TopDownRuleDriver : IRuleDriver
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver", "onProduce(RelNode, RelSubset)")]
-    public void OnProduce(INode node, NodeSubset subset)
+    public void OnProduce(IOpNode op, OpSubset subset)
     {
-        // If the node was added to an unrelated subset, ignore it; a later OptimizeGroup will schedule it.
+        // If the op was added to an unrelated subset, ignore it; a later OptimizeGroup will schedule it.
         if (_applying is null || subset.Set != VolcanoPlanner.EquivRoot(_applying.Group.Set))
             return;
 
-        if (!_applying.OnProduce(node))
+        if (!_applying.OnProduce(op))
             return;
 
-        if (!_planner.IsLogical(node))
+        if (!_planner.IsLogical(op))
         {
-            // A physical node: schedule tasks to optimize its inputs for the optimizing subset(s).
-            NodeSubset? optimizingGroup = null;
-            bool canPassThrough = node is IPhysicalNode && !_passThroughCache.Contains(node);
+            // A physical op: schedule tasks to optimize its inputs for the optimizing subset(s).
+            OpSubset? optimizingGroup = null;
+            bool canPassThrough = op is IPhysicalNode && !_passThroughCache.Contains(op);
             if (!canPassThrough && subset.TaskState is not null)
             {
                 optimizingGroup = subset;
@@ -129,17 +129,17 @@ public sealed class TopDownRuleDriver : IRuleDriver
             {
                 var upperBound = _planner.ZeroCost;
                 var set = subset.Set;
-                var subsetsToPassThrough = new List<NodeSubset>();
+                var subsetsToPassThrough = new List<OpSubset>();
                 foreach (var otherSubset in set.Subsets)
                 {
                     if (!otherSubset.IsRequired
                         || !ReferenceEquals(otherSubset, _planner.RootSubset)
-                        && otherSubset.TaskState != NodeSubset.OptimizeState.Optimizing)
+                        && otherSubset.TaskState != OpSubset.OptimizeState.Optimizing)
                     {
                         continue;
                     }
 
-                    if (node.Traits.Satisfies(otherSubset.Traits))
+                    if (op.Traits.Satisfies(otherSubset.Traits))
                     {
                         if (upperBound.IsLessThan(otherSubset.UpperBound))
                         {
@@ -155,7 +155,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
 
                 foreach (var otherSubset in subsetsToPassThrough)
                 {
-                    var task = GetOptimizeInputTask(node, otherSubset);
+                    var task = GetOptimizeInputTask(op, otherSubset);
                     if (task is not null)
                         _tasks.Push(task);
                 }
@@ -164,7 +164,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
             if (optimizingGroup is null)
                 return;
 
-            var optimizeTask = GetOptimizeInputTask(node, optimizingGroup);
+            var optimizeTask = GetOptimizeInputTask(op, optimizingGroup);
             if (optimizeTask is not null)
                 _tasks.Push(optimizeTask);
         }
@@ -173,7 +173,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
             bool optimizing = false;
             foreach (var s in subset.Set.Subsets)
             {
-                if (s.TaskState == NodeSubset.OptimizeState.Optimizing)
+                if (s.TaskState == OpSubset.OptimizeState.Optimizing)
                 {
                     optimizing = true;
                     break;
@@ -181,17 +181,17 @@ public sealed class TopDownRuleDriver : IRuleDriver
             }
 
             var applying = _applying;
-            _tasks.Push(new OptimizeMExpr(this, node, applying.Group, applying.Exploring && !optimizing));
+            _tasks.Push(new OptimizeMExpr(this, op, applying.Group, applying.Exploring && !optimizing));
         }
     }
 
     /// <summary>
-    /// Decides how to optimize a physical node for a target subset.
+    /// Decides how to optimize a physical op for a target subset.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver", "getOptimizeInputTask(RelNode, RelSubset)")]
-    ITask? GetOptimizeInputTask(INode rel, NodeSubset group)
+    ITask? GetOptimizeInputTask(IOpNode rel, OpSubset group)
     {
-        // If the node does not deliver the group's traits, first try to convert it (pass-through or a
+        // If the op does not deliver the group's traits, first try to convert it (pass-through or a
         // converter rule).
         if (!rel.Traits.Satisfies(group.Traits))
         {
@@ -207,7 +207,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
         bool unProcessed = false;
         foreach (var input in rel.Children)
         {
-            if (((NodeSubset)input).GetWinnerCost() is null)
+            if (((OpSubset)input).GetWinnerCost() is null)
             {
                 unProcessed = true;
                 break;
@@ -225,11 +225,11 @@ public sealed class TopDownRuleDriver : IRuleDriver
     }
 
     /// <summary>
-    /// Tries to convert a physical node to a target subset's traits, by trait pass-through or, failing
+    /// Tries to convert a physical op to a target subset's traits, by trait pass-through or, failing
     /// that, by queuing a converter-rule match.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver", "convert(RelNode, RelSubset)")]
-    INode? Convert(INode rel, NodeSubset group)
+    IOpNode? Convert(IOpNode rel, OpSubset group)
     {
         if (!_passThroughCache.Contains(rel))
         {
@@ -253,10 +253,10 @@ public sealed class TopDownRuleDriver : IRuleDriver
     }
 
     /// <summary>
-    /// Whether a node's lower bound is below a subset's upper bound (so optimizing it is worthwhile).
+    /// Whether an op's lower bound is below a subset's upper bound (so optimizing it is worthwhile).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver", "checkLowerBound(RelNode, RelSubset)")]
-    bool CheckLowerBound(INode rel, NodeSubset group)
+    bool CheckLowerBound(IOpNode rel, OpSubset group)
     {
         var upperBound = group.UpperBound;
         if (upperBound.IsInfinite)
@@ -279,13 +279,13 @@ public sealed class TopDownRuleDriver : IRuleDriver
     interface IGeneratorTask : ITask
     {
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.GeneratorTask", "group()")]
-        NodeSubset Group { get; }
+        OpSubset Group { get; }
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.GeneratorTask", "exploring()")]
         bool Exploring { get; }
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.GeneratorTask", "onProduce(RelNode)")]
-        bool OnProduce(INode node);
+        bool OnProduce(IOpNode op);
     }
 
     /// <summary>
@@ -295,11 +295,11 @@ public sealed class TopDownRuleDriver : IRuleDriver
     sealed class OptimizeGroup : ITask
     {
         readonly TopDownRuleDriver _driver;
-        readonly NodeSubset _group;
+        readonly OpSubset _group;
         readonly ICost _upperBound;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.OptimizeGroup", "OptimizeGroup(RelSubset, RelOptCost)")]
-        public OptimizeGroup(TopDownRuleDriver driver, NodeSubset group, ICost upperBound)
+        public OptimizeGroup(TopDownRuleDriver driver, OpSubset group, ICost upperBound)
         {
             _driver = driver;
             _group = group;
@@ -319,8 +319,8 @@ public sealed class TopDownRuleDriver : IRuleDriver
 
             _driver._tasks.Push(new GroupOptimized(_group));
 
-            var physicals = new List<INode>();
-            foreach (var rel in _group.Set.Nodes)
+            var physicals = new List<IOpNode>();
+            foreach (var rel in _group.Set.Ops)
             {
                 if (_driver._planner.IsLogical(rel))
                     _driver._tasks.Push(new OptimizeMExpr(_driver, rel, _group, false));
@@ -346,10 +346,10 @@ public sealed class TopDownRuleDriver : IRuleDriver
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.GroupOptimized")]
     sealed class GroupOptimized : ITask
     {
-        readonly NodeSubset _group;
+        readonly OpSubset _group;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.GroupOptimized", "GroupOptimized(RelSubset)")]
-        public GroupOptimized(NodeSubset group)
+        public GroupOptimized(OpSubset group)
         {
             _group = group;
         }
@@ -359,18 +359,18 @@ public sealed class TopDownRuleDriver : IRuleDriver
     }
 
     /// <summary>
-    /// Optimizes a logical node: explores its inputs, then applies rules to it.
+    /// Optimizes a logical op: explores its inputs, then applies rules to it.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.OptimizeMExpr")]
     sealed class OptimizeMExpr : ITask
     {
         readonly TopDownRuleDriver _driver;
-        readonly INode _mExpr;
-        readonly NodeSubset _group;
+        readonly IOpNode _mExpr;
+        readonly OpSubset _group;
         readonly bool _explore;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.OptimizeMExpr", "OptimizeMExpr(RelNode, RelSubset, boolean)")]
-        public OptimizeMExpr(TopDownRuleDriver driver, INode mExpr, NodeSubset group, bool explore)
+        public OptimizeMExpr(TopDownRuleDriver driver, IOpNode mExpr, OpSubset group, bool explore)
         {
             _driver = driver;
             _mExpr = mExpr;
@@ -398,12 +398,12 @@ public sealed class TopDownRuleDriver : IRuleDriver
     sealed class EnsureGroupExplored : ITask
     {
         readonly TopDownRuleDriver _driver;
-        readonly NodeSubset _input;
-        readonly INode _parent;
+        readonly OpSubset _input;
+        readonly IOpNode _parent;
         readonly int _inputOrdinal;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.EnsureGroupExplored", "EnsureGroupExplored(RelSubset, RelNode, int)")]
-        public EnsureGroupExplored(TopDownRuleDriver driver, NodeSubset input, INode parent, int inputOrdinal)
+        public EnsureGroupExplored(TopDownRuleDriver driver, OpSubset input, IOpNode parent, int inputOrdinal)
         {
             _driver = driver;
             _input = input;
@@ -425,21 +425,21 @@ public sealed class TopDownRuleDriver : IRuleDriver
     }
 
     /// <summary>
-    /// Explores an input of a node: optimizes (for exploration) the logical members of the input group.
+    /// Explores an input of an op: optimizes (for exploration) the logical members of the input group.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.ExploreInput")]
     sealed class ExploreInput : ITask
     {
         readonly TopDownRuleDriver _driver;
-        readonly NodeSubset _group;
-        readonly INode _parent;
+        readonly OpSubset _group;
+        readonly IOpNode _parent;
         readonly int _inputOrdinal;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.ExploreInput", "ExploreInput(RelNode, int)")]
-        public ExploreInput(TopDownRuleDriver driver, INode parent, int inputOrdinal)
+        public ExploreInput(TopDownRuleDriver driver, IOpNode parent, int inputOrdinal)
         {
             _driver = driver;
-            _group = (NodeSubset)parent.Children[inputOrdinal];
+            _group = (OpSubset)parent.Children[inputOrdinal];
             _parent = parent;
             _inputOrdinal = inputOrdinal;
         }
@@ -451,7 +451,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
                 return;
 
             _driver._tasks.Push(new EnsureGroupExplored(_driver, _group, _parent, _inputOrdinal));
-            foreach (var rel in _group.Set.Nodes)
+            foreach (var rel in _group.Set.Ops)
             {
                 if (_driver._planner.IsLogical(rel))
                     _driver._tasks.Push(new OptimizeMExpr(_driver, rel, _group, true));
@@ -460,18 +460,18 @@ public sealed class TopDownRuleDriver : IRuleDriver
     }
 
     /// <summary>
-    /// Pulls matches for a node out of the queue and schedules an ApplyRule task for each.
+    /// Pulls matches for an op out of the queue and schedules an ApplyRule task for each.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.ApplyRules")]
     sealed class ApplyRules : ITask
     {
         readonly TopDownRuleDriver _driver;
-        readonly INode _mExpr;
-        readonly NodeSubset _group;
+        readonly IOpNode _mExpr;
+        readonly OpSubset _group;
         readonly bool _exploring;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.ApplyRules", "ApplyRules(RelNode, RelSubset, boolean)")]
-        public ApplyRules(TopDownRuleDriver driver, INode mExpr, NodeSubset group, bool exploring)
+        public ApplyRules(TopDownRuleDriver driver, IOpNode mExpr, OpSubset group, bool exploring)
         {
             _driver = driver;
             _mExpr = mExpr;
@@ -500,11 +500,11 @@ public sealed class TopDownRuleDriver : IRuleDriver
     {
         readonly TopDownRuleDriver _driver;
         readonly VolcanoRuleMatch _match;
-        readonly NodeSubset _group;
+        readonly OpSubset _group;
         readonly bool _exploring;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.ApplyRule", "ApplyRule(VolcanoRuleMatch, RelSubset, boolean)")]
-        public ApplyRule(TopDownRuleDriver driver, VolcanoRuleMatch match, NodeSubset group, bool exploring)
+        public ApplyRule(TopDownRuleDriver driver, VolcanoRuleMatch match, OpSubset group, bool exploring)
         {
             _driver = driver;
             _match = match;
@@ -513,30 +513,30 @@ public sealed class TopDownRuleDriver : IRuleDriver
         }
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.ApplyRule", "group()")]
-        public NodeSubset Group => _group;
+        public OpSubset Group => _group;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.ApplyRule", "exploring()")]
         public bool Exploring => _exploring;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.GeneratorTask", "onProduce(RelNode)")]
-        public bool OnProduce(INode node) => true;
+        public bool OnProduce(IOpNode op) => true;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.ApplyRule", "perform()")]
         public void Perform() => _driver.ApplyGenerator(this, _match.OnMatch);
     }
 
     /// <summary>
-    /// Optimizes the single input of a physical node, then derives traits.
+    /// Optimizes the single input of a physical op, then derives traits.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.OptimizeInput1")]
     sealed class OptimizeInput1 : ITask
     {
         readonly TopDownRuleDriver _driver;
-        readonly INode _mExpr;
-        readonly NodeSubset _group;
+        readonly IOpNode _mExpr;
+        readonly OpSubset _group;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.OptimizeInput1", "OptimizeInput1(RelNode, RelSubset)")]
-        public OptimizeInput1(TopDownRuleDriver driver, INode mExpr, NodeSubset group)
+        public OptimizeInput1(TopDownRuleDriver driver, IOpNode mExpr, OpSubset group)
         {
             _driver = driver;
             _mExpr = mExpr;
@@ -551,7 +551,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
             if (upperForInput.IsLessThanOrEqual(_driver._planner.ZeroCost))
                 return;
 
-            var input = (NodeSubset)_mExpr.Children[0];
+            var input = (OpSubset)_mExpr.Children[0];
 
             _driver._tasks.Push(new DeriveTrait(_driver, _mExpr, _group));
             _driver._tasks.Push(new CheckInput(_driver, null, _mExpr, input, 0, upperForInput));
@@ -560,14 +560,14 @@ public sealed class TopDownRuleDriver : IRuleDriver
     }
 
     /// <summary>
-    /// Optimizes a physical node's inputs, apportioning the upper bound across them, then derives traits.
+    /// Optimizes a physical op's inputs, apportioning the upper bound across them, then derives traits.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.OptimizeInputs")]
     sealed class OptimizeInputs : ITask
     {
         readonly TopDownRuleDriver _driver;
-        readonly INode _mExpr;
-        readonly NodeSubset _group;
+        readonly IOpNode _mExpr;
+        readonly OpSubset _group;
         readonly int _childCount;
         ICost _upperBound;
         ICost _upperForInput;
@@ -580,7 +580,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
         internal ICost? LowerBoundSum;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.OptimizeInputs", "OptimizeInputs(RelNode, RelSubset)")]
-        public OptimizeInputs(TopDownRuleDriver driver, INode rel, NodeSubset group)
+        public OptimizeInputs(TopDownRuleDriver driver, IOpNode rel, OpSubset group)
         {
             _driver = driver;
             _mExpr = rel;
@@ -630,7 +630,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
 
             while (_processingChild < _childCount)
             {
-                var input = (NodeSubset)_mExpr.Children[_processingChild];
+                var input = (OpSubset)_mExpr.Children[_processingChild];
 
                 if (input.GetWinnerCost() is not null)
                 {
@@ -665,12 +665,12 @@ public sealed class TopDownRuleDriver : IRuleDriver
         readonly TopDownRuleDriver _driver;
         readonly OptimizeInputs? _context;
         readonly ICost _upper;
-        readonly INode _parent;
-        NodeSubset _input;
+        readonly IOpNode _parent;
+        OpSubset _input;
         readonly int _i;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.CheckInput", "CheckInput(OptimizeInputs, RelNode, RelSubset, int, RelOptCost)")]
-        public CheckInput(TopDownRuleDriver driver, OptimizeInputs? context, INode parent, NodeSubset input, int i, ICost upper)
+        public CheckInput(TopDownRuleDriver driver, OptimizeInputs? context, IOpNode parent, OpSubset input, int i, ICost upper)
         {
             _driver = driver;
             _context = context;
@@ -685,7 +685,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
         {
             if (!ReferenceEquals(_input, _parent.Children[_i]))
             {
-                _input = (NodeSubset)_parent.Children[_i];
+                _input = (OpSubset)_parent.Children[_i];
                 _driver._tasks.Push(this);
                 _driver._tasks.Push(new OptimizeGroup(_driver, _input, _upper));
                 return;
@@ -713,17 +713,17 @@ public sealed class TopDownRuleDriver : IRuleDriver
     }
 
     /// <summary>
-    /// Derives traits for an optimized physical node from its inputs' delivered trait sets.
+    /// Derives traits for an optimized physical op from its inputs' delivered trait sets.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.DeriveTrait")]
     sealed class DeriveTrait : IGeneratorTask
     {
         readonly TopDownRuleDriver _driver;
-        readonly INode _mExpr;
-        readonly NodeSubset _group;
+        readonly IOpNode _mExpr;
+        readonly OpSubset _group;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.DeriveTrait", "DeriveTrait(RelNode, RelSubset)")]
-        public DeriveTrait(TopDownRuleDriver driver, INode mExpr, NodeSubset group)
+        public DeriveTrait(TopDownRuleDriver driver, IOpNode mExpr, OpSubset group)
         {
             _driver = driver;
             _mExpr = mExpr;
@@ -731,15 +731,15 @@ public sealed class TopDownRuleDriver : IRuleDriver
         }
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.DeriveTrait", "group()")]
-        public NodeSubset Group => _group;
+        public OpSubset Group => _group;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.DeriveTrait", "exploring()")]
         public bool Exploring => false;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.DeriveTrait", "onProduce(RelNode)")]
-        public bool OnProduce(INode node)
+        public bool OnProduce(IOpNode op)
         {
-            _driver._passThroughCache.Add(node);
+            _driver._passThroughCache.Add(op);
             return true;
         }
 
@@ -748,7 +748,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
         {
             foreach (var input in _mExpr.Children)
             {
-                if (((NodeSubset)input).GetWinnerCost() is null)
+                if (((OpSubset)input).GetWinnerCost() is null)
                     return;
             }
 
@@ -773,7 +773,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
             {
                 int childId = mode == DeriveMode.RightFirst ? arity - i - 1 : i;
 
-                var input = (NodeSubset)rel.Children[childId];
+                var input = (OpSubset)rel.Children[childId];
                 var traits = new List<TraitSet>();
                 inputTraits.Add(traits);
 

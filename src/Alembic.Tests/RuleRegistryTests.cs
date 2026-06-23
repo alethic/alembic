@@ -47,7 +47,7 @@ public class RuleRegistryTests
         planner.SetRoot(new LogicalSource(cluster, Logical, "t"));
         var best = planner.FindBestPlan();
 
-        // MarkSorted would tag the node sorted, but the exclusion filter keeps it from firing.
+        // MarkSorted would tag the op sorted, but the exclusion filter keeps it from firing.
         Assert.Same(Sortedness.Unsorted, best.Traits.Get(SortednessTraitDef.Instance));
     }
 

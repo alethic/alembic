@@ -21,7 +21,7 @@ public sealed class ExpandConversionRule : Rule
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter.ExpandConversionRule", "onMatch(RelOptRuleCall)")]
     public override void OnMatch(RuleCall call)
     {
-        var converter = (AbstractConverter)call.Node(0);
+        var converter = (AbstractConverter)call.Op(0);
         var planner = (VolcanoPlanner)call.Planner;
 
         var converted = planner.ChangeTraitsUsingConverters(converter.Input, converter.Traits);

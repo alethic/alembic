@@ -23,9 +23,9 @@ sealed class LiteralConverter : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override INode? Convert(INode node)
+    public override IOpNode? Convert(IOpNode op)
     {
-        if (node is Literal literal)
+        if (op is Literal literal)
             return new PhysicalLiteral(literal.Cluster, _physical, literal.Value);
 
         return null;

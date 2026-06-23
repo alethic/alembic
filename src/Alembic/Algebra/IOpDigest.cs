@@ -1,19 +1,19 @@
 namespace Alembic.Algebra;
 
 /// <summary>
-/// A node's structural digest — the value the planner compares and hashes nodes by, since a node's own
+/// An op's structural digest — the value the planner compares and hashes ops by, since an op's own
 /// <c>Equals</c>/<c>GetHashCode</c> stay as reference identity. Two digests are equal exactly when
-/// their nodes are <see cref="INode.DeepEquals"/>.
+/// their ops are <see cref="IOpNode.DeepEquals"/>.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelDigest")]
-public interface INodeDigest
+public interface IOpDigest
 {
 
     /// <summary>
-    /// The node this digest represents.
+    /// The op this digest represents.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelDigest", "getRel()")]
-    INode Node { get; }
+    IOpNode Op { get; }
 
     /// <summary>
     /// Resets any cached state (e.g. the cached hash), so it is recomputed on next use.

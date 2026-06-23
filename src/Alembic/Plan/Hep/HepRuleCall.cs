@@ -8,20 +8,20 @@ namespace Alembic.Plan.Hep;
 
 /// <summary>
 /// The <see cref="RuleCall"/> used by <see cref="HepPlanner"/>. A rule may register several equivalents
-/// per match; heuristic rewriting applies the first that differs from the matched node.
+/// per match; heuristic rewriting applies the first that differs from the matched op.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRuleCall")]
 public sealed class HepRuleCall : RuleCall
 {
 
-    readonly List<INode> _results = new List<INode>();
+    readonly List<IOpNode> _results = new List<IOpNode>();
 
     /// <summary>
-    /// Creates a call seeded at <paramref name="operand0"/> over the operand-bound nodes.
+    /// Creates a call seeded at <paramref name="operand0"/> over the operand-bound ops.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRuleCall", "HepRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>, List<RelNode>)")]
-    public HepRuleCall(IPlanner planner, RuleOperand operand0, ImmutableArray<INode> nodes)
-        : base(planner, operand0, nodes)
+    public HepRuleCall(IPlanner planner, RuleOperand operand0, ImmutableArray<IOpNode> ops)
+        : base(planner, operand0, ops)
     {
 
     }
@@ -30,7 +30,7 @@ public sealed class HepRuleCall : RuleCall
     /// The equivalents the rule registered, in the order it registered them.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRuleCall", "getResults()")]
-    public IReadOnlyList<INode> Results => _results;
+    public IReadOnlyList<IOpNode> Results => _results;
 
     /// <inheritdoc />
     /// <remarks>
@@ -39,7 +39,7 @@ public sealed class HepRuleCall : RuleCall
     /// has no role here and is ignored.
     /// </remarks>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRuleCall", "transformTo(RelNode, Map<RelNode, RelNode>, RelHintsPropagator)")]
-    public override void TransformTo(INode equivalent, IReadOnlyDictionary<INode, INode> equiv)
+    public override void TransformTo(IOpNode equivalent, IReadOnlyDictionary<IOpNode, IOpNode> equiv)
     {
         _results.Add(equivalent);
     }

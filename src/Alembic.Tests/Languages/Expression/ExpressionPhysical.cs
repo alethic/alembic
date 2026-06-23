@@ -6,7 +6,7 @@ namespace Alembic.Tests.Languages.Expression;
 
 /// <summary>
 /// The physical convention of the expression language, which contributes the converter rules that
-/// lower each logical node into its physical counterpart.
+/// lower each logical op into its physical counterpart.
 /// </summary>
 sealed class ExpressionPhysical : Convention
 {

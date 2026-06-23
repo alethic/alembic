@@ -23,9 +23,9 @@ sealed class SourceConverter : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override INode? Convert(INode node)
+    public override IOpNode? Convert(IOpNode op)
     {
-        if (node is LogicalSource source)
+        if (op is LogicalSource source)
             return new PhysicalSource(source.Cluster, _physical, source.Table);
 
         return null;

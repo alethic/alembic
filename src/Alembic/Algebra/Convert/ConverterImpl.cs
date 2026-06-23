@@ -3,11 +3,11 @@ using Alembic.Plan;
 namespace Alembic.Algebra.Convert;
 
 /// <summary>
-/// Abstract base for an <see cref="IConverter"/>: a single-input node that records the input's traits
+/// Abstract base for an <see cref="IConverter"/>: a single-input op that records the input's traits
 /// and the dimension it converts.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterImpl")]
-public abstract class ConverterImpl : SingleNode, IConverter
+public abstract class ConverterImpl : SingleOp, IConverter
 {
 
     /// <summary>
@@ -15,7 +15,7 @@ public abstract class ConverterImpl : SingleNode, IConverter
     /// the dimension <paramref name="traitDef"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterImpl", "ConverterImpl(RelOptCluster, RelTraitDef, RelTraitSet, RelNode)")]
-    protected ConverterImpl(TraitDef? traitDef, TraitSet traits, INode child)
+    protected ConverterImpl(TraitDef? traitDef, TraitSet traits, IOpNode child)
         : base(traits, child)
     {
         InputTraits = child.Traits;
@@ -32,6 +32,6 @@ public abstract class ConverterImpl : SingleNode, IConverter
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.Converter", "getInput()")]
-    public INode Input => Child;
+    public IOpNode Input => Child;
 
 }

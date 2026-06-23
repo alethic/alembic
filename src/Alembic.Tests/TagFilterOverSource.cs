@@ -19,7 +19,7 @@ sealed class TagFilterOverSource : Rule
 
     public override void OnMatch(RuleCall call)
     {
-        var filter = (LogicalFilter)call.Node(0);
+        var filter = (LogicalFilter)call.Op(0);
         call.TransformTo(new LogicalFilter(filter.Traits, filter.Input, "tagged"));
     }
 

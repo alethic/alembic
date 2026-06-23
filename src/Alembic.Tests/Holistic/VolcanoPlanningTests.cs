@@ -29,7 +29,7 @@ public class VolcanoPlanningTests
 
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new PhysicalFilter(physical, new PhysicalSource(cluster, physical, "t"), "x > 5");
+        IOpNode root = new PhysicalFilter(physical, new PhysicalSource(cluster, physical, "t"), "x > 5");
 
         planner.SetRoot(root);
         var best = planner.FindBestPlan();
@@ -49,7 +49,7 @@ public class VolcanoPlanningTests
         // separate filter-over-scan (cost 10 + 100). The planner must pick the cheaper one.
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new PhysicalFilter(physical, new PhysicalSource(cluster, physical, "t"), "x > 5");
+        IOpNode root = new PhysicalFilter(physical, new PhysicalSource(cluster, physical, "t"), "x > 5");
 
         planner.AddRule(new PushFilterIntoSource());
         planner.SetRoot(root);
@@ -68,7 +68,7 @@ public class VolcanoPlanningTests
 
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+        IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         RelationalConventions.Physical.Register(planner);
 
@@ -88,7 +88,7 @@ public class VolcanoPlanningTests
 
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+        IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         RelationalConventions.Physical.Register(planner);
         planner.AddRule(new PushFilterIntoSource());
@@ -112,7 +112,7 @@ public class VolcanoPlanningTests
         // physical plan cannot be produced.
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+        IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         planner.AddRule(new FilterConverter(physical));
         planner.AddRule(new ParameterConverter(physical));
@@ -133,7 +133,7 @@ public class VolcanoPlanningTests
         // sort enforcer — a converter rule whose Source/Target are a trait other than convention.
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new PhysicalSource(cluster, unsorted, "t");
+        IOpNode root = new PhysicalSource(cluster, unsorted, "t");
 
         planner.AddTraitDef(SortednessTraitDef.Instance);
         planner.AddRule(new SortEnforcer());
@@ -154,7 +154,7 @@ public class VolcanoPlanningTests
         // The same lowering-and-cost-choice scenario as the bottom-up search, but driven top-down.
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+        IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         planner.SetTopDownOpt(true);
         RelationalConventions.Physical.Register(planner);
@@ -176,11 +176,11 @@ public class VolcanoPlanningTests
         var (logical, physical) = Setup();
 
         // A lowering scenario: the converters fire (rules produced), and the chosen plan keeps a child
-        // (a physical source under the physical filter), so a non-root node is chosen.
+        // (a physical source under the physical filter), so a non-root op is chosen.
         var listener = new CountingListener();
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+        IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         RelationalConventions.Physical.Register(planner);
         planner.AddListener(listener);
@@ -190,7 +190,7 @@ public class VolcanoPlanningTests
 
         Assert.True(listener.EquivalencesFound > 0);
         Assert.True(listener.RulesProduced > 0);
-        Assert.True(listener.NodesChosen > 0);
+        Assert.True(listener.OpsChosen > 0);
         Assert.True(listener.PlanCompleted);
     }
 
@@ -198,20 +198,20 @@ public class VolcanoPlanningTests
     {
         public int EquivalencesFound { get; private set; }
         public int RulesProduced { get; private set; }
-        public int NodesChosen { get; private set; }
+        public int OpsChosen { get; private set; }
         public bool PlanCompleted { get; private set; }
 
-        public void NodeEquivalenceFound(IPlannerListener.NodeEquivalenceEvent e) => EquivalencesFound++;
+        public void OpEquivalenceFound(IPlannerListener.OpEquivalenceEvent e) => EquivalencesFound++;
         public void RuleAttempted(IPlannerListener.RuleAttemptedEvent e) { }
         public void RuleProductionSucceeded(IPlannerListener.RuleProductionEvent e) => RulesProduced++;
-        public void NodeDiscarded(IPlannerListener.NodeDiscardedEvent e) { }
+        public void OpDiscarded(IPlannerListener.OpDiscardedEvent e) { }
 
-        public void NodeChosen(IPlannerListener.NodeChosenEvent e)
+        public void OpChosen(IPlannerListener.OpChosenEvent e)
         {
-            if (e.Node is null)
+            if (e.Op is null)
                 PlanCompleted = true;
             else
-                NodesChosen++;
+                OpsChosen++;
         }
     }
 

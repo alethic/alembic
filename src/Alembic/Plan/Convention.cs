@@ -13,26 +13,26 @@ public class Convention : IConvention
 {
 
     /// <summary>
-    /// The default convention carried by a node that has not been assigned one.
+    /// The default convention carried by an op that has not been assigned one.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention", "NONE")]
-    public static readonly Convention None = new Convention("NONE", typeof(INode));
+    public static readonly Convention None = new Convention("NONE", typeof(IOpNode));
 
     readonly string _name;
     readonly Type _interface;
 
     /// <summary>
-    /// Creates a convention with the given name and no node-interface marker (members may be any
-    /// <see cref="INode"/>).
+    /// Creates a convention with the given name and no op-interface marker (members may be any
+    /// <see cref="IOpNode"/>).
     /// </summary>
     public Convention(string name)
-        : this(name, typeof(INode))
+        : this(name, typeof(IOpNode))
     {
 
     }
 
     /// <summary>
-    /// Creates a convention with the given name and the node interface its members must implement.
+    /// Creates a convention with the given name and the op interface its members must implement.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention.Impl", "Impl(String, Class)")]
     public Convention(string name, Type @interface)
@@ -82,7 +82,7 @@ public class Convention : IConvention
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention.Impl", "enforce(RelNode, RelTraitSet)")]
-    public virtual INode? Enforce(INode input, TraitSet required) => null;
+    public virtual IOpNode? Enforce(IOpNode input, TraitSet required) => null;
 
     /// <inheritdoc />
     public override bool Equals(object? obj)

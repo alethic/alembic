@@ -23,9 +23,9 @@ sealed class ParameterConverter : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override INode? Convert(INode node)
+    public override IOpNode? Convert(IOpNode op)
     {
-        if (node is LogicalParameter parameter)
+        if (op is LogicalParameter parameter)
             return new PhysicalParameter(parameter.Cluster, _physical, parameter.Name);
 
         return null;

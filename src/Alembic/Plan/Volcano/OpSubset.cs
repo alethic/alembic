@@ -6,17 +6,17 @@ using Alembic.Algebra;
 namespace Alembic.Plan.Volcano;
 
 /// <summary>
-/// The members of a <see cref="NodeSet"/> that share one trait set — equivalent plans with identical
-/// physical properties. A subset is itself an <see cref="INode"/> so it can stand in as a child of a
-/// registered node, and it remembers the cheapest member found so far.
+/// The members of a <see cref="OpSet"/> that share one trait set — equivalent plans with identical
+/// physical properties. A subset is itself an <see cref="IOpNode"/> so it can stand in as a child of a
+/// registered op, and it remembers the cheapest member found so far.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset")]
-public sealed class NodeSubset : AbstractNode
+public sealed class OpSubset : AbstractOp
 {
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "RelSubset(RelOptCluster, RelSet, RelTraitSet)")]
-    internal NodeSubset(NodeSet set, TraitSet traits, ICost infiniteCost)
-        : base(set.Cluster, traits, ImmutableArray<INode>.Empty)
+    internal OpSubset(OpSet set, TraitSet traits, ICost infiniteCost)
+        : base(set.Cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         Set = set;
         BestCost = infiniteCost;
@@ -48,13 +48,13 @@ public sealed class NodeSubset : AbstractNode
     /// The equivalence set this subset belongs to.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getSet()")]
-    public NodeSet Set { get; }
+    public OpSet Set { get; }
 
     /// <summary>
     /// The cheapest member found so far, or <c>null</c> if none has a finite cost yet.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getBest()")]
-    public INode? Best { get; internal set; }
+    public IOpNode? Best { get; internal set; }
 
     /// <summary>
     /// The cost of <see cref="Best"/> (infinite until a member is costed).
@@ -63,18 +63,18 @@ public sealed class NodeSubset : AbstractNode
     public ICost BestCost { get; internal set; }
 
     /// <summary>
-    /// Adds <paramref name="node"/> as an equivalent expression in this subset's set: notifies listeners
-    /// that an equivalent has been found, then appends it via <see cref="NodeSet.AddInternal"/>. A node
+    /// Adds <paramref name="op"/> as an equivalent expression in this subset's set: notifies listeners
+    /// that an equivalent has been found, then appends it via <see cref="OpSet.AddInternal"/>. An op
     /// already in the set is ignored.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "add(RelNode)")]
-    internal void Add(INode node)
+    internal void Add(IOpNode op)
     {
-        if (Set.Nodes.Contains(node))
+        if (Set.Ops.Contains(op))
             return;
 
-        ((AbstractPlanner)Set.Cluster.Planner).FireNodeEquivalenceFound(node, Set.Id, !node.Convention.Equals(Convention.None));
-        Set.AddInternal(node);
+        ((AbstractPlanner)Set.Cluster.Planner).FireOpEquivalenceFound(op, Set.Id, !op.Convention.Equals(Convention.None));
+        Set.AddInternal(op);
     }
 
     // ~ Top-down (Cascades) optimization state ---------------------------------
@@ -101,7 +101,7 @@ public sealed class NodeSubset : AbstractNode
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "triggerRule")]
     internal bool TriggerRule { get; set; }
 
-    HashSet<INode>? _passThroughCache;
+    HashSet<IOpNode>? _passThroughCache;
 
     /// <summary>
     /// Whether some member of this subset delivers its trait set.
@@ -174,24 +174,24 @@ public sealed class NodeSubset : AbstractNode
     }
 
     /// <summary>
-    /// Asks <paramref name="node"/> (a physical node) to pass this subset's required traits down to its
-    /// inputs, returning the delivering node, or <c>null</c> (also if it has already been asked).
+    /// Asks <paramref name="op"/> (a physical op) to pass this subset's required traits down to its
+    /// inputs, returning the delivering op, or <c>null</c> (also if it has already been asked).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "passThrough(RelNode)")]
-    internal INode? PassThrough(INode node)
+    internal IOpNode? PassThrough(IOpNode op)
     {
-        if (node is not IPhysicalNode physical)
+        if (op is not IPhysicalNode physical)
             return null;
 
-        _passThroughCache ??= new HashSet<INode>(ReferenceEqualityComparer.Instance);
-        if (!_passThroughCache.Add(node))
+        _passThroughCache ??= new HashSet<IOpNode>(ReferenceEqualityComparer.Instance);
+        if (!_passThroughCache.Add(op))
             return null;
 
         return physical.PassThrough(Traits);
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "isExplored()")]
-    internal bool IsExplored => Set.Exploring == NodeSet.ExploringState.Explored;
+    internal bool IsExplored => Set.Exploring == OpSet.ExploringState.Explored;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "explore()")]
     internal bool Explore()
@@ -199,43 +199,43 @@ public sealed class NodeSubset : AbstractNode
         if (Set.Exploring is not null)
             return false;
 
-        Set.Exploring = NodeSet.ExploringState.Exploring;
+        Set.Exploring = OpSet.ExploringState.Exploring;
         return true;
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "setExplored()")]
-    internal void SetExplored() => Set.Exploring = NodeSet.ExploringState.Explored;
+    internal void SetExplored() => Set.Exploring = OpSet.ExploringState.Explored;
 
     // ~ Members of the subset --------------------------------------------------
 
     // The upstream subset reads its `set` field directly, relying on subsets being canonized to the live
     // set before use. Alembic's set-merge leaves dead sets in place, so the subset resolves the live set
     // at the point of use through the planner's equivalence-root primitive.
-    NodeSet LiveSet => VolcanoPlanner.EquivRoot(Set);
+    OpSet LiveSet => VolcanoPlanner.EquivRoot(Set);
 
     /// <summary>
-    /// The set's representative (original) node, regardless of cost.
+    /// The set's representative (original) op, regardless of cost.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getOriginal()")]
-    public INode? GetOriginal() => LiveSet.Rel;
+    public IOpNode? GetOriginal() => LiveSet.Rel;
 
     /// <summary>
-    /// The best member if one has been costed, otherwise the original node.
+    /// The best member if one has been costed, otherwise the original op.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getBestOrOriginal()")]
-    public INode? GetBestOrOriginal() => Best ?? GetOriginal();
+    public IOpNode? GetBestOrOriginal() => Best ?? GetOriginal();
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "stripped()")]
-    public INode Stripped => GetBestOrOriginal() ?? this;
+    public IOpNode Stripped => GetBestOrOriginal() ?? this;
 
     /// <summary>
-    /// Every member of this subset: the set's nodes whose trait set satisfies this subset's.
+    /// Every member of this subset: the set's ops whose trait set satisfies this subset's.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getRels()")]
-    public IEnumerable<INode> GetRels()
+    public IEnumerable<IOpNode> GetRels()
     {
-        foreach (var rel in LiveSet.Nodes)
+        foreach (var rel in LiveSet.Ops)
             if (rel.Traits.Satisfies(Traits))
                 yield return rel;
     }
@@ -244,10 +244,10 @@ public sealed class NodeSubset : AbstractNode
     /// As <see cref="GetRels"/>, but as a list.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getRelList()")]
-    public IList<INode> GetRelList()
+    public IList<IOpNode> GetRelList()
     {
-        var list = new List<INode>();
-        foreach (var rel in LiveSet.Nodes)
+        var list = new List<IOpNode>();
+        foreach (var rel in LiveSet.Ops)
             if (rel.Traits.Satisfies(Traits))
                 list.Add(rel);
 
@@ -255,14 +255,14 @@ public sealed class NodeSubset : AbstractNode
     }
 
     /// <summary>
-    /// Whether <paramref name="node"/> is a member of this subset.
+    /// Whether <paramref name="op"/> is a member of this subset.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "contains(RelNode)")]
-    public bool Contains(INode node)
+    public bool Contains(IOpNode op)
     {
-        foreach (var rel in LiveSet.Nodes)
-            if (ReferenceEquals(rel, node))
-                return node.Traits.Satisfies(Traits);
+        foreach (var rel in LiveSet.Ops)
+            if (ReferenceEquals(rel, op))
+                return op.Traits.Satisfies(Traits);
 
         return false;
     }
@@ -271,7 +271,7 @@ public sealed class NodeSubset : AbstractNode
     /// The subsets of this set whose trait set satisfies this subset's.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getSubsetsSatisfyingThis()")]
-    public IEnumerable<NodeSubset> GetSubsetsSatisfyingThis()
+    public IEnumerable<OpSubset> GetSubsetsSatisfyingThis()
     {
         foreach (var subset in LiveSet.Subsets)
             if (subset.Traits.Satisfies(Traits))
@@ -282,7 +282,7 @@ public sealed class NodeSubset : AbstractNode
     /// The subsets of this set whose trait set is satisfied by this subset's.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getSatisfyingSubsets()")]
-    public IEnumerable<NodeSubset> GetSatisfyingSubsets()
+    public IEnumerable<OpSubset> GetSatisfyingSubsets()
     {
         foreach (var subset in LiveSet.Subsets)
             if (Traits.Satisfies(subset.Traits))
@@ -292,12 +292,12 @@ public sealed class NodeSubset : AbstractNode
     // ~ Parents ----------------------------------------------------------------
 
     /// <summary>
-    /// The nodes one of whose inputs is exactly this subset.
+    /// The ops one of whose inputs is exactly this subset.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getParents()")]
-    public IEnumerable<INode> GetParents()
+    public IEnumerable<IOpNode> GetParents()
     {
-        var seen = new HashSet<INode>(ReferenceEqualityComparer.Instance);
+        var seen = new HashSet<IOpNode>(ReferenceEqualityComparer.Instance);
         foreach (var parent in LiveSet.Parents)
         {
             foreach (var input in parent.Children)
@@ -312,17 +312,17 @@ public sealed class NodeSubset : AbstractNode
     }
 
     /// <summary>
-    /// The distinct subsets that contain a node one of whose inputs is exactly this subset.
+    /// The distinct subsets that contain an op one of whose inputs is exactly this subset.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getParentSubsets(VolcanoPlanner)")]
-    public IEnumerable<NodeSubset> GetParentSubsets(VolcanoPlanner planner)
+    public IEnumerable<OpSubset> GetParentSubsets(VolcanoPlanner planner)
     {
-        var seen = new HashSet<NodeSubset>();
+        var seen = new HashSet<OpSubset>();
         foreach (var parent in LiveSet.Parents)
         {
             foreach (var input in parent.Children)
             {
-                var sub = (NodeSubset)input;
+                var sub = (OpSubset)input;
                 if (sub.LiveSet == LiveSet && sub.Traits.Equals(Traits))
                 {
                     var parentSubset = planner.GetSubsetNonNull(parent);
@@ -336,18 +336,18 @@ public sealed class NodeSubset : AbstractNode
     }
 
     /// <summary>
-    /// The nodes one of whose inputs is in this subset (its trait set satisfied by this subset's).
+    /// The ops one of whose inputs is in this subset (its trait set satisfied by this subset's).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getParentRels()")]
-    public IEnumerable<INode> GetParentRels()
+    public IEnumerable<IOpNode> GetParentRels()
     {
         var live = LiveSet;
-        var seen = new HashSet<INode>(ReferenceEqualityComparer.Instance);
+        var seen = new HashSet<IOpNode>(ReferenceEqualityComparer.Instance);
         foreach (var parent in live.Parents)
         {
             foreach (var input in parent.Children)
             {
-                var sub = (NodeSubset)input;
+                var sub = (OpSubset)input;
                 if (sub.LiveSet == live && Traits.Satisfies(sub.Traits))
                 {
                     if (seen.Add(parent))
@@ -360,20 +360,20 @@ public sealed class NodeSubset : AbstractNode
     }
 
     /// <summary>
-    /// Recursively builds a tree of the cheapest plan at each node, replacing each subset with its best
+    /// Recursively builds a tree of the cheapest plan at each op, replacing each subset with its best
     /// member.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "buildCheapestPlan(VolcanoPlanner)")]
-    internal INode BuildCheapestPlan(VolcanoPlanner planner)
+    internal IOpNode BuildCheapestPlan(VolcanoPlanner planner)
     {
         var replacer = new CheapestPlanReplacer(planner);
         var cheapest = replacer.Visit(this, -1, null);
-        planner.FireNodeChosen(null);
+        planner.FireOpChosen(null);
         return cheapest;
     }
 
     /// <summary>
-    /// Replaces each subset in a plan with its cheapest member, memoizing by node so a shared subset is
+    /// Replaces each subset in a plan with its cheapest member, memoizing by op so a shared subset is
     /// built once.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset.CheapestPlanReplacer")]
@@ -382,7 +382,7 @@ public sealed class NodeSubset : AbstractNode
 
         readonly VolcanoPlanner _planner;
 
-        readonly Dictionary<INode, INode> _visited = new Dictionary<INode, INode>(ReferenceEqualityComparer.Instance);
+        readonly Dictionary<IOpNode, IOpNode> _visited = new Dictionary<IOpNode, IOpNode>(ReferenceEqualityComparer.Instance);
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset.CheapestPlanReplacer", "CheapestPlanReplacer(VolcanoPlanner)")]
         public CheapestPlanReplacer(VolcanoPlanner planner)
@@ -391,26 +391,26 @@ public sealed class NodeSubset : AbstractNode
         }
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset.CheapestPlanReplacer", "visit(RelNode, int, RelNode)")]
-        public INode Visit(INode p, int ordinal, INode? parent)
+        public IOpNode Visit(IOpNode p, int ordinal, IOpNode? parent)
         {
             if (_visited.TryGetValue(p, out var prevVisit))
                 return prevVisit;
 
             var key = p;
-            if (p is NodeSubset subset)
+            if (p is OpSubset subset)
             {
                 var cheapest = subset.Best;
                 if (cheapest is null)
-                    throw new CannotPlanException($"There are not enough rules to produce a node with the requested traits ({subset.Traits.Convention}).");
+                    throw new CannotPlanException($"There are not enough rules to produce an op with the requested traits ({subset.Traits.Convention}).");
 
                 p = cheapest;
             }
 
             if (ordinal != -1)
-                _planner.FireNodeChosen(p);
+                _planner.FireOpChosen(p);
 
             var oldInputs = p.Children;
-            var inputs = ImmutableArray.CreateBuilder<INode>(oldInputs.Length);
+            var inputs = ImmutableArray.CreateBuilder<IOpNode>(oldInputs.Length);
             bool changed = false;
             for (int i = 0; i < oldInputs.Length; i++)
             {
@@ -439,7 +439,7 @@ public sealed class NodeSubset : AbstractNode
     /// mutable optimizer state and is deliberately excluded.)
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "explain(RelWriter)")]
-    public override INodeWriter ExplainTerms(INodeWriter writer)
+    public override IOpWriter ExplainTerms(IOpWriter writer)
     {
         base.ExplainTerms(writer);
         writer.Item("subset", Set.Id);
@@ -448,7 +448,7 @@ public sealed class NodeSubset : AbstractNode
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "copy(RelTraitSet, List<RelNode>)")]
-    public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
+    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
     {
         return this;
     }

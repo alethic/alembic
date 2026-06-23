@@ -13,7 +13,7 @@ namespace Alembic.Tests.Languages.Image;
 sealed class Inpaint : ImageOp
 {
 
-    public Inpaint(TraitSet traits, INode input)
+    public Inpaint(TraitSet traits, IOpNode input)
         : base(traits, input)
     {
 
@@ -21,7 +21,7 @@ sealed class Inpaint : ImageOp
 
     public override bool SupportsGpu => false;
 
-    public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
+    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new Inpaint(traits, children[0]);
     }

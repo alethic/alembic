@@ -32,7 +32,7 @@ public class TraitConversionTests
         // through SortednessTraitDef's own conversion hook, which wraps the input in a PhysicalSort.
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new PhysicalSource(cluster, unsorted, "t");
+        IOpNode root = new PhysicalSource(cluster, unsorted, "t");
 
         planner.AddTraitDef(SortednessTraitDef.Instance);
         planner.SetRoot(root);
@@ -54,7 +54,7 @@ public class TraitConversionTests
         // the GPU therefore requires chaining the two: load on the CPU, then upload.
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new Load(cluster, logical, "x.png");
+        IOpNode root = new Load(cluster, logical, "x.png");
 
         planner.AddRule(new LowerToCpu());
         planner.AddRule(new UploadRule());

@@ -28,7 +28,7 @@ public class ImagePlanningTests
         // 10 (load) + 5 (up) + 1 + 1 + 1 + 5 (down) = 23, versus 40 all on the CPU.
         var planner = MakePlanner();
         var cluster = new Cluster(planner);
-        INode root = Threshold(Grayscale(Blur(Load(cluster, "photo.png"))));
+        IOpNode root = Threshold(Grayscale(Blur(Load(cluster, "photo.png"))));
 
         var best = Plan(planner, root, Cpu);
 
@@ -52,7 +52,7 @@ public class ImagePlanningTests
     {
         var planner = MakePlanner();
         var cluster = new Cluster(planner);
-        INode root = Threshold(Grayscale(Blur(Load(cluster, "photo.png"))));
+        IOpNode root = Threshold(Grayscale(Blur(Load(cluster, "photo.png"))));
 
         var best = Plan(planner, root, Gpu);
 
@@ -71,7 +71,7 @@ public class ImagePlanningTests
         // second run, and downloads the result: CPU -> GPU -> CPU -> GPU -> CPU.
         var planner = MakePlanner();
         var cluster = new Cluster(planner);
-        INode root = Threshold(Blur(Inpaint(Grayscale(Blur(Load(cluster, "photo.png"))))));
+        IOpNode root = Threshold(Blur(Inpaint(Grayscale(Blur(Load(cluster, "photo.png"))))));
 
         var best = Plan(planner, root, Cpu);
 
@@ -91,7 +91,7 @@ public class ImagePlanningTests
         // and inserts no transfers at all.
         var planner = MakePlanner();
         var cluster = new Cluster(planner);
-        INode root = Inpaint(Blur(Inpaint(Load(cluster, "photo.png"))));
+        IOpNode root = Inpaint(Blur(Inpaint(Load(cluster, "photo.png"))));
 
         var best = Plan(planner, root, Cpu);
 
@@ -100,11 +100,11 @@ public class ImagePlanningTests
         AssertAllCpu(best);
     }
 
-    static INode Load(Cluster cluster, string source) => new Load(cluster, Logical, source);
-    static INode Blur(INode input) => new Blur(Logical, input);
-    static INode Grayscale(INode input) => new Grayscale(Logical, input);
-    static INode Threshold(INode input) => new Threshold(Logical, input);
-    static INode Inpaint(INode input) => new Inpaint(Logical, input);
+    static IOpNode Load(Cluster cluster, string source) => new Load(cluster, Logical, source);
+    static IOpNode Blur(IOpNode input) => new Blur(Logical, input);
+    static IOpNode Grayscale(IOpNode input) => new Grayscale(Logical, input);
+    static IOpNode Threshold(IOpNode input) => new Threshold(Logical, input);
+    static IOpNode Inpaint(IOpNode input) => new Inpaint(Logical, input);
 
     static readonly TraitSet Logical = TraitSet.CreateEmpty().Plus(ImageConventions.Logical);
     static readonly TraitSet Cpu = TraitSet.CreateEmpty().Plus(ImageConventions.Cpu);
@@ -120,7 +120,7 @@ public class ImagePlanningTests
         return planner;
     }
 
-    INode Plan(VolcanoPlanner planner, INode root, TraitSet required)
+    IOpNode Plan(VolcanoPlanner planner, IOpNode root, TraitSet required)
     {
         planner.SetRoot(root);
         planner.SetRoot(planner.ChangeTraits(root, required));
@@ -129,36 +129,36 @@ public class ImagePlanningTests
         return best;
     }
 
-    static int Count<T>(INode node) where T : INode
+    static int Count<T>(IOpNode op) where T : IOpNode
     {
-        var count = node is T ? 1 : 0;
-        foreach (var child in node.Children)
+        var count = op is T ? 1 : 0;
+        foreach (var child in op.Children)
             count += Count<T>(child);
 
         return count;
     }
 
-    static T First<T>(INode node) where T : INode
+    static T First<T>(IOpNode op) where T : IOpNode
     {
-        if (node is T match)
+        if (op is T match)
             return match;
 
-        foreach (var child in node.Children)
+        foreach (var child in op.Children)
             if (TryFirst<T>(child, out var found))
                 return found;
 
         throw new Xunit.Sdk.XunitException($"No {typeof(T).Name} found in the plan.");
     }
 
-    static bool TryFirst<T>(INode node, out T found) where T : INode
+    static bool TryFirst<T>(IOpNode op, out T found) where T : IOpNode
     {
-        if (node is T match)
+        if (op is T match)
         {
             found = match;
             return true;
         }
 
-        foreach (var child in node.Children)
+        foreach (var child in op.Children)
             if (TryFirst<T>(child, out found))
                 return true;
 
@@ -166,11 +166,11 @@ public class ImagePlanningTests
         return false;
     }
 
-    static void AssertAllCpu(INode node)
+    static void AssertAllCpu(IOpNode op)
     {
-        Assert.Equal(ImageConventions.Cpu, node.Convention);
+        Assert.Equal(ImageConventions.Cpu, op.Convention);
 
-        foreach (var child in node.Children)
+        foreach (var child in op.Children)
             AssertAllCpu(child);
     }
 

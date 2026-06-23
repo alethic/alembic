@@ -7,7 +7,7 @@ namespace Alembic.Tests;
 
 /// <summary>
 /// The trait dimension for <see cref="Sortedness"/>. It can convert anything to sorted itself, by
-/// wrapping the node in a <see cref="PhysicalSort"/> — an alternative to registering a converter rule,
+/// wrapping the op in a <see cref="PhysicalSort"/> — an alternative to registering a converter rule,
 /// exercising the trait-def conversion hooks.
 /// </summary>
 sealed class SortednessTraitDef : TraitDef<Sortedness>
@@ -29,12 +29,12 @@ sealed class SortednessTraitDef : TraitDef<Sortedness>
         return toTrait.Equals(Sortedness.Sorted);
     }
 
-    public override INode? Convert(IPlanner planner, INode node, ITrait toTrait, bool allowInfiniteCostConverters)
+    public override IOpNode? Convert(IPlanner planner, IOpNode op, ITrait toTrait, bool allowInfiniteCostConverters)
     {
-        if (!toTrait.Equals(Sortedness.Sorted) || ReferenceEquals(node.Traits.Get(Instance), Sortedness.Sorted))
+        if (!toTrait.Equals(Sortedness.Sorted) || ReferenceEquals(op.Traits.Get(Instance), Sortedness.Sorted))
             return null;
 
-        return new PhysicalSort(node.Traits.Plus(Sortedness.Sorted), node);
+        return new PhysicalSort(op.Traits.Plus(Sortedness.Sorted), op);
     }
 
 }

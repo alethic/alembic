@@ -23,9 +23,9 @@ sealed class VariableConverter : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override INode? Convert(INode node)
+    public override IOpNode? Convert(IOpNode op)
     {
-        if (node is Variable variable)
+        if (op is Variable variable)
             return new PhysicalVariable(variable.Cluster, _physical, variable.Name);
 
         return null;

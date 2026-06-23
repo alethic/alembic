@@ -1,27 +1,27 @@
 namespace Alembic.Algebra;
 
 /// <summary>
-/// The default <see cref="INodeDigest"/> for a node that does not keep its own: it delegates equality
-/// and hashing to the node's <see cref="INode.DeepEquals"/> / <see cref="INode.DeepHashCode"/>, caching
-/// the hash. <see cref="AbstractNode"/> keeps a richer one that can render the digest string.
+/// The default <see cref="IOpDigest"/> for an op that does not keep its own: it delegates equality
+/// and hashing to the op's <see cref="IOpNode.DeepEquals"/> / <see cref="IOpNode.DeepHashCode"/>, caching
+/// the hash. <see cref="AbstractOp"/> keeps a richer one that can render the digest string.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelDigest")]
-public sealed class NodeDigest : INodeDigest
+public sealed class OpDigest : IOpDigest
 {
 
     int _hash;
 
     /// <summary>
-    /// Creates a digest for the given node.
+    /// Creates a digest for the given op.
     /// </summary>
-    public NodeDigest(INode node)
+    public OpDigest(IOpNode op)
     {
-        Node = node;
+        Op = op;
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelDigest", "getRel()")]
-    public INode Node { get; }
+    public IOpNode Op { get; }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelDigest", "clear()")]
@@ -31,7 +31,7 @@ public sealed class NodeDigest : INodeDigest
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelDigest", "equals(Object)")]
     public override bool Equals(object? obj)
     {
-        return obj is INodeDigest other && Node.DeepEquals(other.Node);
+        return obj is IOpDigest other && Op.DeepEquals(other.Op);
     }
 
     /// <inheritdoc />
@@ -40,7 +40,7 @@ public sealed class NodeDigest : INodeDigest
     {
         if (_hash == 0)
         {
-            _hash = Node.DeepHashCode();
+            _hash = Op.DeepHashCode();
             if (_hash == 0) _hash = 1;
         }
 

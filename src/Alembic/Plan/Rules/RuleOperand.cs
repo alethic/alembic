@@ -7,29 +7,29 @@ using Alembic.Algebra;
 namespace Alembic.Plan.Rules;
 
 /// <summary>
-/// How an operand treats the node's children.
+/// How an operand treats the op's children.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperandChildPolicy")]
 public enum RuleOperandChildPolicy
 {
 
     /// <summary>
-    /// Matches regardless of the node's children (no child operands are checked).
+    /// Matches regardless of the op's children (no child operands are checked).
     /// </summary>
     Any,
 
     /// <summary>
-    /// Matches only a node with no children.
+    /// Matches only an op with no children.
     /// </summary>
     Leaf,
 
     /// <summary>
-    /// Matches the child operands against the node's children positionally (same count, in order).
+    /// Matches the child operands against the op's children positionally (same count, in order).
     /// </summary>
     Some,
 
     /// <summary>
-    /// Each child operand matches any one of the node's children, regardless of position; the node's
+    /// Each child operand matches any one of the op's children, regardless of position; the op's
     /// child count is not constrained.
     /// </summary>
     Unordered
@@ -37,20 +37,20 @@ public enum RuleOperandChildPolicy
 }
 
 /// <summary>
-/// A node-tree pattern. A node matches an operand when it is an instance of <see cref="MatchedClass"/>,
+/// An op-tree pattern. An op matches an operand when it is an instance of <see cref="MatchedClass"/>,
 /// carries <see cref="Trait"/> (if one is required), and satisfies the optional <see cref="Predicate"/>;
-/// the <see cref="ChildPolicy"/> then governs how the child operands match the node's children. Every
-/// <see cref="Rule"/> has one; <see cref="Matches"/> tests a single node, while the recursive tree match
-/// against a node's children is performed by the planner as it fires rules.
+/// the <see cref="ChildPolicy"/> then governs how the child operands match the op's children. Every
+/// <see cref="Rule"/> has one; <see cref="Matches"/> tests a single op, while the recursive tree match
+/// against an op's children is performed by the planner as it fires rules.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand")]
 public sealed class RuleOperand
 {
 
-    static readonly Func<INode, bool> AlwaysMatches = static _ => true;
+    static readonly Func<IOpNode, bool> AlwaysMatches = static _ => true;
 
     /// <summary>
-    /// Matches nodes of <paramref name="matchedClass"/>: with child operands they match positionally
+    /// Matches ops of <paramref name="matchedClass"/>: with child operands they match positionally
     /// (<see cref="RuleOperandChildPolicy.Some"/>); with none it matches only a leaf
     /// (<see cref="RuleOperandChildPolicy.Leaf"/>).
     /// </summary>
@@ -61,7 +61,7 @@ public sealed class RuleOperand
     }
 
     /// <summary>
-    /// Matches nodes of <paramref name="matchedClass"/> with an explicit child policy.
+    /// Matches ops of <paramref name="matchedClass"/> with an explicit child policy.
     /// </summary>
     internal RuleOperand(Type matchedClass, RuleOperandChildPolicy childPolicy, params RuleOperand[] children)
         : this(matchedClass, null, AlwaysMatches, childPolicy, children)
@@ -70,16 +70,16 @@ public sealed class RuleOperand
     }
 
     /// <summary>
-    /// Matches nodes of <paramref name="matchedClass"/> that also satisfy <paramref name="predicate"/>.
+    /// Matches ops of <paramref name="matchedClass"/> that also satisfy <paramref name="predicate"/>.
     /// </summary>
-    internal RuleOperand(Type matchedClass, Func<INode, bool> predicate, RuleOperandChildPolicy childPolicy, params RuleOperand[] children)
+    internal RuleOperand(Type matchedClass, Func<IOpNode, bool> predicate, RuleOperandChildPolicy childPolicy, params RuleOperand[] children)
         : this(matchedClass, null, predicate, childPolicy, children)
     {
 
     }
 
     /// <summary>
-    /// Matches nodes of <paramref name="matchedClass"/> that also carry <paramref name="trait"/>.
+    /// Matches ops of <paramref name="matchedClass"/> that also carry <paramref name="trait"/>.
     /// </summary>
     internal RuleOperand(Type matchedClass, ITrait trait, RuleOperandChildPolicy childPolicy, params RuleOperand[] children)
         : this(matchedClass, trait, AlwaysMatches, childPolicy, children)
@@ -92,7 +92,7 @@ public sealed class RuleOperand
     /// and child operands.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "RelOptRuleOperand(Class, RelTrait, Predicate, RelOptRuleOperandChildPolicy, ImmutableList<RelOptRuleOperand>)")]
-    internal RuleOperand(Type matchedClass, ITrait? trait, Func<INode, bool> predicate, RuleOperandChildPolicy childPolicy, params RuleOperand[] children)
+    internal RuleOperand(Type matchedClass, ITrait? trait, Func<IOpNode, bool> predicate, RuleOperandChildPolicy childPolicy, params RuleOperand[] children)
     {
         MatchedClass = matchedClass;
         Trait = trait;
@@ -135,13 +135,13 @@ public sealed class RuleOperand
     public int[] SolveOrder { get; internal set; } = Array.Empty<int>();
 
     /// <summary>
-    /// The node type this operand matches.
+    /// The op type this operand matches.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "getMatchedClass()")]
     public Type MatchedClass { get; }
 
     /// <summary>
-    /// A trait the node must carry, or <c>null</c> if the operand does not test traits.
+    /// A trait the op must carry, or <c>null</c> if the operand does not test traits.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "trait")]
     public ITrait? Trait { get; }
@@ -150,10 +150,10 @@ public sealed class RuleOperand
     /// An extra condition applied after the class (and trait) test; defaults to always true.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "predicate")]
-    public Func<INode, bool> Predicate { get; }
+    public Func<IOpNode, bool> Predicate { get; }
 
     /// <summary>
-    /// How this operand treats the node's children.
+    /// How this operand treats the op's children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "childPolicy")]
     public RuleOperandChildPolicy ChildPolicy { get; }
@@ -166,19 +166,19 @@ public sealed class RuleOperand
     public ImmutableArray<RuleOperand> Children { get; }
 
     /// <summary>
-    /// Whether <paramref name="node"/> matches this operand's class, trait, and predicate (the children
+    /// Whether <paramref name="op"/> matches this operand's class, trait, and predicate (the children
     /// are matched separately, by the matcher, per the <see cref="ChildPolicy"/>).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "matches(RelNode)")]
-    public bool Matches(INode node)
+    public bool Matches(IOpNode op)
     {
-        if (!MatchedClass.IsInstanceOfType(node))
+        if (!MatchedClass.IsInstanceOfType(op))
             return false;
 
-        if (Trait is not null && !node.Traits.Contains(Trait))
+        if (Trait is not null && !op.Traits.Contains(Trait))
             return false;
 
-        return Predicate(node);
+        return Predicate(op);
     }
 
     /// <summary>

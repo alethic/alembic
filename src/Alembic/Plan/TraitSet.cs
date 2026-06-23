@@ -8,7 +8,7 @@ namespace Alembic.Plan;
 /// <summary>
 /// An immutable, interned, ordered set of traits. A dimension is located by a linear scan over the
 /// slots (there are few dimensions). Equal sets are canonicalized to a single shared instance through
-/// a cache that every set derived from a common empty set shares, so a node holds one reference and
+/// a cache that every set derived from a common empty set shares, so an op holds one reference and
 /// common sets are singletons.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet")]
@@ -134,7 +134,7 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     }
 
     /// <summary>
-    /// Whether a node carrying this set also satisfies a requirement for every dimension named in
+    /// Whether an op carrying this set also satisfies a requirement for every dimension named in
     /// <paramref name="required"/>. A dimension absent from this set is never satisfied; present
     /// dimensions are compared with <see cref="ITrait.Satisfies"/>.
     /// </summary>

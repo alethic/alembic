@@ -7,14 +7,14 @@ using Alembic.Algebra;
 namespace Alembic.Plan.Rules;
 
 /// <summary>
-/// A transformation rule: a root <see cref="RuleOperand"/> selecting the nodes it applies to, and the
-/// action taken on a match (<see cref="OnMatch"/>). A planner matches the operand against each node and,
+/// A transformation rule: a root <see cref="RuleOperand"/> selecting the ops it applies to, and the
+/// action taken on a match (<see cref="OnMatch"/>). A planner matches the operand against each op and,
 /// if <see cref="Matches"/> also allows it, calls <see cref="OnMatch"/>.
 /// </summary>
 /// <remarks>
 /// Operands form a closed world: a rule builds its operand only through the <c>protected static</c>
-/// factory methods here (<see cref="Any{TNode}()"/>, <see cref="Leaf{TNode}"/>, <see cref="Some{TNode}"/>,
-/// <see cref="Unordered{TNode}"/>, <see cref="ConvertOperand{TNode}"/>), passing the result to the
+/// factory methods here (<see cref="Any{TOp}()"/>, <see cref="Leaf{TOp}"/>, <see cref="Some{TOp}"/>,
+/// <see cref="Unordered{TOp}"/>, <see cref="ConvertOperand{TOp}"/>), passing the result to the
 /// constructor. The <see cref="RuleOperand"/> constructor itself is not public, so only well-formed
 /// operand trees can exist.
 /// </remarks>
@@ -41,7 +41,7 @@ public abstract class Rule
 
     /// <summary>
     /// The rule's operands flattened into a single list in prefix order (root first), each tagged with
-    /// its position. A planner indexes these by <see cref="RuleOperand.MatchedClass"/> so that a node
+    /// its position. A planner indexes these by <see cref="RuleOperand.MatchedClass"/> so that an op
     /// can seed a match at any operand position.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "getOperands()")]
@@ -65,7 +65,7 @@ public abstract class Rule
     }
 
     /// <summary>
-    /// Invoked for a matched node; the rule registers equivalents on the call.
+    /// Invoked for a matched op; the rule registers equivalents on the call.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "onMatch(RelOptRuleCall)")]
     public abstract void OnMatch(RuleCall call);
@@ -98,67 +98,67 @@ public abstract class Rule
     // ~ Operand factories (the RelOptRule operand/some/any/none/unordered/convertOperand analogs) ------
 
     /// <summary>
-    /// An operand matching a node of type <typeparamref name="TNode"/> regardless of its children.
+    /// An operand matching an op of type <typeparamref name="TOp"/> regardless of its children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "any()")]
-    protected static RuleOperand Any<TNode>()
-        where TNode : INode
+    protected static RuleOperand Any<TOp>()
+        where TOp : IOpNode
     {
-        return new RuleOperand(typeof(TNode), RuleOperandChildPolicy.Any);
+        return new RuleOperand(typeof(TOp), RuleOperandChildPolicy.Any);
     }
 
     /// <summary>
-    /// An operand matching a node of type <typeparamref name="TNode"/> that also satisfies a predicate,
+    /// An operand matching an op of type <typeparamref name="TOp"/> that also satisfies a predicate,
     /// regardless of its children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "any()")]
-    protected static RuleOperand Any<TNode>(Func<INode, bool> predicate)
-        where TNode : INode
+    protected static RuleOperand Any<TOp>(Func<IOpNode, bool> predicate)
+        where TOp : IOpNode
     {
-        return new RuleOperand(typeof(TNode), predicate, RuleOperandChildPolicy.Any);
+        return new RuleOperand(typeof(TOp), predicate, RuleOperandChildPolicy.Any);
     }
 
     /// <summary>
-    /// An operand matching a leaf node of type <typeparamref name="TNode"/> (one with no children).
+    /// An operand matching a leaf op of type <typeparamref name="TOp"/> (one with no children).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "none()")]
-    protected static RuleOperand Leaf<TNode>()
-        where TNode : INode
+    protected static RuleOperand Leaf<TOp>()
+        where TOp : IOpNode
     {
-        return new RuleOperand(typeof(TNode), RuleOperandChildPolicy.Leaf);
+        return new RuleOperand(typeof(TOp), RuleOperandChildPolicy.Leaf);
     }
 
     /// <summary>
-    /// An operand matching a node of type <typeparamref name="TNode"/> whose children match the given
+    /// An operand matching an op of type <typeparamref name="TOp"/> whose children match the given
     /// child operands positionally.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "some(RelOptRuleOperand, RelOptRuleOperand...)")]
-    protected static RuleOperand Some<TNode>(params RuleOperand[] children)
-        where TNode : INode
+    protected static RuleOperand Some<TOp>(params RuleOperand[] children)
+        where TOp : IOpNode
     {
-        return new RuleOperand(typeof(TNode), RuleOperandChildPolicy.Some, children);
+        return new RuleOperand(typeof(TOp), RuleOperandChildPolicy.Some, children);
     }
 
     /// <summary>
-    /// An operand matching a node of type <typeparamref name="TNode"/> whose children match the given
+    /// An operand matching an op of type <typeparamref name="TOp"/> whose children match the given
     /// child operands in any order.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "unordered(RelOptRuleOperand, RelOptRuleOperand...)")]
-    protected static RuleOperand Unordered<TNode>(params RuleOperand[] children)
-        where TNode : INode
+    protected static RuleOperand Unordered<TOp>(params RuleOperand[] children)
+        where TOp : IOpNode
     {
-        return new RuleOperand(typeof(TNode), RuleOperandChildPolicy.Unordered, children);
+        return new RuleOperand(typeof(TOp), RuleOperandChildPolicy.Unordered, children);
     }
 
     /// <summary>
-    /// An operand matching a node of type <typeparamref name="TNode"/> that carries <paramref name="trait"/>
-    /// — used to match a node needing conversion.
+    /// An operand matching an op of type <typeparamref name="TOp"/> that carries <paramref name="trait"/>
+    /// — used to match an op needing conversion.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "convertOperand(Class, Predicate, RelTrait)")]
-    protected static RuleOperand ConvertOperand<TNode>(ITrait trait)
-        where TNode : INode
+    protected static RuleOperand ConvertOperand<TOp>(ITrait trait)
+        where TOp : IOpNode
     {
-        return new RuleOperand(typeof(TNode), trait, RuleOperandChildPolicy.Any);
+        return new RuleOperand(typeof(TOp), trait, RuleOperandChildPolicy.Any);
     }
 
     // ~ Operand flattening -----------------------------------------------------

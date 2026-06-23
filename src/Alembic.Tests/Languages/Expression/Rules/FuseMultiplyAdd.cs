@@ -14,14 +14,14 @@ sealed class FuseMultiplyAdd : Rule
 {
 
     public FuseMultiplyAdd()
-        : base(Some<PhysicalAdd>(Any<PhysicalMultiply>(), Any<INode>()))
+        : base(Some<PhysicalAdd>(Any<PhysicalMultiply>(), Any<IOpNode>()))
     {
     }
 
     public override void OnMatch(RuleCall call)
     {
-        var add = (PhysicalAdd)call.Node(0);
-        var product = (PhysicalMultiply)call.Node(1);
+        var add = (PhysicalAdd)call.Op(0);
+        var product = (PhysicalMultiply)call.Op(1);
         call.TransformTo(new PhysicalFma(add.Traits, product.Left, product.Right, add.Right));
     }
 

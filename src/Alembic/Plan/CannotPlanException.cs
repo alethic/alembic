@@ -5,7 +5,7 @@ namespace Alembic.Plan;
 /// <summary>
 /// Thrown by <see cref="IPlanner.FindBestPlan"/> when the planner cannot produce a plan that satisfies
 /// the output traits requested through <see cref="IPlanner.ChangeTraits"/> — typically because no rule
-/// chain converts some node into the required form.
+/// chain converts some op into the required form.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner.CannotPlanException")]
 public sealed class CannotPlanException : Exception

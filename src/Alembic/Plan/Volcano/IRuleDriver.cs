@@ -22,16 +22,16 @@ public interface IRuleDriver
     void Drive();
 
     /// <summary>
-    /// Notifies the driver that a node has been added to a subset.
+    /// Notifies the driver that an op has been added to a subset.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleDriver", "onProduce(RelNode, RelSubset)")]
-    void OnProduce(INode node, NodeSubset subset);
+    void OnProduce(IOpNode op, OpSubset subset);
 
     /// <summary>
     /// Notifies the driver that two sets have been merged.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleDriver", "onSetMerged(RelSet)")]
-    void OnSetMerged(NodeSet set);
+    void OnSetMerged(OpSet set);
 
     /// <summary>
     /// Resets the driver.

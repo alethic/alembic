@@ -1,7 +1,7 @@
 namespace Alembic.Plan.Hep;
 
 /// <summary>
-/// The order in which a <see cref="HepPlanner"/> visits nodes when applying rules.
+/// The order in which a <see cref="HepPlanner"/> visits ops when applying rules.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepMatchOrder")]
 public enum HepMatchOrder

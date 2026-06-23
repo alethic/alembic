@@ -122,7 +122,7 @@ public abstract class AbstractPlanner : IPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "prune(RelNode)")]
-    public virtual void Prune(INode node)
+    public virtual void Prune(IOpNode op)
     {
         // The base planner does not model pruning; the cost-based planner overrides this.
     }
@@ -169,14 +169,14 @@ public abstract class AbstractPlanner : IPlanner
     protected internal bool HasListeners => _listeners.Count > 0;
 
     /// <summary>
-    /// Notifies listeners that a node has joined an equivalence class (optionally identified by
-    /// <paramref name="equivalenceClass"/>, with <paramref name="isPhysical"/> flagging a physical node).
+    /// Notifies listeners that an op has joined an equivalence class (optionally identified by
+    /// <paramref name="equivalenceClass"/>, with <paramref name="isPhysical"/> flagging a physical op).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "notifyEquivalence(RelNode, Object, boolean)")]
-    protected internal void FireNodeEquivalenceFound(INode node, object? equivalenceClass = null, bool isPhysical = false)
+    protected internal void FireOpEquivalenceFound(IOpNode op, object? equivalenceClass = null, bool isPhysical = false)
     {
         foreach (var listener in _listeners)
-            listener.NodeEquivalenceFound(new IPlannerListener.NodeEquivalenceEvent(this, node, equivalenceClass, isPhysical));
+            listener.OpEquivalenceFound(new IPlannerListener.OpEquivalenceEvent(this, op, equivalenceClass, isPhysical));
     }
 
     /// <summary>
@@ -186,54 +186,54 @@ public abstract class AbstractPlanner : IPlanner
     protected internal void FireRuleAttempted(RuleCall call, bool before)
     {
         foreach (var listener in _listeners)
-            listener.RuleAttempted(new IPlannerListener.RuleAttemptedEvent(this, call.Node(0), call, before));
+            listener.RuleAttempted(new IPlannerListener.RuleAttemptedEvent(this, call.Op(0), call, before));
     }
 
     /// <summary>
     /// Notifies listeners that a rule produced an equivalent.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "notifyTransformation(RelOptRuleCall, RelNode, boolean)")]
-    protected internal void FireRuleProductionSucceeded(RuleCall call, INode produced)
+    protected internal void FireRuleProductionSucceeded(RuleCall call, IOpNode produced)
     {
         foreach (var listener in _listeners)
             listener.RuleProductionSucceeded(new IPlannerListener.RuleProductionEvent(this, produced, call, false));
     }
 
     /// <summary>
-    /// Notifies listeners that a node has been discarded.
+    /// Notifies listeners that an op has been discarded.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "notifyDiscard(RelNode)")]
-    protected internal void FireNodeDiscarded(INode node)
+    protected internal void FireOpDiscarded(IOpNode op)
     {
         foreach (var listener in _listeners)
-            listener.NodeDiscarded(new IPlannerListener.NodeDiscardedEvent(this, node));
+            listener.OpDiscarded(new IPlannerListener.OpDiscardedEvent(this, op));
     }
 
     /// <summary>
-    /// Notifies listeners that a node has been chosen for the final plan (a null node signals the plan
+    /// Notifies listeners that an op has been chosen for the final plan (a null op signals the plan
     /// is complete).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "notifyChosen(RelNode)")]
-    protected internal void FireNodeChosen(INode? node)
+    protected internal void FireOpChosen(IOpNode? op)
     {
         foreach (var listener in _listeners)
-            listener.NodeChosen(new IPlannerListener.NodeChosenEvent(this, node));
+            listener.OpChosen(new IPlannerListener.OpChosenEvent(this, op));
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "setRoot(RelNode)")]
-    public abstract void SetRoot(INode node);
+    public abstract void SetRoot(IOpNode op);
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "getRoot()")]
-    public abstract INode? Root { get; }
+    public abstract IOpNode? Root { get; }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "changeTraits(RelNode, RelTraitSet)")]
-    public abstract INode ChangeTraits(INode node, TraitSet toTraits);
+    public abstract IOpNode ChangeTraits(IOpNode op, TraitSet toTraits);
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "findBestExp()")]
-    public abstract INode FindBestPlan();
+    public abstract IOpNode FindBestPlan();
 
 }

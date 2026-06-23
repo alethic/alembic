@@ -8,16 +8,16 @@ namespace Alembic.Tests.Languages.Expression.Logical;
 /// <summary>
 /// A logical addition of two sub-expressions.
 /// </summary>
-sealed class Add : BiNode
+sealed class Add : BiOp
 {
 
-    public Add(TraitSet traits, INode left, INode right)
+    public Add(TraitSet traits, IOpNode left, IOpNode right)
         : base(traits, left, right)
     {
 
     }
 
-    public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
+    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new Add(traits, children[0], children[1]);
     }

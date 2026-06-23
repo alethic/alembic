@@ -10,20 +10,20 @@ namespace Alembic.Tests.Languages.Relational.Physical;
 /// required sortedness that the input does not already provide, and it costs a little on top of its
 /// input.
 /// </summary>
-sealed class PhysicalSort : SingleNode
+sealed class PhysicalSort : SingleOp
 {
 
-    public PhysicalSort(TraitSet traits, INode input)
+    public PhysicalSort(TraitSet traits, IOpNode input)
         : base(traits, input)
     {
 
     }
 
-    public INode Input => Child;
+    public IOpNode Input => Child;
 
     public override ICost ComputeSelfCost(IPlanner planner) => planner.CostFactory.MakeCost(50, 0);
 
-    public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
+    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new PhysicalSort(traits, children[0]);
     }

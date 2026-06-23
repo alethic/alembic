@@ -23,9 +23,9 @@ sealed class AddConverter : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override INode? Convert(INode node)
+    public override IOpNode? Convert(IOpNode op)
     {
-        if (node is Add add)
+        if (op is Add add)
             return new PhysicalAdd(_physical, add.Left, add.Right);
 
         return null;

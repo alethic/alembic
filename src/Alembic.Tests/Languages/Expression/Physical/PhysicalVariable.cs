@@ -8,27 +8,27 @@ namespace Alembic.Tests.Languages.Expression.Physical;
 /// <summary>
 /// A physical leaf naming a variable whose value is supplied at evaluation time.
 /// </summary>
-sealed class PhysicalVariable : AbstractNode
+sealed class PhysicalVariable : AbstractOp
 {
 
     readonly string _name;
 
     public PhysicalVariable(Cluster cluster, TraitSet traits, string name)
-        : base(cluster, traits, ImmutableArray<INode>.Empty)
+        : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         _name = name;
     }
 
     public string Name => _name;
 
-    public override INodeWriter ExplainTerms(INodeWriter writer)
+    public override IOpWriter ExplainTerms(IOpWriter writer)
     {
         base.ExplainTerms(writer);
         writer.Item("name", _name);
         return writer;
     }
 
-    public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
+    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new PhysicalVariable(Cluster, traits, _name);
     }

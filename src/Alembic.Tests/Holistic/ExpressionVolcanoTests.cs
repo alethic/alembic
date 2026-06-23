@@ -30,8 +30,8 @@ public class ExpressionVolcanoTests
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
 
-        // (a * b) + c — exercises the two-child BiNode shape through the cost-based planner.
-        INode root = new Add(logical, new Multiply(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b")), new Variable(cluster, logical, "c"));
+        // (a * b) + c — exercises the two-child BiOp shape through the cost-based planner.
+        IOpNode root = new Add(logical, new Multiply(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b")), new Variable(cluster, logical, "c"));
 
         ExpressionConventions.Physical.Register(planner);
         planner.SetRoot(root);

@@ -4,12 +4,12 @@ using System.Text;
 namespace Alembic.Algebra;
 
 /// <summary>
-/// The default <see cref="INodeWriter"/>: renders a node and its inputs as an indented plan tree. Each
-/// node contributes its terms (via <see cref="INode.Explain"/>); <see cref="Done"/> emits the node's line
+/// The default <see cref="IOpWriter"/>: renders an op and its inputs as an indented plan tree. Each
+/// op contributes its terms (via <see cref="IOpNode.Explain"/>); <see cref="Done"/> emits the op's line
 /// — its type, traits, and attributes — and then recurses into its inputs, one indent level deeper.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.externalize.RelWriterImpl")]
-public sealed class NodeWriterImpl : INodeWriter
+public sealed class OpWriterImpl : IOpWriter
 {
 
     readonly StringBuilder _builder;
@@ -20,14 +20,14 @@ public sealed class NodeWriterImpl : INodeWriter
     /// Creates a writer that appends to <paramref name="builder"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.externalize.RelWriterImpl", "RelWriterImpl(PrintWriter)")]
-    public NodeWriterImpl(StringBuilder builder)
+    public OpWriterImpl(StringBuilder builder)
     {
         _builder = builder;
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.externalize.RelWriterImpl", "item(String, Object)")]
-    public INodeWriter Item(string name, object? value)
+    public IOpWriter Item(string name, object? value)
     {
         _values.Add((name, value));
         return this;
@@ -35,25 +35,25 @@ public sealed class NodeWriterImpl : INodeWriter
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.externalize.RelWriterImpl", "done(RelNode)")]
-    public INodeWriter Done(INode node)
+    public IOpWriter Done(IOpNode op)
     {
         var values = _values.ToArray();
         _values.Clear();
-        Explain(node, values);
+        Explain(op, values);
         return this;
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.externalize.RelWriterImpl", "explain_(RelNode, List<Pair<String, Object>>)")]
-    void Explain(INode node, (string Name, object? Value)[] values)
+    void Explain(IOpNode op, (string Name, object? Value)[] values)
     {
         _builder.Append(' ', _spaces);
-        _builder.Append(node.GetType().Name).Append(' ').Append(node.Traits);
+        _builder.Append(op.GetType().Name).Append(' ').Append(op.Traits);
 
         int attributes = 0;
         foreach (var (name, value) in values)
         {
-            // Inputs are items whose value is a node; they are recursed into below, not printed inline.
-            if (value is INode)
+            // Inputs are items whose value is an op; they are recursed into below, not printed inline.
+            if (value is IOpNode)
                 continue;
 
             _builder.Append(attributes++ == 0 ? " (" : ", ").Append(name).Append('=').Append(value);
@@ -65,7 +65,7 @@ public sealed class NodeWriterImpl : INodeWriter
         _builder.Append('\n');
 
         _spaces += 2;
-        foreach (var input in node.Children)
+        foreach (var input in op.Children)
             input.Explain(this);
         _spaces -= 2;
     }

@@ -19,8 +19,8 @@ sealed class MergeFilters : Rule
 
     public override void OnMatch(RuleCall call)
     {
-        var outer = (LogicalFilter)call.Node(0);
-        var inner = (LogicalFilter)call.Node(1);
+        var outer = (LogicalFilter)call.Op(0);
+        var inner = (LogicalFilter)call.Op(1);
         call.TransformTo(new LogicalFilter(outer.Traits, inner.Input, $"{outer.Predicate} AND {inner.Predicate}"));
     }
 

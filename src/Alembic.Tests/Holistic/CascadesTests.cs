@@ -15,7 +15,7 @@ using Xunit.Abstractions;
 namespace Alembic.Tests.Holistic;
 
 /// <summary>
-/// Validates the Cascades-specific machinery: the logical/physical rule split, and a physical node's
+/// Validates the Cascades-specific machinery: the logical/physical rule split, and a physical op's
 /// trait pass-through and derivation.
 /// </summary>
 public class CascadesTests
@@ -32,7 +32,7 @@ public class CascadesTests
     static readonly TraitSet Physical = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
 
     [Fact]
-    public void A_transformation_rule_fires_on_logical_nodes()
+    public void A_transformation_rule_fires_on_logical_ops()
     {
         var spy = new SpyTransformationRule();
         var planner = new VolcanoPlanner();
@@ -41,11 +41,11 @@ public class CascadesTests
         planner.SetRoot(new LogicalSource(cluster, Logical, "t"));
         planner.FindBestPlan();
 
-        Assert.Contains(spy.Fired, node => node is LogicalSource);
+        Assert.Contains(spy.Fired, op => op is LogicalSource);
     }
 
     [Fact]
-    public void A_transformation_rule_is_kept_off_physical_nodes()
+    public void A_transformation_rule_is_kept_off_physical_ops()
     {
         var spy = new SpyTransformationRule();
         var planner = new VolcanoPlanner();
@@ -57,11 +57,11 @@ public class CascadesTests
         planner.SetRoot(new PhysicalSource(cluster, Physical, "t"));
         planner.FindBestPlan();
 
-        Assert.DoesNotContain(spy.Fired, node => node is PhysicalSource);
+        Assert.DoesNotContain(spy.Fired, op => op is PhysicalSource);
     }
 
     [Fact]
-    public void A_physical_node_passes_a_required_trait_set_down_to_its_inputs()
+    public void A_physical_op_passes_a_required_trait_set_down_to_its_inputs()
     {
         var planner = new VolcanoPlanner();
         planner.AddTraitDef(SortednessTraitDef.Instance);
@@ -75,12 +75,12 @@ public class CascadesTests
         var passed = Assert.IsType<PhysicalFilter>(((IPhysicalNode)filter).PassThrough(sorted));
         Assert.Same(Sortedness.Sorted, passed.Traits.Get(SortednessTraitDef.Instance));
 
-        var input = Assert.IsType<NodeSubset>(passed.Input);
+        var input = Assert.IsType<OpSubset>(passed.Input);
         Assert.Same(Sortedness.Sorted, input.Traits.Get(SortednessTraitDef.Instance));
     }
 
     [Fact]
-    public void A_physical_node_derives_a_delivered_trait_set_from_its_input()
+    public void A_physical_op_derives_a_delivered_trait_set_from_its_input()
     {
         var planner = new VolcanoPlanner();
         planner.AddTraitDef(SortednessTraitDef.Instance);
@@ -105,7 +105,7 @@ public class CascadesTests
         // with an enforcer (cost 50 + 10 + 100).
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new PhysicalFilter(unsorted, new PhysicalSource(cluster, unsorted, "t"), "x > 5");
+        IOpNode root = new PhysicalFilter(unsorted, new PhysicalSource(cluster, unsorted, "t"), "x > 5");
 
         planner.SetTopDownOpt(true);
         planner.AddTraitDef(SortednessTraitDef.Instance);
@@ -125,10 +125,10 @@ public class CascadesTests
     {
         var unsorted = Physical.Plus(Sortedness.Unsorted);
 
-        var listener = new NodeRecordingListener();
+        var listener = new OpRecordingListener();
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new PhysicalFilter(unsorted, new PhysicalSource(cluster, unsorted, "t"), "x > 5");
+        IOpNode root = new PhysicalFilter(unsorted, new PhysicalSource(cluster, unsorted, "t"), "x > 5");
 
         planner.SetTopDownOpt(true);
         planner.AddTraitDef(SortednessTraitDef.Instance);
@@ -148,24 +148,24 @@ public class CascadesTests
 
         // But the filter derived a *sorted* filter bottom-up from the sorted source — a novel equivalent
         // the search produced on its own, without any parent requiring it.
-        Assert.Contains(listener.Equivalences, node =>
-            node is PhysicalFilter && ReferenceEquals(node.Traits.Get(SortednessTraitDef.Instance), Sortedness.Sorted));
+        Assert.Contains(listener.Equivalences, op =>
+            op is PhysicalFilter && ReferenceEquals(op.Traits.Get(SortednessTraitDef.Instance), Sortedness.Sorted));
     }
 
     /// <summary>
-    /// A transformation rule that records every node it is invoked on and transforms nothing.
+    /// A transformation rule that records every op it is invoked on and transforms nothing.
     /// </summary>
     sealed class SpyTransformationRule : Rule, ITransformationRule
     {
 
         public SpyTransformationRule()
-            : base(Any<INode>())
+            : base(Any<IOpNode>())
         {
         }
 
-        public List<INode> Fired { get; } = new List<INode>();
+        public List<IOpNode> Fired { get; } = new List<IOpNode>();
 
-        public override void OnMatch(RuleCall call) => Fired.Add(call.Node(0));
+        public override void OnMatch(RuleCall call) => Fired.Add(call.Op(0));
 
     }
 
@@ -183,7 +183,7 @@ public class CascadesTests
 
         public override void OnMatch(RuleCall call)
         {
-            var source = (PhysicalSource)call.Node(0);
+            var source = (PhysicalSource)call.Op(0);
             if (ReferenceEquals(source.Traits.Get(SortednessTraitDef.Instance), Sortedness.Sorted))
                 return;
 
@@ -194,22 +194,22 @@ public class CascadesTests
     }
 
     /// <summary>
-    /// Records every node registered with an equivalence class.
+    /// Records every op registered with an equivalence class.
     /// </summary>
-    sealed class NodeRecordingListener : IPlannerListener
+    sealed class OpRecordingListener : IPlannerListener
     {
 
-        public List<INode> Equivalences { get; } = new List<INode>();
+        public List<IOpNode> Equivalences { get; } = new List<IOpNode>();
 
-        public void NodeEquivalenceFound(IPlannerListener.NodeEquivalenceEvent e) => Equivalences.Add(e.Node!);
+        public void OpEquivalenceFound(IPlannerListener.OpEquivalenceEvent e) => Equivalences.Add(e.Op!);
 
         public void RuleAttempted(IPlannerListener.RuleAttemptedEvent e) { }
 
         public void RuleProductionSucceeded(IPlannerListener.RuleProductionEvent e) { }
 
-        public void NodeDiscarded(IPlannerListener.NodeDiscardedEvent e) { }
+        public void OpDiscarded(IPlannerListener.OpDiscardedEvent e) { }
 
-        public void NodeChosen(IPlannerListener.NodeChosenEvent e) { }
+        public void OpChosen(IPlannerListener.OpChosenEvent e) { }
 
     }
 

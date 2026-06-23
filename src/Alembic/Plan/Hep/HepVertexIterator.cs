@@ -6,20 +6,20 @@ using Alembic.Algebra;
 namespace Alembic.Plan.Hep;
 
 /// <summary>
-/// Iterates the vertices of a <see cref="HepNodeVertex"/> graph in depth-first order, following each
-/// vertex's current node's inputs (which are themselves vertices). Used in large-plan mode, where it
+/// Iterates the vertices of a <see cref="HepOpVertex"/> graph in depth-first order, following each
+/// vertex's current op's inputs (which are themselves vertices). Used in large-plan mode, where it
 /// can resume from a new vertex (<see cref="ContinueFrom"/>) instead of restarting from the root.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepVertexIterator")]
-sealed class HepVertexIterator : IEnumerator<HepNodeVertex>
+sealed class HepVertexIterator : IEnumerator<HepOpVertex>
 {
 
-    readonly Stack<HepNodeVertex> _deque = new Stack<HepNodeVertex>();
-    readonly HashSet<HepNodeVertex> _visited;
-    HepNodeVertex _current = default!;
+    readonly Stack<HepOpVertex> _deque = new Stack<HepOpVertex>();
+    readonly HashSet<HepOpVertex> _visited;
+    HepOpVertex _current = default!;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepVertexIterator", "HepVertexIterator(V, Set<Integer>)")]
-    internal HepVertexIterator(HepNodeVertex root, HashSet<HepNodeVertex> visited)
+    internal HepVertexIterator(HepOpVertex root, HashSet<HepOpVertex> visited)
     {
         _visited = visited;
         _deque.Push(root);
@@ -30,7 +30,7 @@ sealed class HepVertexIterator : IEnumerator<HepNodeVertex>
     /// <paramref name="visited"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepVertexIterator", "of(V, Set<Integer>)")]
-    public static IEnumerable<HepNodeVertex> Of(HepNodeVertex root, HashSet<HepNodeVertex> visited)
+    public static IEnumerable<HepOpVertex> Of(HepOpVertex root, HashSet<HepOpVertex> visited)
     {
         var iterator = new HepVertexIterator(root, visited);
         while (iterator.MoveNext())
@@ -41,13 +41,13 @@ sealed class HepVertexIterator : IEnumerator<HepNodeVertex>
     /// Resumes iteration from <paramref name="newVertex"/>, keeping the visited set.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepVertexIterator", "continueFrom(V)")]
-    public HepVertexIterator ContinueFrom(HepNodeVertex newVertex)
+    public HepVertexIterator ContinueFrom(HepOpVertex newVertex)
     {
         _deque.Push(newVertex);
         return this;
     }
 
-    public HepNodeVertex Current => _current;
+    public HepOpVertex Current => _current;
 
     object IEnumerator.Current => Current;
 
@@ -59,10 +59,10 @@ sealed class HepVertexIterator : IEnumerator<HepNodeVertex>
 
         _current = _deque.Pop();
 
-        var current = _current.CurrentNode;
-        if (current is SingleNode single)
+        var current = _current.CurrentOp;
+        if (current is SingleOp single)
         {
-            var target = (HepNodeVertex)single.Child;
+            var target = (HepOpVertex)single.Child;
             if (_visited.Add(target))
                 _deque.Push(target);
         }
@@ -70,7 +70,7 @@ sealed class HepVertexIterator : IEnumerator<HepNodeVertex>
         {
             foreach (var input in current.Children)
             {
-                var target = (HepNodeVertex)input;
+                var target = (HepOpVertex)input;
                 if (_visited.Add(target))
                     _deque.Push(target);
             }

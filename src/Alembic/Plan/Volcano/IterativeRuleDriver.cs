@@ -36,13 +36,13 @@ public sealed class IterativeRuleDriver : IRuleDriver
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleDriver", "onProduce(RelNode, RelSubset)")]
-    public void OnProduce(INode node, NodeSubset subset)
+    public void OnProduce(IOpNode op, OpSubset subset)
     {
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleDriver", "onSetMerged(RelSet)")]
-    public void OnSetMerged(NodeSet set)
+    public void OnSetMerged(OpSet set)
     {
     }
 

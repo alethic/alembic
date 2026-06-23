@@ -18,30 +18,30 @@ public class ConventionInterfaceTests
     }
 
     [Fact]
-    public void A_node_must_implement_its_conventions_interface()
+    public void A_op_must_implement_its_conventions_interface()
     {
-        // A convention that requires its members to implement IMarked, registered on a node that
+        // A convention that requires its members to implement IMarked, registered on an op that
         // does not — the planner rejects it.
         var marked = new Convention("MARKED", typeof(IMarked));
         var traits = TraitSet.CreateEmpty().Plus(marked);
 
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode bad = new PhysicalSource(cluster, traits, "t");
+        IOpNode bad = new PhysicalSource(cluster, traits, "t");
 
         Assert.Throws<InvalidOperationException>(() => planner.SetRoot(bad));
     }
 
     [Fact]
-    public void A_node_in_a_convention_without_a_marker_is_accepted()
+    public void A_op_in_a_convention_without_a_marker_is_accepted()
     {
-        // The default interface is INode, which every node implements, so registration succeeds.
+        // The default interface is IOpNode, which every op implements, so registration succeeds.
         var plain = new Convention("PLAIN");
         var traits = TraitSet.CreateEmpty().Plus(plain);
 
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode ok = new PhysicalSource(cluster, traits, "t");
+        IOpNode ok = new PhysicalSource(cluster, traits, "t");
 
         planner.SetRoot(ok);
 

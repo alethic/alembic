@@ -9,13 +9,13 @@ namespace Alembic.Tests.Languages.Image;
 /// Loads an image from a named source. The leaf of an image pipeline. Loading reads into host memory,
 /// so it is CPU-only — a GPU pipeline must upload after it.
 /// </summary>
-sealed class Load : AbstractNode, IImageOperation
+sealed class Load : AbstractOp, IImageOperation
 {
 
     readonly string _source;
 
     public Load(Cluster cluster, TraitSet traits, string source)
-        : base(cluster, traits, ImmutableArray<INode>.Empty)
+        : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         _source = source;
     }
@@ -29,14 +29,14 @@ sealed class Load : AbstractNode, IImageOperation
         return planner.CostFactory.MakeCost(ImageConventions.OpCost(Traits.Convention), 0);
     }
 
-    public override INodeWriter ExplainTerms(INodeWriter writer)
+    public override IOpWriter ExplainTerms(IOpWriter writer)
     {
         base.ExplainTerms(writer);
         writer.Item("source", _source);
         return writer;
     }
 
-    public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
+    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new Load(Cluster, traits, _source);
     }

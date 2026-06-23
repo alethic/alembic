@@ -7,7 +7,7 @@ using Alembic.Plan.Rules;
 namespace Alembic.Plan;
 
 /// <summary>
-/// A planner: trait dimensions and rules are registered with it, then it takes a root node, applies
+/// A planner: trait dimensions and rules are registered with it, then it takes a root op, applies
 /// the rules, and returns the best equivalent plan it found.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner")]
@@ -52,10 +52,10 @@ public interface IPlanner
     bool RemoveRule(Rule rule);
 
     /// <summary>
-    /// Prunes a node so that the planner no longer expands it. The default planner ignores this.
+    /// Prunes an op so that the planner no longer expands it. The default planner ignores this.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "prune(RelNode)")]
-    void Prune(INode node);
+    void Prune(IOpNode op);
 
     /// <summary>
     /// Resets the planner's registered state (rules and any search state) so it can be reused. The base
@@ -93,26 +93,26 @@ public interface IPlanner
     /// Sets the root of the plan to optimize.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "setRoot(RelNode)")]
-    void SetRoot(INode node);
+    void SetRoot(IOpNode op);
 
     /// <summary>
     /// The current root of the plan, or <c>null</c> if none is set.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "getRoot()")]
-    INode? Root { get; }
+    IOpNode? Root { get; }
 
     /// <summary>
-    /// Returns an equivalent of <paramref name="node"/> with the given traits, registering it if needed —
+    /// Returns an equivalent of <paramref name="op"/> with the given traits, registering it if needed —
     /// for the cost-based planner, the equivalence subset carrying those traits. This does not change the
     /// planner's root; compose it with <see cref="SetRoot"/> to optimize toward those traits.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "changeTraits(RelNode, RelTraitSet)")]
-    INode ChangeTraits(INode node, TraitSet toTraits);
+    IOpNode ChangeTraits(IOpNode op, TraitSet toTraits);
 
     /// <summary>
     /// Runs the planner and returns the resulting plan.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "findBestExp()")]
-    INode FindBestPlan();
+    IOpNode FindBestPlan();
 
 }

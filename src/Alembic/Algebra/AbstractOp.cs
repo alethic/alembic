@@ -8,27 +8,27 @@ using Alembic.Plan;
 namespace Alembic.Algebra;
 
 /// <summary>
-/// Convenience base for <see cref="INode"/> implementations. A node lists its identity-bearing terms
+/// Convenience base for <see cref="IOpNode"/> implementations. An op lists its identity-bearing terms
 /// in <see cref="ExplainTerms"/> — its own attributes and its inputs — and the base derives
-/// <see cref="DeepEquals"/> / <see cref="DeepHashCode"/> from them. Each node keeps one
-/// <see cref="INodeDigest"/> that caches its hash.
+/// <see cref="DeepEquals"/> / <see cref="DeepHashCode"/> from them. Each op keeps one
+/// <see cref="IOpDigest"/> that caches its hash.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode")]
-public abstract class AbstractNode : INode
+public abstract class AbstractOp : IOpNode
 {
 
-    readonly InnerNodeDigest _digest;
+    readonly InnerOpDigest _digest;
 
     /// <summary>
-    /// Initializes the node with its cluster, traits, and children.
+    /// Initializes the op with its cluster, traits, and children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "AbstractRelNode(RelOptCluster, RelTraitSet)")]
-    protected AbstractNode(Cluster cluster, TraitSet traits, ImmutableArray<INode> children)
+    protected AbstractOp(Cluster cluster, TraitSet traits, ImmutableArray<IOpNode> children)
     {
         Cluster = cluster;
         Traits = traits;
         Children = children;
-        _digest = new InnerNodeDigest(this);
+        _digest = new InnerOpDigest(this);
     }
 
     /// <inheritdoc />
@@ -41,30 +41,30 @@ public abstract class AbstractNode : INode
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getInputs()")]
-    public ImmutableArray<INode> Children { get; }
+    public ImmutableArray<IOpNode> Children { get; }
 
     /// <summary>
-    /// Lists this node's identity-bearing terms. A subclass calls <c>base.ExplainTerms</c>, then adds its
-    /// own attributes (<see cref="INodeWriter.Item"/>) and its inputs (<see cref="INodeWriter.Input"/>).
-    /// Two nodes of the same type with equal traits and equal terms are structurally equivalent; a node
+    /// Lists this op's identity-bearing terms. A subclass calls <c>base.ExplainTerms</c>, then adds its
+    /// own attributes (<see cref="IOpWriter.Item"/>) and its inputs (<see cref="IOpWriter.Input"/>).
+    /// Two ops of the same type with equal traits and equal terms are structurally equivalent; an op
     /// that omits a term excludes it from that comparison, so inputs must be listed here.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "explainTerms(RelWriter)")]
-    public virtual INodeWriter ExplainTerms(INodeWriter writer)
+    public virtual IOpWriter ExplainTerms(IOpWriter writer)
     {
         return writer;
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "explain(RelWriter)")]
-    public void Explain(INodeWriter writer)
+    public void Explain(IOpWriter writer)
     {
         ExplainTerms(writer).Done(this);
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "copy(RelTraitSet, List<RelNode>)")]
-    public abstract INode Copy(TraitSet traits, ImmutableArray<INode> children);
+    public abstract IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children);
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
@@ -74,16 +74,16 @@ public abstract class AbstractNode : INode
     }
 
     /// <summary>
-    /// This node's kept digest. Returning the same instance lets the planner reuse its cached hash.
+    /// This op's kept digest. Returning the same instance lets the planner reuse its cached hash.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getRelDigest()")]
-    public INodeDigest GetDigest()
+    public IOpDigest GetDigest()
     {
         return _digest;
     }
 
     /// <summary>
-    /// Discards this node's cached digest, so it is recomputed on next use.
+    /// Discards this op's cached digest, so it is recomputed on next use.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "recomputeDigest()")]
     public void RecomputeDigest()
@@ -93,12 +93,12 @@ public abstract class AbstractNode : INode
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "deepEquals(Object)")]
-    public virtual bool DeepEquals(INode? other)
+    public virtual bool DeepEquals(IOpNode? other)
     {
         if (ReferenceEquals(this, other)) return true;
         if (other is null || GetType() != other.GetType()) return false;
 
-        var that = (AbstractNode)other;
+        var that = (AbstractOp)other;
         if (!Traits.Equals(that.Traits)) return false;
 
         var a = DigestItems();
@@ -111,9 +111,9 @@ public abstract class AbstractNode : INode
 
             var v1 = a[i].Value;
             var v2 = b[i].Value;
-            if (v1 is INode n1)
+            if (v1 is IOpNode n1)
             {
-                if (v2 is not INode n2 || !n1.DeepEquals(n2)) return false;
+                if (v2 is not IOpNode n2 || !n1.DeepEquals(n2)) return false;
             }
             else if (!Equals(v1, v2))
             {
@@ -134,7 +134,7 @@ public abstract class AbstractNode : INode
         foreach (var (name, value) in DigestItems())
         {
             h.Add(name);
-            h.Add(value is INode node ? node.DeepHashCode() : value);
+            h.Add(value is IOpNode op ? op.DeepHashCode() : value);
         }
 
         return h.ToHashCode();
@@ -149,24 +149,24 @@ public abstract class AbstractNode : INode
     }
 
     /// <summary>
-    /// The digest kept by each node: it caches its hash and delegates equality to the node's
-    /// <see cref="DeepEquals"/>. Because it is nested it can reach the node's <see cref="ExplainTerms"/> to
+    /// The digest kept by each op: it caches its hash and delegates equality to the op's
+    /// <see cref="DeepEquals"/>. Because it is nested it can reach the op's <see cref="ExplainTerms"/> to
     /// render the digest string.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.InnerRelDigest")]
-    sealed class InnerNodeDigest : INodeDigest
+    sealed class InnerOpDigest : IOpDigest
     {
 
-        readonly AbstractNode _node;
+        readonly AbstractOp _op;
         int _hash;
 
-        public InnerNodeDigest(AbstractNode node)
+        public InnerOpDigest(AbstractOp op)
         {
-            _node = node;
+            _op = op;
         }
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "getRel()")]
-        public INode Node => _node;
+        public IOpNode Op => _op;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "clear()")]
         public void Clear() => _hash = 0;
@@ -174,7 +174,7 @@ public abstract class AbstractNode : INode
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "equals(Object)")]
         public override bool Equals(object? obj)
         {
-            return obj is INodeDigest other && _node.DeepEquals(other.Node);
+            return obj is IOpDigest other && _op.DeepEquals(other.Op);
         }
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "hashCode()")]
@@ -182,7 +182,7 @@ public abstract class AbstractNode : INode
         {
             if (_hash == 0)
             {
-                _hash = _node.DeepHashCode();
+                _hash = _op.DeepHashCode();
                 if (_hash == 0) _hash = 1;
             }
 
@@ -192,19 +192,19 @@ public abstract class AbstractNode : INode
         public override string ToString()
         {
             var writer = new DigestWriter();
-            _node.Explain(writer);
+            _op.Explain(writer);
             return writer.Digest;
         }
 
     }
 
     /// <summary>
-    /// Collects a node's explain terms and, on <see cref="Done"/>, renders them into the digest string
+    /// Collects an op's explain terms and, on <see cref="Done"/>, renders them into the digest string
     /// (inputs are referenced by type, not recursed). <see cref="Items"/> also backs the term-by-term
     /// <see cref="DeepEquals"/> comparison.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter")]
-    sealed class DigestWriter : INodeWriter
+    sealed class DigestWriter : IOpWriter
     {
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "attrs")]
@@ -217,22 +217,22 @@ public abstract class AbstractNode : INode
         public string Digest { get; private set; } = "";
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "item(String, Object)")]
-        public INodeWriter Item(string name, object? value)
+        public IOpWriter Item(string name, object? value)
         {
             Items.Add((name, value));
             return this;
         }
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "done(RelNode)")]
-        public INodeWriter Done(INode node)
+        public IOpWriter Done(IOpNode op)
         {
             var sb = new StringBuilder();
-            sb.Append(node.GetType().Name).Append('.').Append(node.Traits).Append('(');
+            sb.Append(op.GetType().Name).Append('.').Append(op.Traits).Append('(');
             for (int i = 0; i < Items.Count; i++)
             {
                 if (i > 0) sb.Append(", ");
                 sb.Append(Items[i].Name).Append('=');
-                sb.Append(Items[i].Value is INode input ? input.GetType().Name : Items[i].Value);
+                sb.Append(Items[i].Value is IOpNode input ? input.GetType().Name : Items[i].Value);
             }
 
             sb.Append(')');

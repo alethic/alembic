@@ -2,7 +2,7 @@ namespace Alembic.Plan;
 
 /// <summary>
 /// Creates the well-known costs a planner needs — zero (a free leaf), infinite (an unimplementable or
-/// rejected plan), and the huge/tiny bookends. A planner carries one and the cost-bearing nodes use it
+/// rejected plan), and the huge/tiny bookends. A planner carries one and the cost-bearing ops use it
 /// to build their own costs.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostFactory")]

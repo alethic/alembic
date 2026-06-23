@@ -19,9 +19,9 @@ sealed class FoldMultiply : Rule
 
     public override void OnMatch(RuleCall call)
     {
-        var multiply = (Multiply)call.Node(0);
-        var left = (Literal)call.Node(1);
-        var right = (Literal)call.Node(2);
+        var multiply = (Multiply)call.Op(0);
+        var left = (Literal)call.Op(1);
+        var right = (Literal)call.Op(2);
         call.TransformTo(new Literal(multiply.Cluster, multiply.Traits, left.Value * right.Value));
     }
 

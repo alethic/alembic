@@ -33,23 +33,23 @@ public class TraitPlannerTests
 
         var planner = new HepPlanner(program);
         var cluster = new Cluster(planner);
-        INode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+        IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         planner.SetRoot(root);
         var best = planner.FindBestPlan();
         _output.WriteLine(PlanUtil.ToString(best));
 
-        // The rule read and wrote the new dimension on every node, and the planner preserved both
+        // The rule read and wrote the new dimension on every op, and the planner preserved both
         // dimensions through Copy. Convention is untouched.
         AssertSorted(best);
     }
 
-    static void AssertSorted(INode node)
+    static void AssertSorted(IOpNode op)
     {
-        Assert.Equal(Sortedness.Sorted, node.Traits.Get(SortednessTraitDef.Instance));
-        Assert.Equal(RelationalConventions.Logical, node.Convention);
+        Assert.Equal(Sortedness.Sorted, op.Traits.Get(SortednessTraitDef.Instance));
+        Assert.Equal(RelationalConventions.Logical, op.Convention);
 
-        foreach (var child in node.Children)
+        foreach (var child in op.Children)
             AssertSorted(child);
     }
 

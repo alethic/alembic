@@ -29,7 +29,7 @@ public sealed class DeferringRuleCall : VolcanoRuleCall
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall.DeferringRuleCall", "onMatch()")]
     public override void OnMatch()
     {
-        var builder = ImmutableArray.CreateBuilder<INode>(Rels.Length);
+        var builder = ImmutableArray.CreateBuilder<IOpNode>(Rels.Length);
         foreach (var rel in Rels)
             builder.Add(rel!);
 

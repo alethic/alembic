@@ -19,7 +19,7 @@ public sealed class AbstractConverter : ConverterImpl
     /// Creates a converter that requires <paramref name="input"/> in the given target traits.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter", "AbstractConverter(RelOptCluster, RelSubset, RelTraitDef, RelTraitSet)")]
-    public AbstractConverter(TraitSet target, INode input, TraitDef? traitDef = null)
+    public AbstractConverter(TraitSet target, IOpNode input, TraitDef? traitDef = null)
         : base(traitDef, target, input)
     {
 
@@ -27,7 +27,7 @@ public sealed class AbstractConverter : ConverterImpl
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter", "explainTerms(RelWriter)")]
-    public override INodeWriter ExplainTerms(INodeWriter writer)
+    public override IOpWriter ExplainTerms(IOpWriter writer)
     {
         base.ExplainTerms(writer);
         foreach (var trait in Traits)
@@ -46,7 +46,7 @@ public sealed class AbstractConverter : ConverterImpl
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter", "copy(RelTraitSet, List<RelNode>)")]
-    public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
+    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new AbstractConverter(traits, children[0], TraitDef);
     }

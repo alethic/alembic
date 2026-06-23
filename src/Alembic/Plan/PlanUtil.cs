@@ -14,14 +14,14 @@ public static class PlanUtil
 {
 
     /// <summary>
-    /// Renders a node and its inputs as an indented plan string: it news up a writer and drives the
-    /// node's <see cref="INode.Explain"/>.
+    /// Renders an op and its inputs as an indented plan string: it news up a writer and drives the
+    /// op's <see cref="IOpNode.Explain"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptUtil", "toString(RelNode)")]
-    public static string ToString(INode node)
+    public static string ToString(IOpNode op)
     {
         var builder = new StringBuilder();
-        node.Explain(new NodeWriterImpl(builder));
+        op.Explain(new OpWriterImpl(builder));
         return builder.ToString().TrimEnd();
     }
 

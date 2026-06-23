@@ -8,25 +8,25 @@ namespace Alembic.Tests.Languages.Expression.Physical;
 /// <summary>
 /// A physical fused multiply-add — computes <c>a * b + c</c> in one step. It is the result of pushing a
 /// <see cref="PhysicalMultiply"/> up into the <see cref="PhysicalAdd"/> above it: a single physical
-/// realization that replaces the two-node form. Having three children, it is a plain
-/// <see cref="AbstractNode"/> rather than a <see cref="BiNode"/>.
+/// realization that replaces the two-op form. Having three children, it is a plain
+/// <see cref="AbstractOp"/> rather than a <see cref="BiOp"/>.
 /// </summary>
-sealed class PhysicalFma : AbstractNode
+sealed class PhysicalFma : AbstractOp
 {
 
-    public PhysicalFma(TraitSet traits, INode a, INode b, INode c)
+    public PhysicalFma(TraitSet traits, IOpNode a, IOpNode b, IOpNode c)
         : base(a.Cluster, traits, ImmutableArray.Create(a, b, c))
     {
 
     }
 
-    public INode A => Children[0];
+    public IOpNode A => Children[0];
 
-    public INode B => Children[1];
+    public IOpNode B => Children[1];
 
-    public INode C => Children[2];
+    public IOpNode C => Children[2];
 
-    public override INodeWriter ExplainTerms(INodeWriter writer)
+    public override IOpWriter ExplainTerms(IOpWriter writer)
     {
         base.ExplainTerms(writer);
         writer.Input("a", A);
@@ -35,7 +35,7 @@ sealed class PhysicalFma : AbstractNode
         return writer;
     }
 
-    public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
+    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new PhysicalFma(traits, children[0], children[1], children[2]);
     }

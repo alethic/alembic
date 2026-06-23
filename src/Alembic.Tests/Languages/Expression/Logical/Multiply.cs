@@ -8,16 +8,16 @@ namespace Alembic.Tests.Languages.Expression.Logical;
 /// <summary>
 /// A logical multiplication of two sub-expressions.
 /// </summary>
-sealed class Multiply : BiNode
+sealed class Multiply : BiOp
 {
 
-    public Multiply(TraitSet traits, INode left, INode right)
+    public Multiply(TraitSet traits, IOpNode left, IOpNode right)
         : base(traits, left, right)
     {
 
     }
 
-    public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
+    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new Multiply(traits, children[0], children[1]);
     }

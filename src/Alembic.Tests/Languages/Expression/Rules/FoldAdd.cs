@@ -19,9 +19,9 @@ sealed class FoldAdd : Rule
 
     public override void OnMatch(RuleCall call)
     {
-        var add = (Add)call.Node(0);
-        var left = (Literal)call.Node(1);
-        var right = (Literal)call.Node(2);
+        var add = (Add)call.Op(0);
+        var left = (Literal)call.Op(1);
+        var right = (Literal)call.Op(2);
         call.TransformTo(new Literal(add.Cluster, add.Traits, left.Value + right.Value));
     }
 

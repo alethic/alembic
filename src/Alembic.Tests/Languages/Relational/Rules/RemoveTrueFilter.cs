@@ -19,7 +19,7 @@ sealed class RemoveTrueFilter : Rule
 
     public override void OnMatch(RuleCall call)
     {
-        call.TransformTo(((LogicalFilter)call.Node(0)).Input);
+        call.TransformTo(((LogicalFilter)call.Op(0)).Input);
     }
 
 }

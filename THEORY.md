@@ -6,7 +6,7 @@ understand the goals of the library, what the pieces mean, and why the planners 
 
 Alembic descends from the query-optimizer lineage (Volcano → Cascades, and Apache Calcite's planner),
 but it is **medium-agnostic**: it keeps the optimizer *ideas* and throws away everything specific to
-relational algebra and SQL. Wherever this document says "plan," "node," or "operation," it means *your*
+relational algebra and SQL. Wherever this document says "plan," "op," or "operation," it means *your*
 domain — image pipelines, tensor graphs, build steps, query trees, anything that can be expressed as a
 tree of immutable operations.
 
@@ -26,7 +26,7 @@ Two things make this non-trivial and worth a framework:
 
 Alembic explores that space with **rules** (which generate equivalent alternatives), prunes/chooses
 with a **cost model**, and tracks the physical properties of each alternative with **traits**. You
-supply the domain (the node types, the rules, the costs); Alembic supplies the search.
+supply the domain (the op types, the rules, the costs); Alembic supplies the search.
 
 The canonical end-to-end shape:
 
@@ -36,14 +36,14 @@ The canonical end-to-end shape:
 
 ---
 
-## 2. The node model
+## 2. The op model
 
-A plan is a tree (more precisely, a DAG during planning) of **nodes**. The node contract is `INode`:
+A plan is a tree (more precisely, a DAG during planning) of **ops**. The op contract is `IOpNode`:
 
-- `Traits` — the node's physical properties (see §4).
+- `Traits` — the op's physical properties (see §4).
 - `Children` — its inputs, in order (an immutable array).
-- `Copy(traits, children)` — produce a new node like this one but with different traits/children. This
-  is how the engine rebuilds the tree; **nodes are immutable**, so rewriting never mutates in place.
+- `Copy(traits, children)` — produce a new op like this one but with different traits/children. This
+  is how the engine rebuilds the tree; **ops are immutable**, so rewriting never mutates in place.
 - `DeepEquals` / `DeepHashCode` — **structural identity** (see §3).
 - DIMs (default interface methods) for convenience: `Convention`, `IsLeaf`, `WithChild`,
   `ComputeSelfCost`, `GetDigest`.
@@ -52,17 +52,17 @@ A plan is a tree (more precisely, a DAG during planning) of **nodes**. The node 
 When the planner rewrites one part of a tree, every untouched subtree is shared by reference, and the
 same subexpression appearing in many places is one object. Mutation would make all of that unsafe.
 
-`AbstractNode` is an optional convenience base (most node types use it). It derives `DeepEquals` /
-`DeepHashCode` from a node's **explain terms** (§3) and keeps a cached digest. `SingleNode` (one child)
-and `BiNode` (two children, `Left`/`Right`) are thin bases over it. A node type can also implement
-`INode` directly — the base classes are a convenience, not a requirement.
+`AbstractOp` is an optional convenience base (most op types use it). It derives `DeepEquals` /
+`DeepHashCode` from an op's **explain terms** (§3) and keeps a cached digest. `SingleOp` (one child)
+and `BiOp` (two children, `Left`/`Right`) are thin bases over it. An op type can also implement
+`IOpNode` directly — the base classes are a convenience, not a requirement.
 
 ---
 
-## 3. Identity: what makes two nodes "the same"
+## 3. Identity: what makes two ops "the same"
 
-The optimizer constantly asks "have I seen this node before?" (to deduplicate) and "are these two nodes
-the same?" (to detect equivalences). A node's ordinary `Equals`/`GetHashCode` stay as **reference
+The optimizer constantly asks "have I seen this op before?" (to deduplicate) and "are these two ops
+the same?" (to detect equivalences). An op's ordinary `Equals`/`GetHashCode` stay as **reference
 identity**; the meaningful, structural notion is a *separate* contract:
 
 - **`DeepEquals(other)`** — structurally equivalent: same type, same traits, same attributes, and
@@ -71,18 +71,18 @@ identity**; the meaningful, structural notion is a *separate* contract:
 
 That is the actual definition of identity. Everything else is a way to *populate* it.
 
-**Explain terms.** `AbstractNode` computes `DeepEquals`/`DeepHashCode` from the node's *terms*: the
-named attributes and inputs a node lists in `Explain(INodeWriter)`. A node writes its own attributes
+**Explain terms.** `AbstractOp` computes `DeepEquals`/`DeepHashCode` from the op's *terms*: the
+named attributes and inputs an op lists in `Explain(IOpWriter)`. An op writes its own attributes
 with `Item(name, value)` and its inputs with `Input(name, child)`; identity is then `type + traits +
-terms`. (Traits and type are folded in by the base; the "terms" are the node-specific part.) The same
+terms`. (Traits and type are folded in by the base; the "terms" are the op-specific part.) The same
 `Explain` output also produces a human-readable rendering — see `ToPlanString()` and the digest string
 — so one mechanism serves both identity and display.
 
-**Digest.** `INodeDigest` is a small cacheable handle on this contract: its `Equals`/`GetHashCode`
-delegate to the node's `DeepEquals`/`DeepHashCode`, and because each node *keeps* one digest instance,
+**Digest.** `IOpDigest` is a small cacheable handle on this contract: its `Equals`/`GetHashCode`
+delegate to the op's `DeepEquals`/`DeepHashCode`, and because each op *keeps* one digest instance,
 the hash is computed once and reused. The cost-based planner keys its dedup dictionary on digests.
 
-A node may **override** `DeepEquals`/`DeepHashCode` directly (e.g., with a hand-rolled or binary
+An op may **override** `DeepEquals`/`DeepHashCode` directly (e.g., with a hand-rolled or binary
 representation) instead of using the explain-term derivation — the contract is what matters, the
 derivation is just the default.
 
@@ -94,10 +94,10 @@ Start from one idea: the optimizer groups plans into **equivalence classes** —
 produce the same result — and wants the cheapest member of each class. Within one class, two plans can
 still differ **physically**. *That difference is a trait.*
 
-> **A trait is a property of a node's output that can vary among plans that compute the identical
+> **A trait is a property of an op's output that can vary among plans that compute the identical
 > result.** It changes *how* the result is delivered, never *what* the result is.
 
-The litmus test for "is this a trait?": **can two nodes have the same logical result but differ in
+The litmus test for "is this a trait?": **can two ops have the same logical result but differ in
 this property?**
 
 - **Sortedness** — `scan` vs `sort(scan)`: same rows, different order → *trait*.
@@ -109,8 +109,8 @@ this property?**
 Two further properties make a trait *useful to the optimizer*:
 
 1. **A consumer can require a value.** A merge-style join needs sorted inputs; a GPU op needs its input
-   on the GPU. So the trait isn't decoration — downstream nodes care.
-2. **An enforcer can establish it without changing the result.** Wrap an unsorted node in a `Sort`; the
+   on the GPU. So the trait isn't decoration — downstream ops care.
+2. **An enforcer can establish it without changing the result.** Wrap an unsorted op in a `Sort`; the
    rows are unchanged, the trait now holds. This is what lets the optimizer *insert* a property where
    it's needed.
 
@@ -123,7 +123,7 @@ That order is `ITrait.Satisfies` — a value can stand in for a weaker one.
   `Default`. A non-generic abstract base, with the strongly-typed `TraitDef<TTrait>` subclass.
 - **`ITrait`** — a *value* on a dimension (e.g. "Sorted"). `Def` names its dimension; `Satisfies(other)`
   is the partial order (defaults to equality); `Register(planner)` lets a trait contribute rules.
-- **`TraitSet`** — one value per dimension: a node's full physical fingerprint, a point in trait-space.
+- **`TraitSet`** — one value per dimension: an op's full physical fingerprint, a point in trait-space.
   It is **interned** (equal sets are one shared instance, via a cache shared by every set derived from
   a common `CreateEmpty()`), and ordered, with a linear `FindIndex`. Key operations: `Plus(trait)`
   (add or replace), `Replace(def, value)`, `Get(def)`, `Satisfies(required)` (does this set meet a
@@ -132,44 +132,44 @@ That order is `ITrait.Satisfies` — a value can stand in for a weaker one.
   `IMultipleTrait` marks such a trait; `CompositeTrait<T>` bundles several values of one dimension; and
   `TraitSet.Replace(def, list)` / `GetList(def)` store and read them.
 
-A node's identity includes its traits, but traits are compared specially (interned `TraitSet` equality),
+An op's identity includes its traits, but traits are compared specially (interned `TraitSet` equality),
 not as ordinary terms — which is both faithful to the model and efficient.
 
 ---
 
 ## 5. Conventions, and logical vs. physical plans
 
-A **convention** is the coarsest, most important trait: the *family* a node belongs to. It answers
+A **convention** is the coarsest, most important trait: the *family* an op belongs to. It answers
 "in what world does this operation run?" — a logical world (abstract), or a particular physical backend
 (CPU, GPU, an interpreter, a codegen target). It is just an `ITrait` whose dimension is always present
 (`ConventionTraitDef`).
 
 This is where the **logical vs. physical** distinction lives, and it is central:
 
-- A **logical plan** says *what* to compute. Its nodes are in a logical convention. It is abstract: it
+- A **logical plan** says *what* to compute. Its ops are in a logical convention. It is abstract: it
   describes the operation (a filter, a blur, an addition) without committing to how or where it runs.
   This is normally what you, the author, write.
-- A **physical plan** says *how* to compute it. Its nodes are in a physical convention (e.g. CPU or GPU)
+- A **physical plan** says *how* to compute it. Its ops are in a physical convention (e.g. CPU or GPU)
   — a concrete, executable realization. The same logical operation can have several physical forms with
   different costs.
 
-**Lowering** is the process of turning a logical plan into a physical one — i.e., converting nodes from
-the logical convention to a physical convention. A *fully lowered* plan is one whose nodes are all in a
+**Lowering** is the process of turning a logical plan into a physical one — i.e., converting ops from
+the logical convention to a physical convention. A *fully lowered* plan is one whose ops are all in a
 target physical convention (no logical leftovers). Because convention is a trait, lowering is just a
 special, very common case of **trait conversion** (§8): you require the root in a physical convention,
 and the planner converts.
 
 `IConvention` carries:
 - `Name`.
-- `Interface` — the node interface members of this convention must implement (defaults to `INode`; a
-  convention may demand its nodes implement a marker so the planner can reject mismatches).
+- `Interface` — the op interface members of this convention must implement (defaults to `IOpNode`; a
+  convention may demand its ops implement a marker so the planner can reject mismatches).
 - `CanConvertConvention` / `UseAbstractConvertersForConversion` / `Enforce` — hooks the planner can use
   to decide how/whether to bridge conventions.
 - `Register(planner)` — a convention can contribute the rules that *produce* it (its lowering rules), so
   enabling a backend is "register its convention."
 
 `Convention` is the default implementation; `IConvention.None` is the sentinel "no convention," which is
-not implementable and has infinite cost (logical-style nodes start here in spirit).
+not implementable and has infinite cost (logical-style ops start here in spirit).
 
 ---
 
@@ -178,20 +178,20 @@ not implementable and has infinite cost (logical-style nodes start here in spiri
 The optimizer never invents transformations on its own; it applies **rules** you provide. A rule
 (`IRule`) has two parts:
 
-- **`Operand`** — a *pattern* that selects where the rule applies. An operand is a predicate over a node
-  plus optional child operands (matched positionally); `Operand.Of<T>()` matches a node type, and a
+- **`Operand`** — a *pattern* that selects where the rule applies. An operand is a predicate over an op
+  plus optional child operands (matched positionally); `Operand.Of<T>()` matches an op type, and a
   child-less predicate operand matches "anything." Matching is done by `OperandMatcher`, outside the
   planner.
-- **`OnMatch(RuleCall)`** — the action. Given a match, the rule builds one or more **equivalent** nodes
+- **`OnMatch(RuleCall)`** — the action. Given a match, the rule builds one or more **equivalent** ops
   and registers them via `call.Transform(equivalent)`.
 
-A crucial detail: a rule reaches its matched nodes through **`call.Node(i)`** (the operand-bound nodes),
-*not* by navigating `node.Children`. Under the heuristic planner a node's children are concrete; under
-the cost-based planner they are equivalence *subsets* — so only the operand-bound nodes are guaranteed
-to be the concrete types the rule expects. Because rules use `Node(i)`, **the same rule works under both
+A crucial detail: a rule reaches its matched ops through **`call.Op(i)`** (the operand-bound ops),
+*not* by navigating `op.Children`. Under the heuristic planner an op's children are concrete; under
+the cost-based planner they are equivalence *subsets* — so only the operand-bound ops are guaranteed
+to be the concrete types the rule expects. Because rules use `Op(i)`, **the same rule works under both
 planners**.
 
-`RuleCall` is the context of a single match (the bound nodes + `Transform`); each planner provides its
+`RuleCall` is the context of a single match (the bound ops + `Transform`); each planner provides its
 own subclass that decides what `Transform` does — replace-in-place (heuristic) or register-an-equivalent
 (cost-based).
 
@@ -199,12 +199,12 @@ own subclass that decides what `Transform` does — replace-in-place (heuristic)
 
 A **converter rule** (`IConverterRule`) is the special, central kind of rule that changes a *trait*:
 it declares a `Source` trait and a `Target` trait (both `ITrait` — usually conventions, but any
-dimension, e.g. unsorted→sorted), and a `Convert(node)` that returns the converted node, or `null` to
+dimension, e.g. unsorted→sorted), and a `Convert(op)` that returns the converted op, or `null` to
 decline. The operand (match anything carrying the `Source` trait) and the match action are provided as
 a mixin; `ConverterRule` is a convenience base. Lowering rules and trait enforcers are all converter
 rules.
 
-Converters also exist as *nodes*: `IConverter` / `ConverterImpl` is a node that bridges a trait (its
+Converters also exist as *ops*: `IConverter` / `ConverterImpl` is an op that bridges a trait (its
 input has one value, its output another) — e.g. a GPU→CPU `Download`, or the `AbstractConverter`
 placeholder (§8).
 
@@ -212,17 +212,17 @@ placeholder (§8).
 
 ## 7. The two planners
 
-Alembic ships two planners over the same node/trait/rule model. Both take a root, apply rules, and
+Alembic ships two planners over the same op/trait/rule model. Both take a root, apply rules, and
 return a best plan; they differ in *how* they search.
 
 ### 7a. The heuristic planner (`HepPlanner`)
 
 A **deterministic, program-driven rewriter**. It holds the plan as a **shared graph** of
-`HepNodeVertex` (the `HepRelVertex` analog): equal subexpressions are interned to a single vertex, so a
+`HepOpVertex` (the `HepRelVertex` analog): equal subexpressions are interned to a single vertex, so a
 rule fires once per distinct subexpression and a rewrite is shared by every parent that references it. A
 vertex's identity is stable, so replacing its content (a rewrite) leaves referencing parents' digests
-intact; the planner's own operand matching sees through a vertex to its current node (just as the
-Volcano matcher descends through a `NodeSubset`). It visits the vertices in
+intact; the planner's own operand matching sees through a vertex to its current op (just as the
+Volcano matcher descends through a `OpSubset`). It visits the vertices in
 a configured order (`HepMatchOrder`), applies each matching rule (at most one transform per vertex per
 pass), and re-passes until nothing changes (a fixed point). A rewrite re-points the vertex's parents and
 orphaned vertices are reclaimed by mark-and-sweep garbage collection. There is **no cost model** — it
@@ -238,33 +238,33 @@ Instructions are immutable; each run allocates a `HepState` to hold its mutable 
 be reused.
 
 It still *enforces* a required output: `ChangeTraits(root, traits)` records the traits the final plan
-must carry, and `FindBestPlan` verifies every node satisfies them, throwing `CannotPlanException` if the
-rewrite couldn't get there. (Because conversions rewrite nodes in place rather than wrapping them, a
-complete plan is convention-uniform, so a single unconverted node means the lowering failed.)
+must carry, and `FindBestPlan` verifies every op satisfies them, throwing `CannotPlanException` if the
+rewrite couldn't get there. (Because conversions rewrite ops in place rather than wrapping them, a
+complete plan is convention-uniform, so a single unconverted op means the lowering failed.)
 
 ### 7b. The cost-based planner (`VolcanoPlanner`)
 
 A **cost-based search over equivalence classes**. This is the heavier machine, and the interesting one.
 
 The data model:
-- **`NodeSet`** — an equivalence class: all nodes known to produce the same result.
-- **`NodeSubset`** — the members of a set that share one trait set. A subset is itself an `INode` (so it
+- **`OpSet`** — an equivalence class: all ops known to produce the same result.
+- **`OpSubset`** — the members of a set that share one trait set. A subset is itself an `IOpNode` (so it
   can stand in as a child), and it remembers its **cheapest member** (`Best` / `BestCost`).
 
-> The mental picture: a **`NodeSet` is a result**; its **subsets are the different physical ways to
+> The mental picture: a **`OpSet` is a result**; its **subsets are the different physical ways to
 > deliver that result**, keyed by trait set. Optimization = for the required delivery (the root's
 > requested trait set), find the cheapest member, inserting enforcers where a cheaper member delivers a
 > different physical form that can be converted.
 
 The lifecycle:
-1. **Register** (`SetRoot` → `RegisterImpl`). Each node's children are replaced by their subsets
-   (`OnRegister`); the node is deduplicated by digest, placed in a set, costed, and its rules are fired.
-2. **Fire rules.** When a node is registered, a `DeferringRuleCall` matches each rule's operand and
+1. **Register** (`SetRoot` → `RegisterImpl`). Each op's children are replaced by their subsets
+   (`OnRegister`); the op is deduplicated by digest, placed in a set, costed, and its rules are fired.
+2. **Fire rules.** When an op is registered, a `DeferringRuleCall` matches each rule's operand and
    *defers* every match as a `VolcanoRuleMatch` onto a `RuleQueue` (rather than applying it inline).
 3. **Drive.** `FindBestPlan` hands the queue to an `IRuleDriver` (`IterativeRuleDriver`), which pops each
-   match and applies it; the match's `Transform` registers the equivalent into the matched node's set.
+   match and applies it; the match's `Transform` registers the equivalent into the matched op's set.
    New equivalents fire more rules, until the queue drains (a fixed point).
-4. **Propagate cost.** Whenever a node is costed, each subset it belongs to keeps the cheapest member,
+4. **Propagate cost.** Whenever an op is costed, each subset it belongs to keeps the cheapest member,
    and improvements propagate to parents.
 5. **Extract.** `BuildCheapestPlan` walks from the root subset, replacing each subset with its `Best`
    member, rebuilding the concrete tree (throwing `CannotPlanException` if a needed subset is empty).
@@ -288,8 +288,8 @@ are only needed at the root; everywhere else, a parent has already asked for its
 form.**
 
 1. **Inputs request their parent's convention.** In the cost-based planner, `OnRegister` makes every
-   node require its inputs in *its own* convention (a GPU operator wants GPU inputs). This propagates a
-   lowering down the tree automatically: a physical node's child subset acquires a physical member via
+   op require its inputs in *its own* convention (a GPU operator wants GPU inputs). This propagates a
+   lowering down the tree automatically: a physical op's child subset acquires a physical member via
    the child's own converter rule. (Converters are exempt — they exist precisely to bridge.)
 2. **The root is enforced explicitly.** The root has no consumer to ask. So `ChangeTraits(root, traits)`
    records the requested traits, and `EnsureRootConverters` puts an **`AbstractConverter`** — an
@@ -316,22 +316,22 @@ Cost is how the optimizer chooses. The model is intentionally small and opaque:
   `Plus`. The engine only ever compares costs and adds them up; it attaches no units.
 - **`ICostFactory`** — makes the well-known costs the planner needs: `MakeCost(cpu, io)`, plus
   `MakeZeroCost` (a free leaf), `MakeInfiniteCost` (unimplementable/rejected), and huge/tiny bookends.
-  A planner carries one (`IPlanner.CostFactory`) and nodes build their costs through it.
+  A planner carries one (`IPlanner.CostFactory`) and ops build their costs through it.
 - **`Cost`** — a scalar default (a single magnitude). **`VolcanoCost`** — the cost-based planner's
   default, with CPU and I/O dimensions (compared on CPU). *(There is deliberately no row count — the
   engine is not a database.)*
 
-A node states its **own** cost via `INode.ComputeSelfCost(planner)` (a method on the node, defaulting to
-a tiny cost; a real cost model overrides it). The **cumulative** cost of a node is its self-cost plus the
+An op states its **own** cost via `IOpNode.ComputeSelfCost(planner)` (a method on the op, defaulting to
+a tiny cost; a real cost model overrides it). The **cumulative** cost of an op is its self-cost plus the
 best cost of each input subset:
 
 ```
-cost(node) = node.ComputeSelfCost() + Σ cost(child-subset.Best)
+cost(op) = op.ComputeSelfCost() + Σ cost(child-subset.Best)
 ```
 
 A subset's `Best`/`BestCost` is the minimum over its members; `BuildCheapestPlan` follows those minima.
 **Infinite** cost is how "this cannot be implemented" enters the arithmetic: an abstract converter, or a
-node in a non-implementable convention, has infinite self-cost, so the planner routes around it (or
+op in a non-implementable convention, has infinite self-cost, so the planner routes around it (or
 fails with `CannotPlanException` if there is no finite alternative).
 
 Self-cost is the *only* source of cost numbers today; a statistics/metadata framework that derives costs
@@ -350,7 +350,7 @@ because it governs whether the optimizer can *scale*.
 - **Top-down / Cascades (future).** Demand flows from the root *down*: "optimize this group for these
   required traits," recursing into inputs and applying rules lazily only where needed. It carries a cost
   upper bound and **prunes** any branch whose lower-bound cost already exceeds the best full plan found.
-  It explores the same space but visits far less of it. It needs `passThrough`/`derive` hooks (a node
+  It explores the same space but visits far less of it. It needs `passThrough`/`derive` hooks (an op
   negotiating "I can deliver trait X if my input has trait Y") and a top-down rule driver — selected by
   `SetTopDownOpt(true)`, which currently throws.
 
@@ -362,21 +362,21 @@ line) that makes that search efficient on large inputs.
 
 ## 11. The lifecycle of a plan (putting it together)
 
-1. **Define a domain** — node types (your operations), conventions (logical + one or more physical
+1. **Define a domain** — op types (your operations), conventions (logical + one or more physical
    backends), rules (lowering converters, simplifications, fusions), and `ComputeSelfCost` on the
-   physical nodes.
-2. **Author a logical plan** — a tree of logical-convention nodes describing what to compute.
+   physical ops.
+2. **Author a logical plan** — a tree of logical-convention ops describing what to compute.
 3. **Configure a planner** — register the rules (often via each convention's `Register`), and, for
    cost-based planning, set the root and the required output traits (`ChangeTraits`).
 4. **Plan** — the planner fires rules to discover equivalents, costs them, enforces the required output
    (inserting converters), and returns the cheapest plan that satisfies the request — or throws
    `CannotPlanException` if no rule chain can reach it.
-5. **Inspect** — `INode.ToPlanString()` renders the result as an indented tree (type, traits,
+5. **Inspect** — `IOpNode.ToPlanString()` renders the result as an indented tree (type, traits,
    attributes; inputs nested), which is how the tests display the plans they produce.
 
 Supporting cast: a **`Cluster`** is the per-session environment (wraps the planner, offers `TraitSet`
 / `TraitSetOf`); **`IPlannerListener`** receives events (equivalences found, rules attempted/succeeded,
-nodes chosen) for tracing; **`INodeImplementor`** is the marker for a convention's "turn this plan into
+ops chosen) for tracing; **`IOpImplementor`** is the marker for a convention's "turn this plan into
 something runnable" callback.
 
 ---
@@ -386,7 +386,7 @@ something runnable" callback.
 To stay medium-agnostic, Alembic omits everything specific to relational algebra and SQL, even though it
 inherits its structure from a relational optimizer:
 
-- **No row types / schemas, no row expressions, no SQL.** A node's "output shape" (if your domain needs
+- **No row types / schemas, no row expressions, no SQL.** An op's "output shape" (if your domain needs
   one) is just one of its identity-bearing attributes, modeled however you like — not a built-in.
 - **No metadata/statistics framework** (cardinality, selectivity). Costs come from `ComputeSelfCost`
   today.
@@ -402,16 +402,16 @@ to any tree-shaped computation.
 
 | Concept | Type(s) |
 |---|---|
-| A plan node | `INode`; bases `AbstractNode`, `SingleNode`, `BiNode` |
-| Structural identity | `DeepEquals` / `DeepHashCode`; `Explain(INodeWriter)`; `INodeDigest` |
-| Plan rendering | `INode.ToPlanString()` |
+| A plan op | `IOpNode`; bases `AbstractOp`, `SingleOp`, `BiOp` |
+| Structural identity | `DeepEquals` / `DeepHashCode`; `Explain(IOpWriter)`; `IOpDigest` |
+| Plan rendering | `IOpNode.ToPlanString()` |
 | A physical property (value / dimension) | `ITrait` / `TraitDef`; multi-valued: `IMultipleTrait`, `CompositeTrait` |
-| A node's full property fingerprint | `TraitSet` |
+| An op's full property fingerprint | `TraitSet` |
 | Calling convention (logical/physical family) | `IConvention` / `Convention` |
 | A transformation rule | `IRule`, `Operand`, `OperandMatcher`, `RuleCall` |
-| A trait-changing rule / node | `IConverterRule` / `ConverterRule`; `IConverter` / `ConverterImpl`; `AbstractConverter` |
-| Cost | `ICost`, `ICostFactory`, `Cost`, `VolcanoCost`; `INode.ComputeSelfCost` |
+| A trait-changing rule / op | `IConverterRule` / `ConverterRule`; `IConverter` / `ConverterImpl`; `AbstractConverter` |
+| Cost | `ICost`, `ICostFactory`, `Cost`, `VolcanoCost`; `IOpNode.ComputeSelfCost` |
 | Heuristic planner | `HepPlanner`, `HepProgram`, `HepRuleCall` |
-| Cost-based planner | `VolcanoPlanner`, `NodeSet`, `NodeSubset`, `RuleQueue`, `IRuleDriver` / `IterativeRuleDriver`, `VolcanoRuleCall` / `VolcanoRuleMatch` / `DeferringRuleCall`, `ExpandConversionRule` |
-| Session / observation | `Cluster`, `IPlannerListener`, `INodeImplementor` |
+| Cost-based planner | `VolcanoPlanner`, `OpSet`, `OpSubset`, `RuleQueue`, `IRuleDriver` / `IterativeRuleDriver`, `VolcanoRuleCall` / `VolcanoRuleMatch` / `DeferringRuleCall`, `ExpandConversionRule` |
+| Session / observation | `Cluster`, `IPlannerListener`, `IOpImplementor` |
 | Failure to plan | `CannotPlanException` |

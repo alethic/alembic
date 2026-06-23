@@ -13,7 +13,7 @@ using Xunit;
 namespace Alembic.Tests;
 
 /// <summary>
-/// Exercises node pruning: a pruned node is skipped when its queued rule matches come up, so rules no
+/// Exercises op pruning: a pruned op is skipped when its queued rule matches come up, so rules no
 /// longer fire on it, while the rest of the tree is still expanded.
 /// </summary>
 public class PruningTests
@@ -22,13 +22,13 @@ public class PruningTests
     static readonly TraitSet Logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
 
     [Fact]
-    public void A_pruned_node_is_not_expanded_by_rules()
+    public void A_pruned_op_is_not_expanded_by_rules()
     {
         var spy = new Spy();
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
         var source = new LogicalSource(cluster, Logical, "t");
-        INode root = new LogicalFilter(Logical, source, "x > 5");
+        IOpNode root = new LogicalFilter(Logical, source, "x > 5");
 
         planner.AddRule(spy);
         planner.SetRoot(root);
@@ -38,24 +38,24 @@ public class PruningTests
         planner.Prune(source);
         planner.FindBestPlan();
 
-        Assert.DoesNotContain(spy.Fired, node => node is LogicalSource);
-        Assert.Contains(spy.Fired, node => node is LogicalFilter);
+        Assert.DoesNotContain(spy.Fired, op => op is LogicalSource);
+        Assert.Contains(spy.Fired, op => op is LogicalFilter);
     }
 
     /// <summary>
-    /// A transformation rule that records every node it is invoked on and transforms nothing.
+    /// A transformation rule that records every op it is invoked on and transforms nothing.
     /// </summary>
     sealed class Spy : Rule, ITransformationRule
     {
 
         public Spy()
-            : base(Any<INode>())
+            : base(Any<IOpNode>())
         {
         }
 
-        public List<INode> Fired { get; } = new List<INode>();
+        public List<IOpNode> Fired { get; } = new List<IOpNode>();
 
-        public override void OnMatch(RuleCall call) => Fired.Add(call.Node(0));
+        public override void OnMatch(RuleCall call) => Fired.Add(call.Op(0));
 
     }
 

@@ -23,9 +23,9 @@ sealed class MultiplyConverter : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override INode? Convert(INode node)
+    public override IOpNode? Convert(IOpNode op)
     {
-        if (node is Multiply multiply)
+        if (op is Multiply multiply)
             return new PhysicalMultiply(_physical, multiply.Left, multiply.Right);
 
         return null;

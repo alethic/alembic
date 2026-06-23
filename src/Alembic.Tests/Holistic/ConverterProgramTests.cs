@@ -27,7 +27,7 @@ public class ConverterProgramTests
     {
         var planner = new HepPlanner(HepProgram.Builder().AddConverters(true).Build());
         var cluster = new Cluster(planner);
-        INode root = new LogicalFilter(Logical, new LogicalSource(cluster, Logical, "t"), "x > 5");
+        IOpNode root = new LogicalFilter(Logical, new LogicalSource(cluster, Logical, "t"), "x > 5");
 
         planner.AddRule(new SourceConverter(Physical));
         planner.AddRule(new FilterConverter(Physical));
@@ -44,7 +44,7 @@ public class ConverterProgramTests
     {
         // The input is already physical, but the filter's converter is non-guaranteed and no parent
         // requests the physical trait, so the raw converter never fires on its own.
-        INode Root(Cluster cluster) => new LogicalFilter(Logical, new PhysicalSource(cluster, Physical, "t"), "x > 5");
+        IOpNode Root(Cluster cluster) => new LogicalFilter(Logical, new PhysicalSource(cluster, Physical, "t"), "x > 5");
 
         // The raw converter alone: doesConverterApply is false (no parent wants physical, not the root
         // request), so the filter stays logical.
@@ -76,9 +76,9 @@ public class ConverterProgramTests
 
         public override bool IsGuaranteed => false;
 
-        public override INode? Convert(INode node)
+        public override IOpNode? Convert(IOpNode op)
         {
-            return node is LogicalFilter filter ? new PhysicalFilter(_physical, filter.Input, filter.Predicate) : null;
+            return op is LogicalFilter filter ? new PhysicalFilter(_physical, filter.Input, filter.Predicate) : null;
         }
 
     }

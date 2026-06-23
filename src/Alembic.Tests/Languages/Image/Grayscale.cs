@@ -11,13 +11,13 @@ namespace Alembic.Tests.Languages.Image;
 sealed class Grayscale : ImageOp
 {
 
-    public Grayscale(TraitSet traits, INode input)
+    public Grayscale(TraitSet traits, IOpNode input)
         : base(traits, input)
     {
 
     }
 
-    public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
+    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new Grayscale(traits, children[0]);
     }

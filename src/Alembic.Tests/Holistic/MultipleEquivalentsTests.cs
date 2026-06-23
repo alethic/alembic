@@ -33,7 +33,7 @@ public class MultipleEquivalentsTests
 
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new LogicalSource(cluster, logical, "t");
+        IOpNode root = new LogicalSource(cluster, logical, "t");
 
         planner.AddRule(new OfferTwoScans(physical));
         planner.SetRoot(root);
@@ -56,7 +56,7 @@ public class MultipleEquivalentsTests
         var listener = new RecordingListener();
         var planner = new VolcanoPlanner();
         var cluster = new Cluster(planner);
-        INode root = new LogicalSource(cluster, logical, "t");
+        IOpNode root = new LogicalSource(cluster, logical, "t");
 
         // The rule registers a primary equivalent for the matched source, and — in the same call, via the
         // equivalence map — a second expression declared equivalent to the matched source.
@@ -66,8 +66,8 @@ public class MultipleEquivalentsTests
         planner.FindBestPlan();
 
         // Both the primary and the map-supplied secondary equivalent were registered.
-        Assert.Contains(listener.Equivalences, node => node is LogicalSource { Table: "t_primary" });
-        Assert.Contains(listener.Equivalences, node => node is LogicalSource { Table: "t_secondary" });
+        Assert.Contains(listener.Equivalences, op => op is LogicalSource { Table: "t_primary" });
+        Assert.Contains(listener.Equivalences, op => op is LogicalSource { Table: "t_secondary" });
     }
 
     /// <summary>
@@ -84,13 +84,13 @@ public class MultipleEquivalentsTests
 
         public override void OnMatch(RuleCall call)
         {
-            var source = (LogicalSource)call.Node(0);
+            var source = (LogicalSource)call.Op(0);
             if (source.Table != "t")
                 return;
 
             var primary = new LogicalSource(source.Cluster, source.Traits, "t_primary");
             var secondary = new LogicalSource(source.Cluster, source.Traits, "t_secondary");
-            call.TransformTo(primary, new Dictionary<INode, INode> { [secondary] = source });
+            call.TransformTo(primary, new Dictionary<IOpNode, IOpNode> { [secondary] = source });
         }
 
     }
@@ -98,17 +98,17 @@ public class MultipleEquivalentsTests
     sealed class RecordingListener : IPlannerListener
     {
 
-        public List<INode> Equivalences { get; } = new List<INode>();
+        public List<IOpNode> Equivalences { get; } = new List<IOpNode>();
 
-        public void NodeEquivalenceFound(IPlannerListener.NodeEquivalenceEvent e) => Equivalences.Add(e.Node!);
+        public void OpEquivalenceFound(IPlannerListener.OpEquivalenceEvent e) => Equivalences.Add(e.Op!);
 
         public void RuleAttempted(IPlannerListener.RuleAttemptedEvent e) { }
 
         public void RuleProductionSucceeded(IPlannerListener.RuleProductionEvent e) { }
 
-        public void NodeDiscarded(IPlannerListener.NodeDiscardedEvent e) { }
+        public void OpDiscarded(IPlannerListener.OpDiscardedEvent e) { }
 
-        public void NodeChosen(IPlannerListener.NodeChosenEvent e) { }
+        public void OpChosen(IPlannerListener.OpChosenEvent e) { }
 
     }
 

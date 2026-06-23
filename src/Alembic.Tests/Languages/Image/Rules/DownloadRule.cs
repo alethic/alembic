@@ -19,12 +19,12 @@ sealed class DownloadRule : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override INode? Convert(INode node)
+    public override IOpNode? Convert(IOpNode op)
     {
-        if (node is Upload)
+        if (op is Upload)
             return null;
 
-        return new Download(node.Traits.Replace(ConventionTraitDef.Instance, ImageConventions.Cpu), node);
+        return new Download(op.Traits.Replace(ConventionTraitDef.Instance, ImageConventions.Cpu), op);
     }
 
 }

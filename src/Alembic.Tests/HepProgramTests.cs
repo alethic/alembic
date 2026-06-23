@@ -11,30 +11,30 @@ namespace Alembic.Tests;
 
 /// <summary>
 /// Exercises the heuristic planner's instruction model — match orders, match limit, subprograms, and
-/// groups — using <see cref="MarkSorted"/>, which tags every node it reaches.
+/// groups — using <see cref="MarkSorted"/>, which tags every op it reaches.
 /// </summary>
 public class HepProgramTests
 {
 
     static readonly TraitSet Logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical).Plus(Sortedness.Unsorted);
 
-    static INode Tree(Cluster cluster) => new LogicalFilter(Logical, new LogicalSource(cluster, Logical, "t"), "x > 5");
+    static IOpNode Tree(Cluster cluster) => new LogicalFilter(Logical, new LogicalSource(cluster, Logical, "t"), "x > 5");
 
-    static bool IsSorted(INode node) => ReferenceEquals(node.Traits.Get(SortednessTraitDef.Instance), Sortedness.Sorted);
+    static bool IsSorted(IOpNode op) => ReferenceEquals(op.Traits.Get(SortednessTraitDef.Instance), Sortedness.Sorted);
 
-    static bool AllSorted(INode node)
+    static bool AllSorted(IOpNode op)
     {
-        if (!IsSorted(node))
+        if (!IsSorted(op))
             return false;
 
-        foreach (var child in node.Children)
+        foreach (var child in op.Children)
             if (!AllSorted(child))
                 return false;
 
         return true;
     }
 
-    static INode Run(HepProgram program)
+    static IOpNode Run(HepProgram program)
     {
         var planner = new HepPlanner(program);
         planner.SetRoot(Tree(new Cluster(planner)));
@@ -56,7 +56,7 @@ public class HepProgramTests
     [Fact]
     public void A_match_limit_caps_the_number_of_transformations()
     {
-        // With a limit of one, only the first node visited (the root, in depth-first order) is rewritten;
+        // With a limit of one, only the first op visited (the root, in depth-first order) is rewritten;
         // its input is left untouched.
         var best = Run(HepProgram.Builder().AddMatchLimit(1).AddRuleInstance(new MarkSorted()).Build());
 

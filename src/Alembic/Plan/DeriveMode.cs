@@ -1,7 +1,7 @@
 namespace Alembic.Plan;
 
 /// <summary>
-/// How a physical node derives traits from its already-optimized inputs during the top-down search.
+/// How a physical op derives traits from its already-optimized inputs during the top-down search.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.DeriveMode")]
 public enum DeriveMode
@@ -26,7 +26,7 @@ public enum DeriveMode
     Both,
 
     /// <summary>
-    /// Hands the node the full matrix of input trait sets and lets it decide what to produce.
+    /// Hands the op the full matrix of input trait sets and lets it decide what to produce.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.DeriveMode", "OMAKASE")]
     Omakase,
