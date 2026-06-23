@@ -18,7 +18,7 @@ namespace Alembic.Plan;
 public abstract class OpTraitDef
 {
 
-    readonly WeakInterner<IOpTrait> _interned = new WeakInterner<IOpTrait>(EqualityComparer<IOpTrait>.Default);
+    readonly IInterner<IOpTrait> _interned = Interners.NewWeakInterner<IOpTrait>();
 
     /// <summary>
     /// A stable name for this dimension.
