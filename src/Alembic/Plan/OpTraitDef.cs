@@ -30,7 +30,7 @@ public abstract class OpTraitDef
     /// The type of the traits on this dimension.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "getTraitClass()")]
-    public abstract Type TraitClass { get; }
+    public abstract Type TraitType { get; }
 
     /// <summary>
     /// The value an op carries on this dimension when none is specified.
@@ -107,7 +107,7 @@ public abstract class OpTraitDef<TTrait> : OpTraitDef
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "getTraitClass()")]
-    public override Type TraitClass => typeof(TTrait);
+    public override Type TraitType => typeof(TTrait);
 
     /// <summary>
     /// The value an op carries on this dimension when none is specified.
