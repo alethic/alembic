@@ -16,17 +16,17 @@ public class Convention : IConvention
     /// The default convention carried by an op that has not been assigned one.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention", "NONE")]
-    public static readonly Convention None = new Convention("NONE", typeof(IOpNode));
+    public static readonly Convention None = new Convention("NONE", typeof(IOp));
 
     readonly string _name;
     readonly Type _interface;
 
     /// <summary>
     /// Creates a convention with the given name and no op-interface marker (members may be any
-    /// <see cref="IOpNode"/>).
+    /// <see cref="IOp"/>).
     /// </summary>
     public Convention(string name)
-        : this(name, typeof(IOpNode))
+        : this(name, typeof(IOp))
     {
 
     }
@@ -82,7 +82,7 @@ public class Convention : IConvention
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention.Impl", "enforce(RelNode, RelTraitSet)")]
-    public virtual IOpNode? Enforce(IOpNode input, OpTraitSet required) => null;
+    public virtual IOp? Enforce(IOp input, OpTraitSet required) => null;
 
     /// <inheritdoc />
     public override bool Equals(object? obj)

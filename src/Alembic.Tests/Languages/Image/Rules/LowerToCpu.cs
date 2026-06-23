@@ -18,7 +18,7 @@ sealed class LowerToCpu : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override IOpNode? Convert(IOpNode op)
+    public override IOp? Convert(IOp op)
     {
         return op.Copy(op.Traits.Replace(ConventionTraitDef.Instance, ImageConventions.Cpu), op.Children);
     }

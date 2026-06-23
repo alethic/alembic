@@ -18,7 +18,7 @@ sealed class PhysicalFilteredSource : AbstractOp
     readonly string _predicate;
 
     public PhysicalFilteredSource(OpCluster cluster, OpTraitSet traits, string table, string predicate)
-        : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
+        : base(cluster, traits, ImmutableArray<IOp>.Empty)
     {
         _table = table;
         _predicate = predicate;
@@ -39,7 +39,7 @@ sealed class PhysicalFilteredSource : AbstractOp
         return writer;
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new PhysicalFilteredSource(Cluster, traits, _table, _predicate);
     }

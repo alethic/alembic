@@ -11,13 +11,13 @@ namespace Alembic.Tests.Languages.Expression.Logical;
 sealed class Add : BiOp
 {
 
-    public Add(OpTraitSet traits, IOpNode left, IOpNode right)
+    public Add(OpTraitSet traits, IOp left, IOp right)
         : base(traits, left, right)
     {
 
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new Add(traits, children[0], children[1]);
     }

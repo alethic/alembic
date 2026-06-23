@@ -6,13 +6,13 @@ using Alembic.Algebra;
 namespace Alembic.Plan.Rules;
 
 /// <summary>
-/// The context of a single rule match: the ops bound to each operand and <see cref="TransformTo(IOpNode)"/> —
+/// The context of a single rule match: the ops bound to each operand and <see cref="TransformTo(IOp)"/> —
 /// the sink through which the rule registers an equivalent. This base is planner-agnostic; each
-/// planner provides a subclass that decides what <see cref="TransformTo(IOpNode)"/> does.
+/// planner provides a subclass that decides what <see cref="TransformTo(IOp)"/> does.
 /// </summary>
 /// <remarks>
 /// A rule reaches its matched ops through <see cref="Op"/>, not by navigating
-/// <see cref="IOpNode.Children"/>: under a heuristic planner the children are the concrete ops, but
+/// <see cref="IOp.Children"/>: under a heuristic planner the children are the concrete ops, but
 /// under a cost-based planner they are equivalence subsets, so only the operand-bound ops are
 /// guaranteed to be the concrete types the rule expects.
 /// </remarks>
@@ -28,7 +28,7 @@ public abstract class OpRuleCall
     /// is taken from the seed operand.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "RelOptRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOpNode> ops)
+    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops)
     {
         Id = _nextId++;
         Planner = planner;
@@ -66,19 +66,19 @@ public abstract class OpRuleCall
     /// The ops bound to the rule's operands, in operand order.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "getRelList()")]
-    public ImmutableArray<IOpNode> Ops { get; }
+    public ImmutableArray<IOp> Ops { get; }
 
     /// <summary>
     /// The op bound to the operand at the given ordinal. The operand root is ordinal 0.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "rel(int)")]
-    public IOpNode Op(int ordinal) => Ops[ordinal];
+    public IOp Op(int ordinal) => Ops[ordinal];
 
     /// <summary>
     /// Registers an equivalent for the matched op, with no other equivalences.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "transformTo(RelNode)")]
-    public void TransformTo(IOpNode equivalent) => TransformTo(equivalent, ImmutableDictionary<IOpNode, IOpNode>.Empty);
+    public void TransformTo(IOp equivalent) => TransformTo(equivalent, ImmutableDictionary<IOp, IOp>.Empty);
 
     /// <summary>
     /// Registers an equivalent for the matched op, along with a map of other equivalences to register
@@ -86,6 +86,6 @@ public abstract class OpRuleCall
     /// register them twice). What this does is planner-specific.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "transformTo(RelNode, Map<RelNode, RelNode>)")]
-    public abstract void TransformTo(IOpNode equivalent, IReadOnlyDictionary<IOpNode, IOpNode> equiv);
+    public abstract void TransformTo(IOp equivalent, IReadOnlyDictionary<IOp, IOp> equiv);
 
 }

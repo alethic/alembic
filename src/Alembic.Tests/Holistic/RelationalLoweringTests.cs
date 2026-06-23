@@ -30,7 +30,7 @@ public class RelationalLoweringTests
 
         var planner = BuildPlanner(Converters(physical));
         var cluster = new OpCluster(planner);
-        IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+        IOp root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         var result = Lower(planner, root, physical);
 
@@ -47,7 +47,7 @@ public class RelationalLoweringTests
         // Lower, then push the physical filter down into the source — a second physical realization.
         var planner = BuildPlanner(new SourceConverter(physical), new FilterConverter(physical), new PushFilterIntoSource());
         var cluster = new OpCluster(planner);
-        IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+        IOp root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         var result = Lower(planner, root, physical);
 
@@ -63,7 +63,7 @@ public class RelationalLoweringTests
 
         var planner = BuildPlanner(Converters(physical));
         var cluster = new OpCluster(planner);
-        IOpNode root = new LogicalFilter(logical, new LogicalParameter(cluster, logical, "p"), "x > 5");
+        IOp root = new LogicalFilter(logical, new LogicalParameter(cluster, logical, "p"), "x > 5");
 
         var result = Lower(planner, root, physical);
 
@@ -78,7 +78,7 @@ public class RelationalLoweringTests
 
         var planner = BuildPlanner(new RemoveTrueFilter());
         var cluster = new OpCluster(planner);
-        IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "true");
+        IOp root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "true");
 
         var result = Simplify(planner, root);
 
@@ -92,7 +92,7 @@ public class RelationalLoweringTests
 
         var planner = BuildPlanner(new MergeFilters());
         var cluster = new OpCluster(planner);
-        IOpNode root = new LogicalFilter(logical, new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "b"), "a");
+        IOp root = new LogicalFilter(logical, new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "b"), "a");
 
         var result = Simplify(planner, root);
 
@@ -108,7 +108,7 @@ public class RelationalLoweringTests
 
         var planner = BuildPlanner(new RemoveTrueFilter());
         var cluster = new OpCluster(planner);
-        IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "true");
+        IOp root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "true");
 
         // Phase 1: simplify away the redundant filter in the logical model.
         var simplified = Simplify(planner, root);
@@ -131,7 +131,7 @@ public class RelationalLoweringTests
 
         var logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
         var physical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
-        IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+        IOp root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         planner.SetRoot(root);
         planner.ChangeTraits(root, physical);
@@ -149,7 +149,7 @@ public class RelationalLoweringTests
         // planner cannot satisfy the requested output traits.
         var planner = BuildPlanner(new FilterConverter(physical));
         var cluster = new OpCluster(planner);
-        IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+        IOp root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         Assert.Throws<CannotPlanException>(() => Lower(planner, root, physical));
     }
@@ -166,7 +166,7 @@ public class RelationalLoweringTests
         return [new SourceConverter(physical), new FilterConverter(physical), new ParameterConverter(physical)];
     }
 
-    IOpNode Lower(HepPlanner planner, IOpNode root, OpTraitSet required)
+    IOp Lower(HepPlanner planner, IOp root, OpTraitSet required)
     {
         planner.SetRoot(root);
         planner.ChangeTraits(root, required);
@@ -176,7 +176,7 @@ public class RelationalLoweringTests
         return best;
     }
 
-    IOpNode Simplify(HepPlanner planner, IOpNode root)
+    IOp Simplify(HepPlanner planner, IOp root)
     {
         planner.SetRoot(root);
         var best = planner.FindBestPlan();

@@ -14,7 +14,7 @@ namespace Alembic.Plan.Volcano;
 public sealed class TopDownRuleQueue : RuleQueue
 {
 
-    readonly Dictionary<IOpNode, LinkedList<VolcanoRuleMatch>> _matches = new Dictionary<IOpNode, LinkedList<VolcanoRuleMatch>>(ReferenceEqualityComparer.Instance);
+    readonly Dictionary<IOp, LinkedList<VolcanoRuleMatch>> _matches = new Dictionary<IOp, LinkedList<VolcanoRuleMatch>>(ReferenceEqualityComparer.Instance);
     readonly HashSet<VolcanoRuleMatch> _seen = new HashSet<VolcanoRuleMatch>();
 
     /// <summary>
@@ -54,7 +54,7 @@ public sealed class TopDownRuleQueue : RuleQueue
     /// <paramref name="predicate"/> (if any), or <c>null</c>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue", "popMatch(Pair<RelNode, Predicate<VolcanoRuleMatch>>)")]
-    public VolcanoRuleMatch? PopMatch(IOpNode rel, Func<VolcanoRuleMatch, bool>? predicate)
+    public VolcanoRuleMatch? PopMatch(IOp rel, Func<VolcanoRuleMatch, bool>? predicate)
     {
         if (!_matches.TryGetValue(rel, out var queue))
             return null;

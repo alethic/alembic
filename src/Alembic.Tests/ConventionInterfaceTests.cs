@@ -27,7 +27,7 @@ public class ConventionInterfaceTests
 
         var planner = new VolcanoPlanner();
         var cluster = new OpCluster(planner);
-        IOpNode bad = new PhysicalSource(cluster, traits, "t");
+        IOp bad = new PhysicalSource(cluster, traits, "t");
 
         Assert.Throws<InvalidOperationException>(() => planner.SetRoot(bad));
     }
@@ -35,13 +35,13 @@ public class ConventionInterfaceTests
     [Fact]
     public void A_op_in_a_convention_without_a_marker_is_accepted()
     {
-        // The default interface is IOpNode, which every op implements, so registration succeeds.
+        // The default interface is IOp, which every op implements, so registration succeeds.
         var plain = new Convention("PLAIN");
         var traits = OpTraitSet.CreateEmpty().Plus(plain);
 
         var planner = new VolcanoPlanner();
         var cluster = new OpCluster(planner);
-        IOpNode ok = new PhysicalSource(cluster, traits, "t");
+        IOp ok = new PhysicalSource(cluster, traits, "t");
 
         planner.SetRoot(ok);
 

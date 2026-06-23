@@ -20,7 +20,7 @@ namespace Alembic.Algebra;
 /// <see cref="DeriveMode.Omakase"/>, <see cref="Derive(IList{IList{OpTraitSet}})"/>).
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode")]
-public interface IPhysicalNode : IOpNode
+public interface IPhysicalOp : IOp
 {
 
     /// <summary>
@@ -28,13 +28,13 @@ public interface IPhysicalNode : IOpNode
     /// <c>null</c> if it cannot.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "passThrough(RelTraitSet)")]
-    IOpNode? PassThrough(OpTraitSet required)
+    IOp? PassThrough(OpTraitSet required)
     {
         var pair = PassThroughTraits(required);
         if (pair is null)
             return null;
 
-        var inputs = ImmutableArray.CreateBuilder<IOpNode>(Children.Length);
+        var inputs = ImmutableArray.CreateBuilder<IOp>(Children.Length);
         for (int i = 0; i < Children.Length; i++)
             inputs.Add(Cluster.Planner.ChangeTraits(Children[i], pair.Right[i]));
 
@@ -57,13 +57,13 @@ public interface IPhysicalNode : IOpNode
     /// <paramref name="childTraits"/>), returning the derived op, or <c>null</c>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "derive(RelTraitSet, int)")]
-    IOpNode? Derive(OpTraitSet childTraits, int childId)
+    IOp? Derive(OpTraitSet childTraits, int childId)
     {
         var pair = DeriveTraits(childTraits, childId);
         if (pair is null)
             return null;
 
-        var inputs = ImmutableArray.CreateBuilder<IOpNode>(Children.Length);
+        var inputs = ImmutableArray.CreateBuilder<IOp>(Children.Length);
         for (int i = 0; i < Children.Length; i++)
             inputs.Add(Cluster.Planner.ChangeTraits(Children[i], pair.Right[i]));
 
@@ -86,7 +86,7 @@ public interface IPhysicalNode : IOpNode
     /// <see cref="DeriveMode.Omakase"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "derive(List<List<RelTraitSet>>)")]
-    IList<IOpNode> Derive(IList<IList<OpTraitSet>> inputTraits)
+    IList<IOp> Derive(IList<IList<OpTraitSet>> inputTraits)
     {
         throw new NotSupportedException(GetType().Name + " does not implement Derive.");
     }

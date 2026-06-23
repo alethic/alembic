@@ -8,13 +8,13 @@ using Alembic.Plan;
 namespace Alembic.Algebra;
 
 /// <summary>
-/// Convenience base for <see cref="IOpNode"/> implementations. An op lists its identity-bearing terms
+/// Convenience base for <see cref="IOp"/> implementations. An op lists its identity-bearing terms
 /// in <see cref="ExplainTerms"/> — its own attributes and its inputs — and the base derives
 /// <see cref="DeepEquals"/> / <see cref="DeepHashCode"/> from them. Each op keeps one
 /// <see cref="IOpDigest"/> that caches its hash.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode")]
-public abstract class AbstractOp : IOpNode
+public abstract class AbstractOp : IOp
 {
 
     readonly InnerOpDigest _digest;
@@ -23,7 +23,7 @@ public abstract class AbstractOp : IOpNode
     /// Initializes the op with its cluster, traits, and children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "AbstractRelNode(RelOptCluster, RelTraitSet)")]
-    protected AbstractOp(OpCluster cluster, OpTraitSet traits, ImmutableArray<IOpNode> children)
+    protected AbstractOp(OpCluster cluster, OpTraitSet traits, ImmutableArray<IOp> children)
     {
         Cluster = cluster;
         Traits = traits;
@@ -41,7 +41,7 @@ public abstract class AbstractOp : IOpNode
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getInputs()")]
-    public ImmutableArray<IOpNode> Children { get; }
+    public ImmutableArray<IOp> Children { get; }
 
     /// <summary>
     /// Lists this op's identity-bearing terms. A subclass calls <c>base.ExplainTerms</c>, then adds its
@@ -64,7 +64,7 @@ public abstract class AbstractOp : IOpNode
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "copy(RelTraitSet, List<RelNode>)")]
-    public abstract IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children);
+    public abstract IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children);
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
@@ -93,7 +93,7 @@ public abstract class AbstractOp : IOpNode
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "deepEquals(Object)")]
-    public virtual bool DeepEquals(IOpNode? other)
+    public virtual bool DeepEquals(IOp? other)
     {
         if (ReferenceEquals(this, other)) return true;
         if (other is null || GetType() != other.GetType()) return false;
@@ -111,9 +111,9 @@ public abstract class AbstractOp : IOpNode
 
             var v1 = a[i].Value;
             var v2 = b[i].Value;
-            if (v1 is IOpNode n1)
+            if (v1 is IOp n1)
             {
-                if (v2 is not IOpNode n2 || !n1.DeepEquals(n2)) return false;
+                if (v2 is not IOp n2 || !n1.DeepEquals(n2)) return false;
             }
             else if (!Equals(v1, v2))
             {
@@ -134,7 +134,7 @@ public abstract class AbstractOp : IOpNode
         foreach (var (name, value) in DigestItems())
         {
             h.Add(name);
-            h.Add(value is IOpNode op ? op.DeepHashCode() : value);
+            h.Add(value is IOp op ? op.DeepHashCode() : value);
         }
 
         return h.ToHashCode();
@@ -166,7 +166,7 @@ public abstract class AbstractOp : IOpNode
         }
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "getRel()")]
-        public IOpNode Op => _op;
+        public IOp Op => _op;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "clear()")]
         public void Clear() => _hash = 0;
@@ -224,7 +224,7 @@ public abstract class AbstractOp : IOpNode
         }
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "done(RelNode)")]
-        public IOpWriter Done(IOpNode op)
+        public IOpWriter Done(IOp op)
         {
             var sb = new StringBuilder();
             sb.Append(op.GetType().Name).Append('.').Append(op.Traits).Append('(');
@@ -232,7 +232,7 @@ public abstract class AbstractOp : IOpNode
             {
                 if (i > 0) sb.Append(", ");
                 sb.Append(Items[i].Name).Append('=');
-                sb.Append(Items[i].Value is IOpNode input ? input.GetType().Name : Items[i].Value);
+                sb.Append(Items[i].Value is IOp input ? input.GetType().Name : Items[i].Value);
             }
 
             sb.Append(')');

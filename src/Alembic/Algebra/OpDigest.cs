@@ -2,7 +2,7 @@ namespace Alembic.Algebra;
 
 /// <summary>
 /// The default <see cref="IOpDigest"/> for an op that does not keep its own: it delegates equality
-/// and hashing to the op's <see cref="IOpNode.DeepEquals"/> / <see cref="IOpNode.DeepHashCode"/>, caching
+/// and hashing to the op's <see cref="IOp.DeepEquals"/> / <see cref="IOp.DeepHashCode"/>, caching
 /// the hash. <see cref="AbstractOp"/> keeps a richer one that can render the digest string.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelDigest")]
@@ -14,14 +14,14 @@ public sealed class OpDigest : IOpDigest
     /// <summary>
     /// Creates a digest for the given op.
     /// </summary>
-    public OpDigest(IOpNode op)
+    public OpDigest(IOp op)
     {
         Op = op;
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelDigest", "getRel()")]
-    public IOpNode Op { get; }
+    public IOp Op { get; }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelDigest", "clear()")]

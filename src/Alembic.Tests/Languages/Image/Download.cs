@@ -14,7 +14,7 @@ namespace Alembic.Tests.Languages.Image;
 sealed class Download : ConverterImpl
 {
 
-    public Download(OpTraitSet traits, IOpNode input)
+    public Download(OpTraitSet traits, IOp input)
         : base(ConventionTraitDef.Instance, traits, input)
     {
 
@@ -25,7 +25,7 @@ sealed class Download : ConverterImpl
         return planner.CostFactory.MakeCost(ImageConventions.TransferCost, 0);
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new Download(traits, children[0]);
     }

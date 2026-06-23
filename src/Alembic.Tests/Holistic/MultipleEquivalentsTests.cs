@@ -33,7 +33,7 @@ public class MultipleEquivalentsTests
 
         var planner = new VolcanoPlanner();
         var cluster = new OpCluster(planner);
-        IOpNode root = new LogicalSource(cluster, logical, "t");
+        IOp root = new LogicalSource(cluster, logical, "t");
 
         planner.AddRule(new OfferTwoScans(physical));
         planner.SetRoot(root);
@@ -56,7 +56,7 @@ public class MultipleEquivalentsTests
         var listener = new RecordingListener();
         var planner = new VolcanoPlanner();
         var cluster = new OpCluster(planner);
-        IOpNode root = new LogicalSource(cluster, logical, "t");
+        IOp root = new LogicalSource(cluster, logical, "t");
 
         // The rule registers a primary equivalent for the matched source, and — in the same call, via the
         // equivalence map — a second expression declared equivalent to the matched source.
@@ -90,7 +90,7 @@ public class MultipleEquivalentsTests
 
             var primary = new LogicalSource(source.Cluster, source.Traits, "t_primary");
             var secondary = new LogicalSource(source.Cluster, source.Traits, "t_secondary");
-            call.TransformTo(primary, new Dictionary<IOpNode, IOpNode> { [secondary] = source });
+            call.TransformTo(primary, new Dictionary<IOp, IOp> { [secondary] = source });
         }
 
     }
@@ -98,7 +98,7 @@ public class MultipleEquivalentsTests
     sealed class RecordingListener : IPlannerListener
     {
 
-        public List<IOpNode> Equivalences { get; } = new List<IOpNode>();
+        public List<IOp> Equivalences { get; } = new List<IOp>();
 
         public void OpEquivalenceFound(IPlannerListener.OpEquivalenceEvent e) => Equivalences.Add(e.Op!);
 

@@ -18,7 +18,7 @@ public abstract class ConverterRule : OpRule
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "ConverterRule(Class<? extends RelNode>, RelTrait, RelTrait, String)")]
     protected ConverterRule(IOpTrait source, IOpTrait target)
-        : base(ConvertOperand<IOpNode>(source))
+        : base(ConvertOperand<IOp>(source))
     {
         Source = source;
         Target = target;
@@ -55,7 +55,7 @@ public abstract class ConverterRule : OpRule
     /// Converts the op from <see cref="Source"/> to <see cref="Target"/>, or returns null to decline.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "convert(RelNode)")]
-    public abstract IOpNode? Convert(IOpNode op);
+    public abstract IOp? Convert(IOp op);
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "onMatch(RelOptRuleCall)")]

@@ -11,13 +11,13 @@ namespace Alembic.Tests.Languages.Expression.Physical;
 sealed class PhysicalAdd : BiOp
 {
 
-    public PhysicalAdd(OpTraitSet traits, IOpNode left, IOpNode right)
+    public PhysicalAdd(OpTraitSet traits, IOp left, IOp right)
         : base(traits, left, right)
     {
 
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new PhysicalAdd(traits, children[0], children[1]);
     }

@@ -38,7 +38,7 @@ The canonical end-to-end shape:
 
 ## 2. The op model
 
-A plan is a tree (more precisely, a DAG during planning) of **ops**. The op contract is `IOpNode`:
+A plan is a tree (more precisely, a DAG during planning) of **ops**. The op contract is `IOp`:
 
 - `Traits` — the op's physical properties (see §4).
 - `Children` — its inputs, in order (an immutable array).
@@ -55,7 +55,7 @@ same subexpression appearing in many places is one object. Mutation would make a
 `AbstractOp` is an optional convenience base (most op types use it). It derives `DeepEquals` /
 `DeepHashCode` from an op's **explain terms** (§3) and keeps a cached digest. `SingleOp` (one child)
 and `BiOp` (two children, `Left`/`Right`) are thin bases over it. An op type can also implement
-`IOpNode` directly — the base classes are a convenience, not a requirement.
+`IOp` directly — the base classes are a convenience, not a requirement.
 
 ---
 
@@ -161,7 +161,7 @@ and the planner converts.
 
 `IConvention` carries:
 - `Name`.
-- `Interface` — the op interface members of this convention must implement (defaults to `IOpNode`; a
+- `Interface` — the op interface members of this convention must implement (defaults to `IOp`; a
   convention may demand its ops implement a marker so the planner can reject mismatches).
 - `CanConvertConvention` / `UseAbstractConvertersForConversion` / `Enforce` — hooks the planner can use
   to decide how/whether to bridge conventions.
@@ -248,7 +248,7 @@ A **cost-based search over equivalence classes**. This is the heavier machine, a
 
 The data model:
 - **`OpSet`** — an equivalence class: all ops known to produce the same result.
-- **`OpSubset`** — the members of a set that share one trait set. A subset is itself an `IOpNode` (so it
+- **`OpSubset`** — the members of a set that share one trait set. A subset is itself an `IOp` (so it
   can stand in as a child), and it remembers its **cheapest member** (`Best` / `BestCost`).
 
 > The mental picture: a **`OpSet` is a result**; its **subsets are the different physical ways to
@@ -321,7 +321,7 @@ OpCost is how the optimizer chooses. The model is intentionally small and opaque
   default, with CPU and I/O dimensions (compared on CPU). *(There is deliberately no row count — the
   engine is not a database.)*
 
-An op states its **own** cost via `IOpNode.ComputeSelfCost(planner)` (a method on the op, defaulting to
+An op states its **own** cost via `IOp.ComputeSelfCost(planner)` (a method on the op, defaulting to
 a tiny cost; a real cost model overrides it). The **cumulative** cost of an op is its self-cost plus the
 best cost of each input subset:
 
@@ -371,7 +371,7 @@ line) that makes that search efficient on large inputs.
 4. **Plan** — the planner fires rules to discover equivalents, costs them, enforces the required output
    (inserting converters), and returns the cheapest plan that satisfies the request — or throws
    `CannotPlanException` if no rule chain can reach it.
-5. **Inspect** — `IOpNode.ToPlanString()` renders the result as an indented tree (type, traits,
+5. **Inspect** — `IOp.ToPlanString()` renders the result as an indented tree (type, traits,
    attributes; inputs nested), which is how the tests display the plans they produce.
 
 Supporting cast: a **`OpCluster`** is the per-session environment (wraps the planner, offers `OpTraitSet`
@@ -402,15 +402,15 @@ to any tree-shaped computation.
 
 | Concept | Type(s) |
 |---|---|
-| A plan op | `IOpNode`; bases `AbstractOp`, `SingleOp`, `BiOp` |
+| A plan op | `IOp`; bases `AbstractOp`, `SingleOp`, `BiOp` |
 | Structural identity | `DeepEquals` / `DeepHashCode`; `Explain(IOpWriter)`; `IOpDigest` |
-| Plan rendering | `IOpNode.ToPlanString()` |
+| Plan rendering | `IOp.ToPlanString()` |
 | A physical property (value / dimension) | `IOpTrait` / `OpTraitDef`; multi-valued: `IOpMultipleTrait`, `OpCompositeTrait` |
 | An op's full property fingerprint | `OpTraitSet` |
 | Calling convention (logical/physical family) | `IConvention` / `Convention` |
 | A transformation rule | `IRule`, `Operand`, `OperandMatcher`, `OpRuleCall` |
 | A trait-changing rule / op | `IConverterRule` / `ConverterRule`; `IConverter` / `ConverterImpl`; `AbstractConverter` |
-| OpCost | `IOpCost`, `IOpCostFactory`, `OpCost`, `VolcanoCost`; `IOpNode.ComputeSelfCost` |
+| OpCost | `IOpCost`, `IOpCostFactory`, `OpCost`, `VolcanoCost`; `IOp.ComputeSelfCost` |
 | Heuristic planner | `HepPlanner`, `HepProgram`, `HepRuleCall` |
 | OpCost-based planner | `VolcanoPlanner`, `OpSet`, `OpSubset`, `RuleQueue`, `IRuleDriver` / `IterativeRuleDriver`, `VolcanoRuleCall` / `VolcanoRuleMatch` / `DeferringRuleCall`, `ExpandConversionRule` |
 | Session / observation | `OpCluster`, `IPlannerListener`, `IOpImplementor` |

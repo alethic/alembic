@@ -15,10 +15,10 @@ public static class PlanUtil
 
     /// <summary>
     /// Renders an op and its inputs as an indented plan string: it news up a writer and drives the
-    /// op's <see cref="IOpNode.Explain"/>.
+    /// op's <see cref="IOp.Explain"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptUtil", "toString(RelNode)")]
-    public static string ToString(IOpNode op)
+    public static string ToString(IOp op)
     {
         var builder = new StringBuilder();
         op.Explain(new OpWriterImpl(builder));

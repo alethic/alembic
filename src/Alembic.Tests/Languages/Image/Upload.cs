@@ -14,7 +14,7 @@ namespace Alembic.Tests.Languages.Image;
 sealed class Upload : ConverterImpl
 {
 
-    public Upload(OpTraitSet traits, IOpNode input)
+    public Upload(OpTraitSet traits, IOp input)
         : base(ConventionTraitDef.Instance, traits, input)
     {
 
@@ -25,7 +25,7 @@ sealed class Upload : ConverterImpl
         return planner.CostFactory.MakeCost(ImageConventions.TransferCost, 0);
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new Upload(traits, children[0]);
     }

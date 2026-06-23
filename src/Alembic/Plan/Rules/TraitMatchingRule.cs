@@ -39,7 +39,7 @@ public sealed class TraitMatchingRule : OpRule
     static OpRuleOperand BuildOperand(ConverterRule converterRule)
     {
         var converterOperand = converterRule.Operand;
-        return new OpRuleOperand(converterOperand.MatchedClass, converterOperand.Trait, converterOperand.Predicate, RuleOperandChildPolicy.Some, new OpRuleOperand(typeof(IOpNode), RuleOperandChildPolicy.Any));
+        return new OpRuleOperand(converterOperand.MatchedClass, converterOperand.Trait, converterOperand.Predicate, RuleOperandChildPolicy.Some, new OpRuleOperand(typeof(IOp), RuleOperandChildPolicy.Any));
     }
 
 }

@@ -11,7 +11,7 @@ sealed class MarkSorted : OpRule
 {
 
     public MarkSorted()
-        : base(Any<IOpNode>(op => !ReferenceEquals(op.Traits.Get(SortednessTraitDef.Instance), Sortedness.Sorted)))
+        : base(Any<IOp>(op => !ReferenceEquals(op.Traits.Get(SortednessTraitDef.Instance), Sortedness.Sorted)))
     {
     }
 

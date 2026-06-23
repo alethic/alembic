@@ -34,7 +34,7 @@ public class OperandMatchingTests
 
         // An outer filter over an inner filter over a source. Only the inner filter sits directly
         // over a source, so only it should match the Filter(Source) operand.
-        IOpNode root = new LogicalFilter(
+        IOp root = new LogicalFilter(
             logical,
             new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "inner"),
             "outer");

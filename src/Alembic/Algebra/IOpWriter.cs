@@ -2,9 +2,9 @@ namespace Alembic.Algebra;
 
 /// <summary>
 /// Collects an op's identity-bearing terms — its attributes and its inputs — as an op describes itself
-/// through <see cref="IOpNode.Explain"/>. Implementations consume the terms differently: one renders an
+/// through <see cref="IOp.Explain"/>. Implementations consume the terms differently: one renders an
 /// indented plan string (<see cref="OpWriterImpl"/>), another builds the structural digest that drives
-/// <see cref="IOpNode.DeepEquals"/> / <see cref="IOpNode.DeepHashCode"/>.
+/// <see cref="IOp.DeepEquals"/> / <see cref="IOp.DeepHashCode"/>.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelWriter")]
 public interface IOpWriter
@@ -26,12 +26,12 @@ public interface IOpWriter
     /// Adds an input (child) term — an item whose value is an op.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelWriter", "input(String, RelNode)")]
-    IOpWriter Input(string name, IOpNode input) => Item(name, input);
+    IOpWriter Input(string name, IOp input) => Item(name, input);
 
     /// <summary>
     /// Signals that <paramref name="op"/>'s terms are complete, so the writer can emit it.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelWriter", "done(RelNode)")]
-    IOpWriter Done(IOpNode op);
+    IOpWriter Done(IOp op);
 
 }

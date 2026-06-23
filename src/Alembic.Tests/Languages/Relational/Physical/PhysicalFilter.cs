@@ -12,18 +12,18 @@ namespace Alembic.Tests.Languages.Relational.Physical;
 /// input. A filter preserves any physical property of its input, so it both passes a required trait set
 /// down to its input and derives a delivered trait set up from it.
 /// </summary>
-sealed class PhysicalFilter : SingleOp, IPhysicalNode
+sealed class PhysicalFilter : SingleOp, IPhysicalOp
 {
 
     readonly string _predicate;
 
-    public PhysicalFilter(OpTraitSet traits, IOpNode input, string predicate)
+    public PhysicalFilter(OpTraitSet traits, IOp input, string predicate)
         : base(traits, input)
     {
         _predicate = predicate;
     }
 
-    public IOpNode Input => Child;
+    public IOp Input => Child;
 
     public string Predicate => _predicate;
 
@@ -46,7 +46,7 @@ sealed class PhysicalFilter : SingleOp, IPhysicalNode
         return writer;
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new PhysicalFilter(traits, children[0], _predicate);
     }

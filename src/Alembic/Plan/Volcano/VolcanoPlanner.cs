@@ -24,11 +24,11 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
 {
 
     readonly List<OpSet> _allSets = new List<OpSet>();
-    readonly Dictionary<IOpDigest, IOpNode> _digestToOp = new Dictionary<IOpDigest, IOpNode>();
-    readonly Dictionary<IOpNode, OpSubset> _opToSubset = new Dictionary<IOpNode, OpSubset>(ReferenceEqualityComparer.Instance);
+    readonly Dictionary<IOpDigest, IOp> _digestToOp = new Dictionary<IOpDigest, IOp>();
+    readonly Dictionary<IOp, OpSubset> _opToSubset = new Dictionary<IOp, OpSubset>(ReferenceEqualityComparer.Instance);
     readonly Dictionary<Type, List<OpRuleOperand>> _classOperands = new Dictionary<Type, List<OpRuleOperand>>();
     readonly HashSet<Type> _classes = new HashSet<Type>();
-    readonly HashSet<IOpNode> _prunedOps = new HashSet<IOpNode>(ReferenceEqualityComparer.Instance);
+    readonly HashSet<IOp> _prunedOps = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
 
     IRuleDriver _ruleDriver;
     OpSubset? _root;
@@ -55,7 +55,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getRoot()")]
-    public override IOpNode? Root => _root;
+    public override IOp? Root => _root;
 
     /// <summary>
     /// Whether the planner uses the top-down (Cascades) search rather than the default bottom-up search.
@@ -97,7 +97,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
         foreach (var operand in rule.Operands)
             foreach (var subClass in SubClasses(operand.MatchedClass))
             {
-                if (isTransformationRule && typeof(IPhysicalNode).IsAssignableFrom(subClass))
+                if (isTransformationRule && typeof(IPhysicalOp).IsAssignableFrom(subClass))
                     continue;
 
                 OperandsFor(subClass).Add(operand);
@@ -183,13 +183,13 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     /// operands of every rule registered so far (and any registered later, via <see cref="AddRule"/>).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "onNewClass(RelNode)")]
-    void OnNewClass(IOpNode op)
+    void OnNewClass(IOp op)
     {
         var clazz = op.GetType();
         if (!_classes.Add(clazz))
             return;
 
-        bool isPhysical = typeof(IPhysicalNode).IsAssignableFrom(clazz);
+        bool isPhysical = typeof(IPhysicalOp).IsAssignableFrom(clazz);
         foreach (var rule in Rules)
         {
             // A transformation rule never matches a physical op.
@@ -204,7 +204,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "setRoot(RelNode)")]
-    public override void SetRoot(IOpNode op)
+    public override void SetRoot(IOp op)
     {
         _cluster ??= op.Cluster;
         _root = EnsureRegistered(op, null);
@@ -212,7 +212,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "changeTraits(RelNode, RelTraitSet)")]
-    public override IOpNode ChangeTraits(IOpNode op, OpTraitSet toTraits)
+    public override IOp ChangeTraits(IOp op, OpTraitSet toTraits)
     {
         var subset = EnsureRegistered(op, null);
         return EquivRoot(subset.Set).GetOrCreateSubset(toTraits, required: true);
@@ -220,7 +220,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "findBestExp()")]
-    public override IOpNode FindBestPlan()
+    public override IOp FindBestPlan()
     {
         if (_root is null)
             throw new InvalidOperationException("No root has been set.");
@@ -236,7 +236,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     /// when that is <c>null</c>), returning the subset it lands in.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "register(RelNode, RelNode)")]
-    internal OpSubset Register(IOpNode op, IOpNode? equivalent)
+    internal OpSubset Register(IOp op, IOp? equivalent)
     {
         OpSet? set = null;
         if (equivalent is not null)
@@ -249,7 +249,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "ensureRegistered(RelNode, RelNode)")]
-    internal OpSubset EnsureRegistered(IOpNode op, IOpNode? equivalent)
+    internal OpSubset EnsureRegistered(IOp op, IOp? equivalent)
     {
         if (op is OpSubset subset)
             return subset;
@@ -285,7 +285,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "registerImpl(RelNode, RelSet)")]
-    OpSubset RegisterImpl(IOpNode op, OpSet? set)
+    OpSubset RegisterImpl(IOp op, OpSet? set)
     {
         if (op is OpSubset subset)
             return RegisterSubset(set, subset);
@@ -349,7 +349,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "onRegister(RelOptPlanner)")]
-    IOpNode OnRegister(IOpNode op)
+    IOp OnRegister(IOp op)
     {
         if (op.Children.IsEmpty)
             return op;
@@ -361,7 +361,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
         var bridge = op is IConverter;
         var convention = op.Traits.Convention;
 
-        var children = ImmutableArray.CreateBuilder<IOpNode>(op.Children.Length);
+        var children = ImmutableArray.CreateBuilder<IOp>(op.Children.Length);
         foreach (var child in op.Children)
         {
             var childSubset = EnsureRegistered(child, null);
@@ -375,7 +375,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "addRelToSet(RelNode, RelSet)")]
-    OpSubset AddOpToSet(IOpNode op, OpSet set)
+    OpSubset AddOpToSet(IOp op, OpSet set)
     {
         var subset = set.Add(op);
         _opToSubset[op] = subset;
@@ -384,12 +384,12 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "propagateCostImprovements(RelNode)")]
-    internal void PropagateCostImprovements(IOpNode op)
+    internal void PropagateCostImprovements(IOp op)
     {
         // A best-first worklist: ops whose cost may have improved, processed cheapest-first. The cost
         // for each op lives in the map (read from there, not the heap); the heap only orders the work.
-        var propagateRels = new Dictionary<IOpNode, IOpCost>(ReferenceEqualityComparer.Instance);
-        var propagateHeap = new PriorityQueue<IOpNode, IOpCost>(Comparer<IOpCost>.Create(
+        var propagateRels = new Dictionary<IOp, IOpCost>(ReferenceEqualityComparer.Instance);
+        var propagateHeap = new PriorityQueue<IOp, IOpCost>(Comparer<IOpCost>.Create(
             (a, b) => a.IsLessThan(b) ? -1 : b.IsLessThan(a) ? 1 : 0));
 
         propagateRels[op] = GetCost(op);
@@ -435,7 +435,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     static bool CostEquals(IOpCost a, IOpCost b) => !a.IsLessThan(b) && !b.IsLessThan(a);
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getCost(RelNode, RelMetadataQuery)")]
-    IOpCost GetCost(IOpNode op)
+    IOpCost GetCost(IOp op)
     {
         if (op is OpSubset subset)
             return subset.BestCost;
@@ -452,7 +452,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     /// that could bind an op of this class; each such operand seeds a match that solves outward.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "fireRules(RelNode)")]
-    internal void FireRules(IOpNode op)
+    internal void FireRules(IOp op)
     {
         if (!_classOperands.TryGetValue(op.GetType(), out var operands))
             return;
@@ -467,33 +467,33 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     /// / <c>Contains</c> live on <see cref="OpSubset"/>.)
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getSubsetNonNull(RelNode)")]
-    internal OpSubset GetSubsetNonNull(IOpNode op) => _opToSubset[op];
+    internal OpSubset GetSubsetNonNull(IOp op) => _opToSubset[op];
 
     /// <summary>
     /// The subset an op belongs to, or <c>null</c> if it is not registered (or has been removed).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getSubset(RelNode)")]
-    internal OpSubset? GetSubset(IOpNode op) => _opToSubset.GetValueOrDefault(op);
+    internal OpSubset? GetSubset(IOp op) => _opToSubset.GetValueOrDefault(op);
 
     /// <summary>
     /// Prunes an op: marks it as having zero importance, so it is not added to a set on registration and
     /// no rule fires on a match that touches it.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "prune(RelNode)")]
-    public override void Prune(IOpNode op) => _prunedOps.Add(op);
+    public override void Prune(IOp op) => _prunedOps.Add(op);
 
     /// <summary>
     /// Whether <paramref name="op"/> has been pruned.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "prunedOps")]
-    internal bool IsPruned(IOpNode op) => _prunedOps.Contains(op);
+    internal bool IsPruned(IOp op) => _prunedOps.Contains(op);
 
     /// <summary>
     /// Propagates pruning across a newly discovered equivalence: if <paramref name="duplicate"/> is
     /// pruned, then <paramref name="op"/> (equivalent to it) is pruned too.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "checkPruned(RelNode, RelNode)")]
-    void CheckPruned(IOpNode op, IOpNode duplicate)
+    void CheckPruned(IOp op, IOp duplicate)
     {
         if (_prunedOps.Contains(duplicate))
             _prunedOps.Add(op);
@@ -528,9 +528,9 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     /// Whether an op is logical: not physical, and not already in the requested root convention.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "isLogical(RelNode)")]
-    internal bool IsLogical(IOpNode op)
+    internal bool IsLogical(IOp op)
     {
-        return op is not IPhysicalNode && !op.Convention.Equals(RootConvention);
+        return op is not IPhysicalOp && !op.Convention.Equals(RootConvention);
     }
 
     /// <summary>
@@ -549,27 +549,27 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     /// Whether an op has been registered.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "isRegistered(RelNode)")]
-    internal bool IsRegistered(IOpNode op) => _opToSubset.ContainsKey(op);
+    internal bool IsRegistered(IOp op) => _opToSubset.ContainsKey(op);
 
     /// <summary>
     /// The live set a registered op belongs to.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getSet(RelNode)")]
-    internal OpSet GetSet(IOpNode op) => EquivRoot(_opToSubset[op].Set);
+    internal OpSet GetSet(IOp op) => EquivRoot(_opToSubset[op].Set);
 
     /// <summary>
     /// The lower bound of an op's cost. Pending the metadata subsystem this is the trivial zero bound,
     /// so the top-down search keeps its branch-and-bound structure but performs no lower-bound pruning.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getLowerBound(RelNode)")]
-    internal IOpCost GetLowerBound(IOpNode op) => ZeroCost;
+    internal IOpCost GetLowerBound(IOp op) => ZeroCost;
 
     /// <summary>
     /// The upper bound to allow an op's inputs, given the op's own upper bound: the bound minus the
     /// op's self cost.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "upperBoundForInputs(RelNode, RelOptCost)")]
-    internal IOpCost UpperBoundForInputs(IOpNode op, IOpCost upperBound)
+    internal IOpCost UpperBoundForInputs(IOp op, IOpCost upperBound)
     {
         if (!upperBound.IsInfinite)
         {
@@ -610,7 +610,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     /// member, or <c>null</c> if no chain reaches the traits.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "changeTraitsUsingConverters(RelNode, RelTraitSet)")]
-    internal IOpNode? ChangeTraitsUsingConverters(IOpNode op, OpTraitSet toTraits)
+    internal IOp? ChangeTraitsUsingConverters(IOp op, OpTraitSet toTraits)
     {
         var subset = (OpSubset)op;
         if (subset.Traits.Equals(toTraits))
@@ -718,7 +718,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     sealed class ConversionStep
     {
 
-        public ConversionStep(OpTraitSet result, Func<IOpNode, IOpNode?> convert)
+        public ConversionStep(OpTraitSet result, Func<IOp, IOp?> convert)
         {
             Result = result;
             Convert = convert;
@@ -726,7 +726,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
 
         public OpTraitSet Result { get; }
 
-        public Func<IOpNode, IOpNode?> Convert { get; }
+        public Func<IOp, IOp?> Convert { get; }
 
     }
 
@@ -798,7 +798,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     /// ops into the surviving set).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "mapRel2Subset")]
-    internal void MapOpToSubset(IOpNode op, OpSubset subset) => _opToSubset[op] = subset;
+    internal void MapOpToSubset(IOp op, OpSubset subset) => _opToSubset[op] = subset;
 
     /// <summary>
     /// Re-points an op's child subsets at their live (merged) sets, rebuilding the op if any child
@@ -806,10 +806,10 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     /// re-pointing produces a fresh copy rather than mutating in place.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "fixUpInputs(RelNode)")]
-    IOpNode? FixUpInputs(IOpNode op)
+    IOp? FixUpInputs(IOp op)
     {
         var changed = false;
-        var children = ImmutableArray.CreateBuilder<IOpNode>(op.Children.Length);
+        var children = ImmutableArray.CreateBuilder<IOp>(op.Children.Length);
         foreach (var child in op.Children)
         {
             var childSubset = (OpSubset)child;
@@ -832,7 +832,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     /// in place. If the recomputed op coincides with an existing one, their sets are merged instead.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "rename(RelNode)")]
-    internal void Rename(IOpNode op)
+    internal void Rename(IOp op)
     {
         if (!_opToSubset.TryGetValue(op, out var subset))
             return;

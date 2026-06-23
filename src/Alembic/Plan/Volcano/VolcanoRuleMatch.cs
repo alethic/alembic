@@ -17,7 +17,7 @@ public sealed class VolcanoRuleMatch : VolcanoRuleCall
 {
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "VolcanoRuleMatch(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    internal VolcanoRuleMatch(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOpNode> ops)
+    internal VolcanoRuleMatch(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops)
         : base(planner, operand0, ops)
     {
         // A completed match must have bound an op to every operand.

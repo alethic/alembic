@@ -28,7 +28,7 @@ public interface IConvention : IOpTrait
 
     /// <summary>
     /// The op interface that members of this convention are expected to implement. Defaults to
-    /// <see cref="IOpNode"/> for conventions that impose no marker.
+    /// <see cref="IOp"/> for conventions that impose no marker.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention", "getInterface()")]
     Type Interface { get; }
@@ -52,7 +52,7 @@ public interface IConvention : IOpTrait
     /// unimplemented.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention", "enforce(RelNode, RelTraitSet)")]
-    IOpNode? Enforce(IOpNode input, OpTraitSet required)
+    IOp? Enforce(IOp input, OpTraitSet required)
     {
         throw new NotImplementedException($"{GetType().Name}.Enforce is not implemented.");
     }

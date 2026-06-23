@@ -14,13 +14,13 @@ namespace Alembic.Plan.Hep;
 public sealed class HepRuleCall : OpRuleCall
 {
 
-    readonly List<IOpNode> _results = new List<IOpNode>();
+    readonly List<IOp> _results = new List<IOp>();
 
     /// <summary>
     /// Creates a call seeded at <paramref name="operand0"/> over the operand-bound ops.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRuleCall", "HepRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>, List<RelNode>)")]
-    public HepRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOpNode> ops)
+    public HepRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops)
         : base(planner, operand0, ops)
     {
 
@@ -30,7 +30,7 @@ public sealed class HepRuleCall : OpRuleCall
     /// The equivalents the rule registered, in the order it registered them.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRuleCall", "getResults()")]
-    public IReadOnlyList<IOpNode> Results => _results;
+    public IReadOnlyList<IOp> Results => _results;
 
     /// <inheritdoc />
     /// <remarks>
@@ -39,7 +39,7 @@ public sealed class HepRuleCall : OpRuleCall
     /// has no role here and is ignored.
     /// </remarks>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRuleCall", "transformTo(RelNode, Map<RelNode, RelNode>, RelHintsPropagator)")]
-    public override void TransformTo(IOpNode equivalent, IReadOnlyDictionary<IOpNode, IOpNode> equiv)
+    public override void TransformTo(IOp equivalent, IReadOnlyDictionary<IOp, IOp> equiv)
     {
         _results.Add(equivalent);
     }

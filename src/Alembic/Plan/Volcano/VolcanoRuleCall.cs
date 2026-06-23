@@ -23,17 +23,17 @@ public class VolcanoRuleCall : OpRuleCall
     /// the match solves outward.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "rels")]
-    internal IOpNode?[] Rels { get; }
+    internal IOp?[] Rels { get; }
 
     /// <summary>
     /// Creates a call seeded at <paramref name="operand0"/>, with no ops bound yet.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand)")]
     internal VolcanoRuleCall(VolcanoPlanner planner, OpRuleOperand operand0)
-        : base(planner, operand0, ImmutableArray<IOpNode>.Empty)
+        : base(planner, operand0, ImmutableArray<IOp>.Empty)
     {
         _planner = planner;
-        Rels = new IOpNode?[operand0.Rule.Operands.Length];
+        Rels = new IOp?[operand0.Rule.Operands.Length];
     }
 
     /// <summary>
@@ -41,11 +41,11 @@ public class VolcanoRuleCall : OpRuleCall
     /// <paramref name="operand0"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    internal VolcanoRuleCall(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOpNode> ops)
+    internal VolcanoRuleCall(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops)
         : base(planner, operand0, ops)
     {
         _planner = planner;
-        Rels = new IOpNode?[operand0.Rule.Operands.Length];
+        Rels = new IOp?[operand0.Rule.Operands.Length];
         for (int i = 0; i < ops.Length; i++)
             Rels[i] = ops[i];
     }
@@ -90,10 +90,10 @@ public class VolcanoRuleCall : OpRuleCall
     /// secondary equivalences in <paramref name="equiv"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "transformTo(RelNode, Map<RelNode, RelNode>, RelHintsPropagator)")]
-    public override void TransformTo(IOpNode equivalent, IReadOnlyDictionary<IOpNode, IOpNode> equiv)
+    public override void TransformTo(IOp equivalent, IReadOnlyDictionary<IOp, IOp> equiv)
     {
         // A transformation rule stays logical; it may not produce a physical op.
-        if (equivalent is IPhysicalNode && Rule is ITransformationRule)
+        if (equivalent is IPhysicalOp && Rule is ITransformationRule)
             throw new InvalidOperationException($"'{equivalent.GetType().Name}' is a physical op, which the transformation rule '{Rule.Description}' may not produce.");
 
         // Register the explicit equivalences first, so registering the root below does not register them
@@ -109,7 +109,7 @@ public class VolcanoRuleCall : OpRuleCall
     /// Seeds the match with <paramref name="op"/> in <see cref="OpRuleCall.Operand0"/>'s slot and solves the rest.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "match(RelNode)")]
-    internal void Match(IOpNode op)
+    internal void Match(IOp op)
     {
         const int solve = 0;
         int operandOrdinal = Operand0.SolveOrder[solve];
@@ -142,7 +142,7 @@ public class VolcanoRuleCall : OpRuleCall
         var previous = Rels[previousOperandOrdinal]!;
 
         OpRuleOperand parentOperand;
-        IEnumerable<IOpNode> successors;
+        IEnumerable<IOp> successors;
         if (ascending)
         {
             // The operand being solved is an ancestor of the previous one; climb to the previous op's
@@ -170,7 +170,7 @@ public class VolcanoRuleCall : OpRuleCall
             else
             {
                 // The parent does not have the input this operand expects.
-                successors = Array.Empty<IOpNode>();
+                successors = Array.Empty<IOp>();
             }
         }
 
@@ -201,9 +201,9 @@ public class VolcanoRuleCall : OpRuleCall
         }
     }
 
-    IEnumerable<IOpNode> AllOpsInInputs(ImmutableArray<IOpNode> inputs)
+    IEnumerable<IOp> AllOpsInInputs(ImmutableArray<IOp> inputs)
     {
-        var seen = new HashSet<IOpNode>(ReferenceEqualityComparer.Instance);
+        var seen = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
         foreach (var input in inputs)
         {
             if (!seen.Add(input))

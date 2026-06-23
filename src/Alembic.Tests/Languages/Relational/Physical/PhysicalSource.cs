@@ -13,13 +13,13 @@ namespace Alembic.Tests.Languages.Relational.Physical;
 /// op it can natively deliver any requested ordering (modelling an indexed read): having no inputs,
 /// it passes a required trait set straight through to itself.
 /// </summary>
-sealed class PhysicalSource : AbstractOp, IPhysicalNode
+sealed class PhysicalSource : AbstractOp, IPhysicalOp
 {
 
     readonly string _table;
 
     public PhysicalSource(OpCluster cluster, OpTraitSet traits, string table)
-        : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
+        : base(cluster, traits, ImmutableArray<IOp>.Empty)
     {
         _table = table;
     }
@@ -40,7 +40,7 @@ sealed class PhysicalSource : AbstractOp, IPhysicalNode
         return writer;
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new PhysicalSource(Cluster, traits, _table);
     }

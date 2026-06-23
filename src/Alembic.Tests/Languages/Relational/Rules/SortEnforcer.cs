@@ -21,7 +21,7 @@ sealed class SortEnforcer : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override IOpNode? Convert(IOpNode op)
+    public override IOp? Convert(IOp op)
     {
         // The operand also admits already-sorted ops (sorted satisfies an unsorted requirement),
         // so decline those rather than stacking a redundant sort.

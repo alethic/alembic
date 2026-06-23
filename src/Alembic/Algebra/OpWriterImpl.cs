@@ -5,7 +5,7 @@ namespace Alembic.Algebra;
 
 /// <summary>
 /// The default <see cref="IOpWriter"/>: renders an op and its inputs as an indented plan tree. Each
-/// op contributes its terms (via <see cref="IOpNode.Explain"/>); <see cref="Done"/> emits the op's line
+/// op contributes its terms (via <see cref="IOp.Explain"/>); <see cref="Done"/> emits the op's line
 /// — its type, traits, and attributes — and then recurses into its inputs, one indent level deeper.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.externalize.RelWriterImpl")]
@@ -35,7 +35,7 @@ public sealed class OpWriterImpl : IOpWriter
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.externalize.RelWriterImpl", "done(RelNode)")]
-    public IOpWriter Done(IOpNode op)
+    public IOpWriter Done(IOp op)
     {
         var values = _values.ToArray();
         _values.Clear();
@@ -44,7 +44,7 @@ public sealed class OpWriterImpl : IOpWriter
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.externalize.RelWriterImpl", "explain_(RelNode, List<Pair<String, Object>>)")]
-    void Explain(IOpNode op, (string Name, object? Value)[] values)
+    void Explain(IOp op, (string Name, object? Value)[] values)
     {
         _builder.Append(' ', _spaces);
         _builder.Append(op.GetType().Name).Append(' ').Append(op.Traits);
@@ -53,7 +53,7 @@ public sealed class OpWriterImpl : IOpWriter
         foreach (var (name, value) in values)
         {
             // Inputs are items whose value is an op; they are recursed into below, not printed inline.
-            if (value is IOpNode)
+            if (value is IOp)
                 continue;
 
             _builder.Append(attributes++ == 0 ? " (" : ", ").Append(name).Append('=').Append(value);

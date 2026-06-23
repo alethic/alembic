@@ -42,7 +42,7 @@ public sealed class OpSet
     /// Every op in the set (across all subsets).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "rels")]
-    public List<IOpNode> Ops { get; } = new List<IOpNode>();
+    public List<IOp> Ops { get; } = new List<IOp>();
 
     /// <summary>
     /// The subsets of this set, one per distinct trait set.
@@ -54,7 +54,7 @@ public sealed class OpSet
     /// Ops (in other sets) that reference a subset of this set as a child.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "parents")]
-    public List<IOpNode> Parents { get; } = new List<IOpNode>();
+    public List<IOp> Parents { get; } = new List<IOp>();
 
     /// <summary>
     /// Set when this set is merged into another; the live set is reached by following the chain.
@@ -94,7 +94,7 @@ public sealed class OpSet
     /// subset has no best member yet.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "rel")]
-    public IOpNode? Rel { get; private set; }
+    public IOp? Rel { get; private set; }
 
     /// <summary>
     /// The subset with exactly the given traits, or <c>null</c>.
@@ -226,7 +226,7 @@ public sealed class OpSet
     /// subset if needed) and returning the subset.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "add(RelNode)")]
-    internal OpSubset Add(IOpNode op)
+    internal OpSubset Add(IOp op)
     {
         var subset = GetOrCreateSubset(op.Traits, op.IsEnforcer);
         subset.Add(op);
@@ -239,7 +239,7 @@ public sealed class OpSet
     /// the caller, <see cref="OpSubset.Add"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "addInternal(RelNode)")]
-    internal void AddInternal(IOpNode op)
+    internal void AddInternal(IOp op)
     {
         if (!Ops.Contains(op))
             Ops.Add(op);
@@ -252,7 +252,7 @@ public sealed class OpSet
     /// from the planner).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "obliterateRelNode(RelNode)")]
-    internal void ObliterateOp(IOpNode op) => Parents.Remove(op);
+    internal void ObliterateOp(IOp op) => Parents.Remove(op);
 
     /// <summary>
     /// The live sets this set's (non-converter) members consume as inputs — its child sets in the
@@ -300,7 +300,7 @@ public sealed class OpSet
 
         // Parents referenced subsets of the now-dead set as children; re-point them at the surviving
         // set, recomputing their digests. Snapshot first, since re-pointing mutates the parent lists.
-        var parents = new List<IOpNode>(other.Parents);
+        var parents = new List<IOp>(other.Parents);
         Parents.AddRange(other.Parents);
         other.Parents.Clear();
 

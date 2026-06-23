@@ -14,17 +14,17 @@ namespace Alembic.Tests.Languages.Expression.Physical;
 sealed class PhysicalFma : AbstractOp
 {
 
-    public PhysicalFma(OpTraitSet traits, IOpNode a, IOpNode b, IOpNode c)
+    public PhysicalFma(OpTraitSet traits, IOp a, IOp b, IOp c)
         : base(a.Cluster, traits, ImmutableArray.Create(a, b, c))
     {
 
     }
 
-    public IOpNode A => Children[0];
+    public IOp A => Children[0];
 
-    public IOpNode B => Children[1];
+    public IOp B => Children[1];
 
-    public IOpNode C => Children[2];
+    public IOp C => Children[2];
 
     public override IOpWriter ExplainTerms(IOpWriter writer)
     {
@@ -35,7 +35,7 @@ sealed class PhysicalFma : AbstractOp
         return writer;
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new PhysicalFma(traits, children[0], children[1], children[2]);
     }

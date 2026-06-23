@@ -102,7 +102,7 @@ public abstract class OpRule
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "any()")]
     protected static OpRuleOperand Any<TOp>()
-        where TOp : IOpNode
+        where TOp : IOp
     {
         return new OpRuleOperand(typeof(TOp), RuleOperandChildPolicy.Any);
     }
@@ -112,8 +112,8 @@ public abstract class OpRule
     /// regardless of its children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "any()")]
-    protected static OpRuleOperand Any<TOp>(Func<IOpNode, bool> predicate)
-        where TOp : IOpNode
+    protected static OpRuleOperand Any<TOp>(Func<IOp, bool> predicate)
+        where TOp : IOp
     {
         return new OpRuleOperand(typeof(TOp), predicate, RuleOperandChildPolicy.Any);
     }
@@ -123,7 +123,7 @@ public abstract class OpRule
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "none()")]
     protected static OpRuleOperand Leaf<TOp>()
-        where TOp : IOpNode
+        where TOp : IOp
     {
         return new OpRuleOperand(typeof(TOp), RuleOperandChildPolicy.Leaf);
     }
@@ -134,7 +134,7 @@ public abstract class OpRule
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "some(RelOptRuleOperand, RelOptRuleOperand...)")]
     protected static OpRuleOperand Some<TOp>(params OpRuleOperand[] children)
-        where TOp : IOpNode
+        where TOp : IOp
     {
         return new OpRuleOperand(typeof(TOp), RuleOperandChildPolicy.Some, children);
     }
@@ -145,7 +145,7 @@ public abstract class OpRule
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "unordered(RelOptRuleOperand, RelOptRuleOperand...)")]
     protected static OpRuleOperand Unordered<TOp>(params OpRuleOperand[] children)
-        where TOp : IOpNode
+        where TOp : IOp
     {
         return new OpRuleOperand(typeof(TOp), RuleOperandChildPolicy.Unordered, children);
     }
@@ -156,7 +156,7 @@ public abstract class OpRule
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "convertOperand(Class, Predicate, RelTrait)")]
     protected static OpRuleOperand ConvertOperand<TOp>(IOpTrait trait)
-        where TOp : IOpNode
+        where TOp : IOp
     {
         return new OpRuleOperand(typeof(TOp), trait, RuleOperandChildPolicy.Any);
     }

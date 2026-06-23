@@ -35,7 +35,7 @@ public class SharedDagTests
 
         // (2 * 3) + (2 * 3): the two multiplies are the same subexpression, so the graph interns them to
         // one vertex. Folding it once rewrites both occurrences, and the result shares one op.
-        IOpNode root = new Add(
+        IOp root = new Add(
             logical,
             new Multiply(logical, new Literal(cluster, logical, 2), new Literal(cluster, logical, 3)),
             new Multiply(logical, new Literal(cluster, logical, 2), new Literal(cluster, logical, 3)));

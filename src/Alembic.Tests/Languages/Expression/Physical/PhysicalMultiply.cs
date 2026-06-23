@@ -11,13 +11,13 @@ namespace Alembic.Tests.Languages.Expression.Physical;
 sealed class PhysicalMultiply : BiOp
 {
 
-    public PhysicalMultiply(OpTraitSet traits, IOpNode left, IOpNode right)
+    public PhysicalMultiply(OpTraitSet traits, IOp left, IOp right)
         : base(traits, left, right)
     {
 
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new PhysicalMultiply(traits, children[0], children[1]);
     }

@@ -23,7 +23,7 @@ sealed class VariableConverter : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override IOpNode? Convert(IOpNode op)
+    public override IOp? Convert(IOp op)
     {
         if (op is Variable variable)
             return new PhysicalVariable(variable.Cluster, _physical, variable.Name);

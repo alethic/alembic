@@ -15,7 +15,7 @@ sealed class PhysicalIndexSource : AbstractOp
     readonly string _table;
 
     public PhysicalIndexSource(OpCluster cluster, OpTraitSet traits, string table)
-        : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
+        : base(cluster, traits, ImmutableArray<IOp>.Empty)
     {
         _table = table;
     }
@@ -31,7 +31,7 @@ sealed class PhysicalIndexSource : AbstractOp
         return writer;
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new PhysicalIndexSource(Cluster, traits, _table);
     }

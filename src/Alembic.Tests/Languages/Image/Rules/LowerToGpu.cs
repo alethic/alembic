@@ -18,7 +18,7 @@ sealed class LowerToGpu : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override IOpNode? Convert(IOpNode op)
+    public override IOp? Convert(IOp op)
     {
         // A CPU-only operation has no GPU form; the planner reaches its result on the GPU by uploading.
         if (op is IImageOperation image && !image.SupportsGpu)

@@ -5,9 +5,9 @@ using Alembic.Plan;
 namespace Alembic.Algebra;
 
 /// <summary>
-/// Convenience base for an <see cref="IOpNode"/> with exactly one child. It lists the child as an input
+/// Convenience base for an <see cref="IOp"/> with exactly one child. It lists the child as an input
 /// term; subclasses add their own attributes in <see cref="AbstractOp.ExplainTerms"/> and override
-/// <see cref="IOpNode.Copy"/>.
+/// <see cref="IOp.Copy"/>.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel")]
 public abstract class SingleOp : AbstractOp
@@ -17,7 +17,7 @@ public abstract class SingleOp : AbstractOp
     /// Initializes the op with its traits and single child.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel", "SingleRel(RelOptCluster, RelTraitSet, RelNode)")]
-    protected SingleOp(OpTraitSet traits, IOpNode child)
+    protected SingleOp(OpTraitSet traits, IOp child)
         : base(child.Cluster, traits, ImmutableArray.Create(child))
     {
 
@@ -27,7 +27,7 @@ public abstract class SingleOp : AbstractOp
     /// This op's single child.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel", "getInput()")]
-    public IOpNode Child => Children[0];
+    public IOp Child => Children[0];
 
     /// <inheritdoc />
     public override IOpWriter ExplainTerms(IOpWriter writer)

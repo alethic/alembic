@@ -15,7 +15,7 @@ sealed class Load : AbstractOp, IImageOperation
     readonly string _source;
 
     public Load(OpCluster cluster, OpTraitSet traits, string source)
-        : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
+        : base(cluster, traits, ImmutableArray<IOp>.Empty)
     {
         _source = source;
     }
@@ -36,7 +36,7 @@ sealed class Load : AbstractOp, IImageOperation
         return writer;
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new Load(Cluster, traits, _source);
     }

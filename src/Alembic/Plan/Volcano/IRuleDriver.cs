@@ -25,7 +25,7 @@ public interface IRuleDriver
     /// Notifies the driver that an op has been added to a subset.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleDriver", "onProduce(RelNode, RelSubset)")]
-    void OnProduce(IOpNode op, OpSubset subset);
+    void OnProduce(IOp op, OpSubset subset);
 
     /// <summary>
     /// Notifies the driver that two sets have been merged.

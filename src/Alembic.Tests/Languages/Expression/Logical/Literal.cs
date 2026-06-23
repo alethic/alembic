@@ -14,7 +14,7 @@ sealed class Literal : AbstractOp
     readonly int _value;
 
     public Literal(OpCluster cluster, OpTraitSet traits, int value)
-        : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
+        : base(cluster, traits, ImmutableArray<IOp>.Empty)
     {
         _value = value;
     }
@@ -28,7 +28,7 @@ sealed class Literal : AbstractOp
         return writer;
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new Literal(Cluster, traits, _value);
     }

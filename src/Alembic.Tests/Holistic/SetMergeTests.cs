@@ -31,7 +31,7 @@ public class SetMergeTests
 
         // (2 * 3) + 6 — folding 2*3 to 6 makes the left subtree structurally equal to the right child
         // (which is already its own equivalence set), so the planner must merge the two sets.
-        IOpNode root = new Add(
+        IOp root = new Add(
             logical,
             new Multiply(logical, new Literal(cluster, logical, 2), new Literal(cluster, logical, 3)),
             new Literal(cluster, logical, 6));

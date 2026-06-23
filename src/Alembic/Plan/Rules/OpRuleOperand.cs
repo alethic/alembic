@@ -47,7 +47,7 @@ public enum RuleOperandChildPolicy
 public sealed class OpRuleOperand
 {
 
-    static readonly Func<IOpNode, bool> AlwaysMatches = static _ => true;
+    static readonly Func<IOp, bool> AlwaysMatches = static _ => true;
 
     /// <summary>
     /// Matches ops of <paramref name="matchedClass"/>: with child operands they match positionally
@@ -72,7 +72,7 @@ public sealed class OpRuleOperand
     /// <summary>
     /// Matches ops of <paramref name="matchedClass"/> that also satisfy <paramref name="predicate"/>.
     /// </summary>
-    internal OpRuleOperand(Type matchedClass, Func<IOpNode, bool> predicate, RuleOperandChildPolicy childPolicy, params OpRuleOperand[] children)
+    internal OpRuleOperand(Type matchedClass, Func<IOp, bool> predicate, RuleOperandChildPolicy childPolicy, params OpRuleOperand[] children)
         : this(matchedClass, null, predicate, childPolicy, children)
     {
 
@@ -92,7 +92,7 @@ public sealed class OpRuleOperand
     /// and child operands.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "RelOptRuleOperand(Class, RelTrait, Predicate, RelOptRuleOperandChildPolicy, ImmutableList<RelOptRuleOperand>)")]
-    internal OpRuleOperand(Type matchedClass, IOpTrait? trait, Func<IOpNode, bool> predicate, RuleOperandChildPolicy childPolicy, params OpRuleOperand[] children)
+    internal OpRuleOperand(Type matchedClass, IOpTrait? trait, Func<IOp, bool> predicate, RuleOperandChildPolicy childPolicy, params OpRuleOperand[] children)
     {
         MatchedClass = matchedClass;
         Trait = trait;
@@ -150,7 +150,7 @@ public sealed class OpRuleOperand
     /// An extra condition applied after the class (and trait) test; defaults to always true.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "predicate")]
-    public Func<IOpNode, bool> Predicate { get; }
+    public Func<IOp, bool> Predicate { get; }
 
     /// <summary>
     /// How this operand treats the op's children.
@@ -170,7 +170,7 @@ public sealed class OpRuleOperand
     /// are matched separately, by the matcher, per the <see cref="ChildPolicy"/>).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "matches(RelNode)")]
-    public bool Matches(IOpNode op)
+    public bool Matches(IOp op)
     {
         if (!MatchedClass.IsInstanceOfType(op))
             return false;

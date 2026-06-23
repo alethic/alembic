@@ -11,13 +11,13 @@ namespace Alembic.Tests.Languages.Expression.Logical;
 sealed class Multiply : BiOp
 {
 
-    public Multiply(OpTraitSet traits, IOpNode left, IOpNode right)
+    public Multiply(OpTraitSet traits, IOp left, IOp right)
         : base(traits, left, right)
     {
 
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new Multiply(traits, children[0], children[1]);
     }

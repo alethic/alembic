@@ -28,7 +28,7 @@ public class PruningTests
         var planner = new VolcanoPlanner();
         var cluster = new OpCluster(planner);
         var source = new LogicalSource(cluster, Logical, "t");
-        IOpNode root = new LogicalFilter(Logical, source, "x > 5");
+        IOp root = new LogicalFilter(Logical, source, "x > 5");
 
         planner.AddRule(spy);
         planner.SetRoot(root);
@@ -49,11 +49,11 @@ public class PruningTests
     {
 
         public Spy()
-            : base(Any<IOpNode>())
+            : base(Any<IOp>())
         {
         }
 
-        public List<IOpNode> Fired { get; } = new List<IOpNode>();
+        public List<IOp> Fired { get; } = new List<IOp>();
 
         public override void OnMatch(OpRuleCall call) => Fired.Add(call.Op(0));
 

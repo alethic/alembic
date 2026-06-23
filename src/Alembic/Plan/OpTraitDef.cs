@@ -72,7 +72,7 @@ public abstract class OpTraitDef
     /// converter even when it would carry an infinite cost.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "convert(RelOptPlanner, RelNode, RelTrait, boolean)")]
-    public virtual IOpNode? Convert(IOpPlanner planner, IOpNode op, IOpTrait toTrait, bool allowInfiniteCostConverters)
+    public virtual IOp? Convert(IOpPlanner planner, IOp op, IOpTrait toTrait, bool allowInfiniteCostConverters)
     {
         return null;
     }

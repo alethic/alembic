@@ -28,7 +28,7 @@ public class ImagePlanningTests
         // 10 (load) + 5 (up) + 1 + 1 + 1 + 5 (down) = 23, versus 40 all on the CPU.
         var planner = MakePlanner();
         var cluster = new OpCluster(planner);
-        IOpNode root = Threshold(Grayscale(Blur(Load(cluster, "photo.png"))));
+        IOp root = Threshold(Grayscale(Blur(Load(cluster, "photo.png"))));
 
         var best = Plan(planner, root, Cpu);
 
@@ -52,7 +52,7 @@ public class ImagePlanningTests
     {
         var planner = MakePlanner();
         var cluster = new OpCluster(planner);
-        IOpNode root = Threshold(Grayscale(Blur(Load(cluster, "photo.png"))));
+        IOp root = Threshold(Grayscale(Blur(Load(cluster, "photo.png"))));
 
         var best = Plan(planner, root, Gpu);
 
@@ -71,7 +71,7 @@ public class ImagePlanningTests
         // second run, and downloads the result: CPU -> GPU -> CPU -> GPU -> CPU.
         var planner = MakePlanner();
         var cluster = new OpCluster(planner);
-        IOpNode root = Threshold(Blur(Inpaint(Grayscale(Blur(Load(cluster, "photo.png"))))));
+        IOp root = Threshold(Blur(Inpaint(Grayscale(Blur(Load(cluster, "photo.png"))))));
 
         var best = Plan(planner, root, Cpu);
 
@@ -91,7 +91,7 @@ public class ImagePlanningTests
         // and inserts no transfers at all.
         var planner = MakePlanner();
         var cluster = new OpCluster(planner);
-        IOpNode root = Inpaint(Blur(Inpaint(Load(cluster, "photo.png"))));
+        IOp root = Inpaint(Blur(Inpaint(Load(cluster, "photo.png"))));
 
         var best = Plan(planner, root, Cpu);
 
@@ -100,11 +100,11 @@ public class ImagePlanningTests
         AssertAllCpu(best);
     }
 
-    static IOpNode Load(OpCluster cluster, string source) => new Load(cluster, Logical, source);
-    static IOpNode Blur(IOpNode input) => new Blur(Logical, input);
-    static IOpNode Grayscale(IOpNode input) => new Grayscale(Logical, input);
-    static IOpNode Threshold(IOpNode input) => new Threshold(Logical, input);
-    static IOpNode Inpaint(IOpNode input) => new Inpaint(Logical, input);
+    static IOp Load(OpCluster cluster, string source) => new Load(cluster, Logical, source);
+    static IOp Blur(IOp input) => new Blur(Logical, input);
+    static IOp Grayscale(IOp input) => new Grayscale(Logical, input);
+    static IOp Threshold(IOp input) => new Threshold(Logical, input);
+    static IOp Inpaint(IOp input) => new Inpaint(Logical, input);
 
     static readonly OpTraitSet Logical = OpTraitSet.CreateEmpty().Plus(ImageConventions.Logical);
     static readonly OpTraitSet Cpu = OpTraitSet.CreateEmpty().Plus(ImageConventions.Cpu);
@@ -120,7 +120,7 @@ public class ImagePlanningTests
         return planner;
     }
 
-    IOpNode Plan(VolcanoPlanner planner, IOpNode root, OpTraitSet required)
+    IOp Plan(VolcanoPlanner planner, IOp root, OpTraitSet required)
     {
         planner.SetRoot(root);
         planner.SetRoot(planner.ChangeTraits(root, required));
@@ -129,7 +129,7 @@ public class ImagePlanningTests
         return best;
     }
 
-    static int Count<T>(IOpNode op) where T : IOpNode
+    static int Count<T>(IOp op) where T : IOp
     {
         var count = op is T ? 1 : 0;
         foreach (var child in op.Children)
@@ -138,7 +138,7 @@ public class ImagePlanningTests
         return count;
     }
 
-    static T First<T>(IOpNode op) where T : IOpNode
+    static T First<T>(IOp op) where T : IOp
     {
         if (op is T match)
             return match;
@@ -150,7 +150,7 @@ public class ImagePlanningTests
         throw new Xunit.Sdk.XunitException($"No {typeof(T).Name} found in the plan.");
     }
 
-    static bool TryFirst<T>(IOpNode op, out T found) where T : IOpNode
+    static bool TryFirst<T>(IOp op, out T found) where T : IOp
     {
         if (op is T match)
         {
@@ -166,7 +166,7 @@ public class ImagePlanningTests
         return false;
     }
 
-    static void AssertAllCpu(IOpNode op)
+    static void AssertAllCpu(IOp op)
     {
         Assert.Equal(ImageConventions.Cpu, op.Convention);
 

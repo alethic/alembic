@@ -11,13 +11,13 @@ namespace Alembic.Tests.Languages.Image;
 sealed class Blur : ImageOp
 {
 
-    public Blur(OpTraitSet traits, IOpNode input)
+    public Blur(OpTraitSet traits, IOp input)
         : base(traits, input)
     {
 
     }
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new Blur(traits, children[0]);
     }

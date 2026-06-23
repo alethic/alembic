@@ -18,11 +18,11 @@ public class HepProgramTests
 
     static readonly OpTraitSet Logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical).Plus(Sortedness.Unsorted);
 
-    static IOpNode Tree(OpCluster cluster) => new LogicalFilter(Logical, new LogicalSource(cluster, Logical, "t"), "x > 5");
+    static IOp Tree(OpCluster cluster) => new LogicalFilter(Logical, new LogicalSource(cluster, Logical, "t"), "x > 5");
 
-    static bool IsSorted(IOpNode op) => ReferenceEquals(op.Traits.Get(SortednessTraitDef.Instance), Sortedness.Sorted);
+    static bool IsSorted(IOp op) => ReferenceEquals(op.Traits.Get(SortednessTraitDef.Instance), Sortedness.Sorted);
 
-    static bool AllSorted(IOpNode op)
+    static bool AllSorted(IOp op)
     {
         if (!IsSorted(op))
             return false;
@@ -34,7 +34,7 @@ public class HepProgramTests
         return true;
     }
 
-    static IOpNode Run(HepProgram program)
+    static IOp Run(HepProgram program)
     {
         var planner = new HepPlanner(program);
         planner.SetRoot(Tree(new OpCluster(planner)));

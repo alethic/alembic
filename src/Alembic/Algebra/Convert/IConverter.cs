@@ -8,7 +8,7 @@ namespace Alembic.Algebra.Convert;
 /// input and output are logically equivalent but physically different.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.Converter")]
-public interface IConverter : IOpNode
+public interface IConverter : IOp
 {
 
     /// <summary>
@@ -27,6 +27,6 @@ public interface IConverter : IOpNode
     /// The sole input being converted.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.Converter", "getInput()")]
-    IOpNode Input { get; }
+    IOp Input { get; }
 
 }

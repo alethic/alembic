@@ -29,7 +29,7 @@ sealed class SortednessTraitDef : OpTraitDef<Sortedness>
         return toTrait.Equals(Sortedness.Sorted);
     }
 
-    public override IOpNode? Convert(IOpPlanner planner, IOpNode op, IOpTrait toTrait, bool allowInfiniteCostConverters)
+    public override IOp? Convert(IOpPlanner planner, IOp op, IOpTrait toTrait, bool allowInfiniteCostConverters)
     {
         if (!toTrait.Equals(Sortedness.Sorted) || ReferenceEquals(op.Traits.Get(Instance), Sortedness.Sorted))
             return null;

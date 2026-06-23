@@ -55,7 +55,7 @@ public interface IOpPlanner
     /// Prunes an op so that the planner no longer expands it. The default planner ignores this.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "prune(RelNode)")]
-    void Prune(IOpNode op);
+    void Prune(IOp op);
 
     /// <summary>
     /// Resets the planner's registered state (rules and any search state) so it can be reused. The base
@@ -93,13 +93,13 @@ public interface IOpPlanner
     /// Sets the root of the plan to optimize.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "setRoot(RelNode)")]
-    void SetRoot(IOpNode op);
+    void SetRoot(IOp op);
 
     /// <summary>
     /// The current root of the plan, or <c>null</c> if none is set.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "getRoot()")]
-    IOpNode? Root { get; }
+    IOp? Root { get; }
 
     /// <summary>
     /// Returns an equivalent of <paramref name="op"/> with the given traits, registering it if needed —
@@ -107,12 +107,12 @@ public interface IOpPlanner
     /// planner's root; compose it with <see cref="SetRoot"/> to optimize toward those traits.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "changeTraits(RelNode, RelTraitSet)")]
-    IOpNode ChangeTraits(IOpNode op, OpTraitSet toTraits);
+    IOp ChangeTraits(IOp op, OpTraitSet toTraits);
 
     /// <summary>
     /// Runs the planner and returns the resulting plan.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "findBestExp()")]
-    IOpNode FindBestPlan();
+    IOp FindBestPlan();
 
 }

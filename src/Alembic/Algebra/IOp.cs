@@ -15,7 +15,7 @@ namespace Alembic.Algebra;
 /// is the separate <see cref="DeepEquals"/> / <see cref="DeepHashCode"/> contract.
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode")]
-public interface IOpNode
+public interface IOp
 {
 
     /// <summary>
@@ -34,19 +34,19 @@ public interface IOpNode
     /// This op's child ops, in order.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getInputs()")]
-    ImmutableArray<IOpNode> Children { get; }
+    ImmutableArray<IOp> Children { get; }
 
     /// <summary>
     /// Produces a copy of this op with the given traits and children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "copy(RelTraitSet, List<RelNode>)")]
-    IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children);
+    IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children);
 
     /// <summary>
     /// Whether this op is structurally equivalent to <paramref name="other"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "deepEquals(Object)")]
-    bool DeepEquals(IOpNode? other);
+    bool DeepEquals(IOp? other);
 
     /// <summary>
     /// A hash consistent with <see cref="DeepEquals"/>.
@@ -101,7 +101,7 @@ public interface IOpNode
     /// vertex) returns the concrete op it stands for; an ordinary op returns itself.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "stripped()")]
-    IOpNode Stripped => this;
+    IOp Stripped => this;
 
     /// <summary>
     /// This op's own cost, not counting its inputs. A cost-based planner consults it; a heuristic

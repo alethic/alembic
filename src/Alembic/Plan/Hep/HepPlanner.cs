@@ -27,10 +27,10 @@ public sealed class HepPlanner : AbstractOpPlanner
     readonly Dictionary<IOpDigest, HepOpVertex> _mapDigestToVertex = new Dictionary<IOpDigest, HepOpVertex>();
     readonly DirectedGraph<HepOpVertex, DefaultEdge> _graph = DefaultDirectedGraph<HepOpVertex, DefaultEdge>.Create();
     readonly Dictionary<FiredKey, HashSet<OpRule>> _firedRulesCache = new Dictionary<FiredKey, HashSet<OpRule>>();
-    readonly Dictionary<IOpNode, HashSet<FiredKey>> _firedRulesCacheIndex = new Dictionary<IOpNode, HashSet<FiredKey>>();
+    readonly Dictionary<IOp, HashSet<FiredKey>> _firedRulesCacheIndex = new Dictionary<IOp, HashSet<FiredKey>>();
 
     HepOpVertex? _root;
-    IOpNode? _rootOp;
+    IOp? _rootOp;
     OpTraitSet? _requestedRootTraits;
     int _nTransformations;
     int _graphSizeLastGC;
@@ -101,7 +101,7 @@ public sealed class HepPlanner : AbstractOpPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "setRoot(RelNode)")]
-    public override void SetRoot(IOpNode op)
+    public override void SetRoot(IOp op)
     {
         _rootOp = op;
         _root = AddOpToGraph(op);
@@ -109,7 +109,7 @@ public sealed class HepPlanner : AbstractOpPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "getRoot()")]
-    public override IOpNode? Root => _root;
+    public override IOp? Root => _root;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "clear()")]
@@ -137,7 +137,7 @@ public sealed class HepPlanner : AbstractOpPlanner
     /// request is enforced when <see cref="FindBestPlan"/> finishes.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "changeTraits(RelNode, RelTraitSet)")]
-    public override IOpNode ChangeTraits(IOpNode op, OpTraitSet toTraits)
+    public override IOp ChangeTraits(IOp op, OpTraitSet toTraits)
     {
         if (ReferenceEquals(op, _rootOp) || (_root is not null && ReferenceEquals(op, _root.CurrentOp)))
             _requestedRootTraits = toTraits;
@@ -147,7 +147,7 @@ public sealed class HepPlanner : AbstractOpPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "findBestExp()")]
-    public override IOpNode FindBestPlan()
+    public override IOp FindBestPlan()
     {
         if (_root is null)
             throw new InvalidOperationException("No root has been set.");
@@ -157,7 +157,7 @@ public sealed class HepPlanner : AbstractOpPlanner
         // Get rid of everything except what's in the final plan.
         CollectGarbage();
 
-        var plan = BuildFinalPlan(_root, new Dictionary<HepOpVertex, IOpNode>());
+        var plan = BuildFinalPlan(_root, new Dictionary<HepOpVertex, IOp>());
 
         if (_requestedRootTraits is not null)
             EnsureSatisfies(plan, _requestedRootTraits);
@@ -170,7 +170,7 @@ public sealed class HepPlanner : AbstractOpPlanner
     /// ops in place rather than wrapping them, a complete plan is uniform throughout, so a single
     /// surviving op that falls short means no rule chain could finish the job.
     /// </summary>
-    static void EnsureSatisfies(IOpNode op, OpTraitSet required)
+    static void EnsureSatisfies(IOp op, OpTraitSet required)
     {
         if (!op.Traits.Satisfies(required))
             throw new CannotPlanException($"No plan satisfies the requested traits; '{op.GetType().Name}' remained in convention '{op.Convention}'.");
@@ -558,7 +558,7 @@ public sealed class HepPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "applyTransformationResults(HepRelVertex, HepRuleCall, RelTrait)")]
     HepOpVertex ApplyTransformationResults(HepOpVertex vertex, HepRuleCall call, IOpTrait? parentTrait)
     {
-        IOpNode? bestRel;
+        IOp? bestRel;
         if (call.Results.Count == 1)
         {
             bestRel = call.Results[0];
@@ -619,7 +619,7 @@ public sealed class HepPlanner : AbstractOpPlanner
         return newVertex;
     }
 
-    static bool ShallowEqual(ImmutableArray<IOpNode> a, IReadOnlyList<IOpNode> b)
+    static bool ShallowEqual(ImmutableArray<IOp> a, IReadOnlyList<IOp> b)
     {
         if (a.Length != b.Count)
             return false;
@@ -632,13 +632,13 @@ public sealed class HepPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "addRelToGraph(RelNode, IdentityHashMap<RelNode, HepRelVertex>)")]
-    HepOpVertex AddOpToGraph(IOpNode rel)
+    HepOpVertex AddOpToGraph(IOp rel)
     {
         if (rel is HepOpVertex existing && _graph.VertexSet.Contains(existing))
             return existing;
 
         // Recursively add children, replacing this op's inputs with their vertices.
-        var newInputs = new List<IOpNode>(rel.Children.Length);
+        var newInputs = new List<IOp>(rel.Children.Length);
         foreach (var input in rel.Children)
             newInputs.Add(AddOpToGraph(input));
 
@@ -671,7 +671,7 @@ public sealed class HepPlanner : AbstractOpPlanner
         {
             var parentRel = parent.CurrentOp;
             var inputs = parentRel.Children;
-            ImmutableArray<IOpNode>.Builder? builder = null;
+            ImmutableArray<IOp>.Builder? builder = null;
             for (int i = 0; i < inputs.Length; i++)
             {
                 if (ReferenceEquals(inputs[i], discardedVertex))
@@ -725,7 +725,7 @@ public sealed class HepPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "updateVertex(HepRelVertex, RelNode)")]
-    void UpdateVertex(HepOpVertex vertex, IOpNode rel)
+    void UpdateVertex(HepOpVertex vertex, IOp rel)
     {
         if (!ReferenceEquals(rel, vertex.CurrentOp))
             FireOpDiscarded(vertex.CurrentOp);
@@ -742,7 +742,7 @@ public sealed class HepPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "buildFinalPlan(HepRelVertex)")]
-    IOpNode BuildFinalPlan(HepOpVertex vertex, Dictionary<HepOpVertex, IOpNode> memo)
+    IOp BuildFinalPlan(HepOpVertex vertex, Dictionary<HepOpVertex, IOp> memo)
     {
         if (memo.TryGetValue(vertex, out var done))
             return done;
@@ -751,7 +751,7 @@ public sealed class HepPlanner : AbstractOpPlanner
         FireOpChosen(rel);
 
         var children = rel.Children;
-        ImmutableArray<IOpNode>.Builder? builder = null;
+        ImmutableArray<IOp>.Builder? builder = null;
         for (int i = 0; i < children.Length; i++)
         {
             if (children[i] is HepOpVertex childVertex)
@@ -843,7 +843,7 @@ public sealed class HepPlanner : AbstractOpPlanner
                 RemoveFiredRules(vertex.CurrentOp);
     }
 
-    void RemoveFiredRules(IOpNode rel)
+    void RemoveFiredRules(IOp rel)
     {
         if (!_firedRulesCacheIndex.TryGetValue(rel, out var keys))
             return;
@@ -855,7 +855,7 @@ public sealed class HepPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getCost(RelNode, RelMetadataQuery)")]
-    IOpCost GetCost(IOpNode op)
+    IOpCost GetCost(IOp op)
     {
         var current = op is HepOpVertex vertex ? vertex.CurrentOp : op;
         var cost = current.ComputeSelfCost(this);
@@ -867,14 +867,14 @@ public sealed class HepPlanner : AbstractOpPlanner
 
     // ~ RuleOperand matching (sees through vertices) -----------------------------
 
-    static ImmutableArray<IOpNode>? Match(OpRuleOperand operand, IOpNode op)
+    static ImmutableArray<IOp>? Match(OpRuleOperand operand, IOp op)
     {
-        var bound = new List<IOpNode>();
+        var bound = new List<IOp>();
         return MatchOperand(operand, op, bound) ? bound.ToImmutableArray() : null;
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "matchOperands(RelOptRuleOperand, RelNode, List<RelNode>, Map<RelNode, List<RelNode>>)")]
-    static bool MatchOperand(OpRuleOperand operand, IOpNode op, List<IOpNode> bound)
+    static bool MatchOperand(OpRuleOperand operand, IOp op, List<IOp> bound)
     {
         while (op is HepOpVertex vertex)
             op = vertex.CurrentOp;
@@ -941,10 +941,10 @@ public sealed class HepPlanner : AbstractOpPlanner
     sealed class FiredKey : IEquatable<FiredKey>
     {
 
-        readonly ImmutableArray<IOpNode> _ops;
+        readonly ImmutableArray<IOp> _ops;
         readonly int _hash;
 
-        public FiredKey(ImmutableArray<IOpNode> ops)
+        public FiredKey(ImmutableArray<IOp> ops)
         {
             _ops = ops;
             var hash = new HashCode();

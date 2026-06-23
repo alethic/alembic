@@ -52,7 +52,7 @@ public class CascadesTests
         var cluster = new OpCluster(planner);
         planner.AddRule(spy);
 
-        // PhysicalSource is an IPhysicalNode, so the dispatch table never offers it to a transformation
+        // PhysicalSource is an IPhysicalOp, so the dispatch table never offers it to a transformation
         // rule; the rule is never even attempted on it.
         planner.SetRoot(new PhysicalSource(cluster, Physical, "t"));
         planner.FindBestPlan();
@@ -72,7 +72,7 @@ public class CascadesTests
 
         // Pushing a sorted requirement through the filter yields a sorted filter whose input is required
         // sorted in turn.
-        var passed = Assert.IsType<PhysicalFilter>(((IPhysicalNode)filter).PassThrough(sorted));
+        var passed = Assert.IsType<PhysicalFilter>(((IPhysicalOp)filter).PassThrough(sorted));
         Assert.Same(Sortedness.Sorted, passed.Traits.Get(SortednessTraitDef.Instance));
 
         var input = Assert.IsType<OpSubset>(passed.Input);
@@ -90,7 +90,7 @@ public class CascadesTests
         var filter = new PhysicalFilter(Physical, new PhysicalSource(cluster, Physical, "t"), "x > 5");
 
         // Given a sorted input, the filter derives a sorted output.
-        var derived = Assert.IsType<PhysicalFilter>(((IPhysicalNode)filter).Derive(sorted, 0));
+        var derived = Assert.IsType<PhysicalFilter>(((IPhysicalOp)filter).Derive(sorted, 0));
         Assert.Same(Sortedness.Sorted, derived.Traits.Get(SortednessTraitDef.Instance));
     }
 
@@ -105,7 +105,7 @@ public class CascadesTests
         // with an enforcer (cost 50 + 10 + 100).
         var planner = new VolcanoPlanner();
         var cluster = new OpCluster(planner);
-        IOpNode root = new PhysicalFilter(unsorted, new PhysicalSource(cluster, unsorted, "t"), "x > 5");
+        IOp root = new PhysicalFilter(unsorted, new PhysicalSource(cluster, unsorted, "t"), "x > 5");
 
         planner.SetTopDownOpt(true);
         planner.AddTraitDef(SortednessTraitDef.Instance);
@@ -128,7 +128,7 @@ public class CascadesTests
         var listener = new OpRecordingListener();
         var planner = new VolcanoPlanner();
         var cluster = new OpCluster(planner);
-        IOpNode root = new PhysicalFilter(unsorted, new PhysicalSource(cluster, unsorted, "t"), "x > 5");
+        IOp root = new PhysicalFilter(unsorted, new PhysicalSource(cluster, unsorted, "t"), "x > 5");
 
         planner.SetTopDownOpt(true);
         planner.AddTraitDef(SortednessTraitDef.Instance);
@@ -159,11 +159,11 @@ public class CascadesTests
     {
 
         public SpyTransformationRule()
-            : base(Any<IOpNode>())
+            : base(Any<IOp>())
         {
         }
 
-        public List<IOpNode> Fired { get; } = new List<IOpNode>();
+        public List<IOp> Fired { get; } = new List<IOp>();
 
         public override void OnMatch(OpRuleCall call) => Fired.Add(call.Op(0));
 
@@ -199,7 +199,7 @@ public class CascadesTests
     sealed class OpRecordingListener : IPlannerListener
     {
 
-        public List<IOpNode> Equivalences { get; } = new List<IOpNode>();
+        public List<IOp> Equivalences { get; } = new List<IOp>();
 
         public void OpEquivalenceFound(IPlannerListener.OpEquivalenceEvent e) => Equivalences.Add(e.Op!);
 

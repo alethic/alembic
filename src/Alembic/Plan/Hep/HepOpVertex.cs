@@ -17,11 +17,11 @@ namespace Alembic.Plan.Hep;
 sealed class HepOpVertex : AbstractOp
 {
 
-    IOpNode _currentOp;
+    IOp _currentOp;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "HepRelVertex(RelNode)")]
-    public HepOpVertex(IOpNode currentOp)
-        : base(currentOp.Cluster, currentOp.Traits, ImmutableArray<IOpNode>.Empty)
+    public HepOpVertex(IOp currentOp)
+        : base(currentOp.Cluster, currentOp.Traits, ImmutableArray<IOp>.Empty)
     {
         _currentOp = currentOp;
     }
@@ -30,26 +30,26 @@ sealed class HepOpVertex : AbstractOp
     /// The op currently chosen as the implementation of this vertex.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "getCurrentRel()")]
-    public IOpNode CurrentOp => _currentOp;
+    public IOp CurrentOp => _currentOp;
 
     /// <summary>
     /// This vertex with its wrapping stripped away — its current op.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "stripped()")]
-    public IOpNode Stripped => _currentOp;
+    public IOp Stripped => _currentOp;
 
     /// <summary>
     /// Replaces the implementation for this vertex with a new op.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "replaceRel(RelNode)")]
-    public void ReplaceOp(IOpNode newOp)
+    public void ReplaceOp(IOp newOp)
     {
         _currentOp = newOp;
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "copy(RelTraitSet, List<RelNode>)")]
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return this;
     }
@@ -67,7 +67,7 @@ sealed class HepOpVertex : AbstractOp
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "deepEquals(Object)")]
-    public override bool DeepEquals(IOpNode? other)
+    public override bool DeepEquals(IOp? other)
     {
         return ReferenceEquals(this, other)
             || (other is HepOpVertex vertex && ReferenceEquals(_currentOp, vertex._currentOp));

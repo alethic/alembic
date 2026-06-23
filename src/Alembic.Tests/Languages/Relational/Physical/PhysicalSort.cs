@@ -13,17 +13,17 @@ namespace Alembic.Tests.Languages.Relational.Physical;
 sealed class PhysicalSort : SingleOp
 {
 
-    public PhysicalSort(OpTraitSet traits, IOpNode input)
+    public PhysicalSort(OpTraitSet traits, IOp input)
         : base(traits, input)
     {
 
     }
 
-    public IOpNode Input => Child;
+    public IOp Input => Child;
 
     public override IOpCost ComputeSelfCost(IOpPlanner planner) => planner.CostFactory.MakeCost(50, 0);
 
-    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         return new PhysicalSort(traits, children[0]);
     }

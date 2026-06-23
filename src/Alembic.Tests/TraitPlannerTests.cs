@@ -33,7 +33,7 @@ public class TraitPlannerTests
 
         var planner = new HepPlanner(program);
         var cluster = new OpCluster(planner);
-        IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
+        IOp root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         planner.SetRoot(root);
         var best = planner.FindBestPlan();
@@ -44,7 +44,7 @@ public class TraitPlannerTests
         AssertSorted(best);
     }
 
-    static void AssertSorted(IOpNode op)
+    static void AssertSorted(IOp op)
     {
         Assert.Equal(Sortedness.Sorted, op.Traits.Get(SortednessTraitDef.Instance));
         Assert.Equal(RelationalConventions.Logical, op.Convention);

@@ -11,13 +11,13 @@ namespace Alembic.Tests.Languages.Image;
 abstract class ImageOp : SingleOp, IImageOperation
 {
 
-    protected ImageOp(OpTraitSet traits, IOpNode input)
+    protected ImageOp(OpTraitSet traits, IOp input)
         : base(traits, input)
     {
 
     }
 
-    public IOpNode Input => Child;
+    public IOp Input => Child;
 
     /// <summary>
     /// Whether this operation has a GPU implementation. Most do; CPU-only operations override this.

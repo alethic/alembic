@@ -53,7 +53,7 @@ public interface IPlannerListener
         /// Initializes the event with its planner and the op it concerns (if any).
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RelEvent", "RelEvent(Object, RelNode)")]
-        protected PlannerEvent(IOpPlanner source, IOpNode? op)
+        protected PlannerEvent(IOpPlanner source, IOp? op)
         {
             Source = source;
             Op = op;
@@ -68,7 +68,7 @@ public interface IPlannerListener
         /// The op the event concerns, or <c>null</c>.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RelEvent", "getRel()")]
-        public IOpNode? Op { get; }
+        public IOp? Op { get; }
 
     }
 
@@ -83,7 +83,7 @@ public interface IPlannerListener
         /// Creates the event.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RelChosenEvent", "RelChosenEvent(Object, RelNode)")]
-        public OpChosenEvent(IOpPlanner source, IOpNode? op)
+        public OpChosenEvent(IOpPlanner source, IOp? op)
             : base(source, op)
         {
 
@@ -104,7 +104,7 @@ public interface IPlannerListener
         /// is whether the op carries a physical (non-logical) convention.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RelEquivalenceEvent", "RelEquivalenceEvent(Object, RelNode, Object, boolean)")]
-        public OpEquivalenceEvent(IOpPlanner source, IOpNode op, object? equivalenceClass = null, bool isPhysical = false)
+        public OpEquivalenceEvent(IOpPlanner source, IOp op, object? equivalenceClass = null, bool isPhysical = false)
             : base(source, op)
         {
             EquivalenceClass = equivalenceClass;
@@ -136,7 +136,7 @@ public interface IPlannerListener
         /// Creates the event.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RelDiscardedEvent", "RelDiscardedEvent(Object, RelNode)")]
-        public OpDiscardedEvent(IOpPlanner source, IOpNode op)
+        public OpDiscardedEvent(IOpPlanner source, IOp op)
             : base(source, op)
         {
 
@@ -155,7 +155,7 @@ public interface IPlannerListener
         /// Initializes the event with the rule call.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RuleEvent", "RuleEvent(Object, RelNode, RelOptRuleCall)")]
-        protected RuleEvent(IOpPlanner source, IOpNode? op, OpRuleCall ruleCall)
+        protected RuleEvent(IOpPlanner source, IOp? op, OpRuleCall ruleCall)
             : base(source, op)
         {
             RuleCall = ruleCall;
@@ -180,7 +180,7 @@ public interface IPlannerListener
         /// Creates the event; <paramref name="before"/> is true on the pre-application notification.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RuleAttemptedEvent", "RuleAttemptedEvent(Object, RelNode, RelOptRuleCall, boolean)")]
-        public RuleAttemptedEvent(IOpPlanner source, IOpNode? op, OpRuleCall ruleCall, bool before)
+        public RuleAttemptedEvent(IOpPlanner source, IOp? op, OpRuleCall ruleCall, bool before)
             : base(source, op, ruleCall)
         {
             Before = before;
@@ -205,7 +205,7 @@ public interface IPlannerListener
         /// Creates the event.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RuleProductionEvent", "RuleProductionEvent(Object, RelNode, RelOptRuleCall, boolean)")]
-        public RuleProductionEvent(IOpPlanner source, IOpNode? op, OpRuleCall ruleCall, bool before)
+        public RuleProductionEvent(IOpPlanner source, IOp? op, OpRuleCall ruleCall, bool before)
             : base(source, op, ruleCall, before)
         {
 

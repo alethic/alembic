@@ -19,7 +19,7 @@ sealed class DownloadRule : ConverterRule
 
     public override bool IsGuaranteed => true;
 
-    public override IOpNode? Convert(IOpNode op)
+    public override IOp? Convert(IOp op)
     {
         if (op is Upload)
             return null;
