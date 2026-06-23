@@ -35,6 +35,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     OpCluster? _cluster;
     bool _topDownOpt;
     bool _locked;
+    bool _noneConventionHasInfiniteCost = true;
     int _nextSetId;
 
     /// <summary>
@@ -78,6 +79,13 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "setLocked(boolean)")]
     public void SetLocked(bool locked) => _locked = locked;
+
+    /// <summary>
+    /// Sets whether this planner should consider ops with <see cref="Convention.None"/> to have infinite
+    /// cost or not.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "setNoneConventionHasInfiniteCost(boolean)")]
+    public void SetNoneConventionHasInfiniteCost(bool infinite) => _noneConventionHasInfiniteCost = infinite;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "addRule(RelOptRule)")]
@@ -475,7 +483,15 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
         if (op is OpSubset subset)
             return subset.BestCost;
 
+        if (_noneConventionHasInfiniteCost
+            && op.Convention.Equals(Convention.None))
+            return CostFactory.MakeInfiniteCost();
+
         var cost = op.ComputeSelfCost(this);
+        if (!ZeroCost.IsLessThan(cost))
+            // cost must be positive, so nudge it
+            cost = CostFactory.MakeTinyCost();
+
         foreach (var child in op.Children)
             cost = cost.Plus(GetCost(child));
 
@@ -617,25 +633,32 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     }
 
     /// <summary>
-    /// Puts an <see cref="AbstractConverter"/> into the root's set for each delivered subset whose
-    /// traits differ from the requested root traits. The root is the only place explicit converters are
-    /// needed — everywhere else a parent has already asked for its inputs' convention (see
-    /// <see cref="OnRegister"/>). <see cref="ExpandConversionRule"/> then turns each one into a real
-    /// conversion.
+    /// Puts an <see cref="AbstractConverter"/> into the root's set for each subset that differs from the
+    /// requested root traits by exactly one trait and does not already have a converter. The root is the
+    /// only place explicit converters are needed — everywhere else a parent has already asked for its
+    /// inputs' convention (see <see cref="OnRegister"/>). <see cref="ExpandConversionRule"/> then turns
+    /// each one into a real conversion.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "ensureRootConverters()")]
     void EnsureRootConverters()
     {
-        if (_root is null)
-            return;
-
-        var set = EquivRoot(_root.Set);
-        foreach (var subset in set.Subsets.ToArray())
+        var root = _root!;
+        var subsets = new HashSet<OpSubset>();
+        foreach (var op in root.GetRels())
         {
-            if (subset.Traits.Equals(_root.Traits))
-                continue;
+            if (op is AbstractConverter converter && !_topDownOpt)
+                subsets.Add((OpSubset)converter.Input);
+        }
 
-            Register(new AbstractConverter(_root.Traits, subset), _root);
+        foreach (var subset in root.Set.Subsets)
+        {
+            var difference = root.Traits.Difference(subset.Traits);
+            if (difference.Count == 1 && subsets.Add(subset))
+            {
+                Register(
+                    new AbstractConverter(root.Traits, subset, difference[0].TraitDef),
+                    root);
+            }
         }
     }
 

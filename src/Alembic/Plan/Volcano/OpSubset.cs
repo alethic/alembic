@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
@@ -450,7 +451,16 @@ public sealed class OpSubset : AbstractOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "copy(RelTraitSet, List<RelNode>)")]
     public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
-        return this;
+        if (children.IsEmpty)
+        {
+            var traitSet1 = traits.Simplify();
+            if (traitSet1.Equals(Traits))
+                return this;
+
+            return Set.GetOrCreateSubset(traitSet1, IsRequired);
+        }
+
+        throw new NotSupportedException();
     }
 
 }
