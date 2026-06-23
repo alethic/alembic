@@ -23,7 +23,7 @@ public class VolcanoRuleCall : OpRuleCall
     /// the match solves outward.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "rels")]
-    internal IOp?[] Rels { get; }
+    internal readonly IOp?[] Rels;
 
     /// <summary>
     /// Creates a call seeded at <paramref name="operand0"/>, with no ops bound yet.

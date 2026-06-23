@@ -119,20 +119,20 @@ public sealed class OpRuleOperand
     /// flattening.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "ordinalInParent")]
-    public int OrdinalInParent { get; internal set; }
+    public int OrdinalInParent;
 
     /// <summary>
     /// This operand's position in the rule's flattened operand list. Assigned during flattening.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "ordinalInRule")]
-    public int OrdinalInRule { get; internal set; }
+    public int OrdinalInRule;
 
     /// <summary>
     /// The order in which to solve operands when matching is seeded from this operand: itself, then its
     /// parents up to the root, then the remaining operands in prefix order. Assigned during flattening.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "solveOrder")]
-    public int[] SolveOrder { get; internal set; } = Array.Empty<int>();
+    public int[] SolveOrder = Array.Empty<int>();
 
     /// <summary>
     /// The op type this operand matches.
@@ -144,19 +144,19 @@ public sealed class OpRuleOperand
     /// A trait the op must carry, or <c>null</c> if the operand does not test traits.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "trait")]
-    public IOpTrait? Trait { get; }
+    public readonly IOpTrait? Trait;
 
     /// <summary>
     /// An extra condition applied after the class (and trait) test; defaults to always true.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "predicate")]
-    public Func<IOp, bool> Predicate { get; }
+    internal readonly Func<IOp, bool> Predicate;
 
     /// <summary>
     /// How this operand treats the op's children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "childPolicy")]
-    public RuleOperandChildPolicy ChildPolicy { get; }
+    public readonly RuleOperandChildPolicy ChildPolicy;
 
     /// <summary>
     /// The child operands (empty for <see cref="RuleOperandChildPolicy.Any"/> and

@@ -48,7 +48,7 @@ public abstract class OpRuleCall
     /// This call's stable identity, assigned in creation order.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "id")]
-    public int Id { get; }
+    public readonly int Id;
 
     /// <summary>
     /// The planner that issued this call.

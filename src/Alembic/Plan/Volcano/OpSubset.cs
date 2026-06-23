@@ -16,12 +16,12 @@ public sealed class OpSubset : AbstractOp
 {
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "RelSubset(RelOptCluster, RelSet, RelTraitSet)")]
-    internal OpSubset(OpSet set, OpTraitSet traits, IOpCost infiniteCost)
-        : base(set.Cluster, traits)
+    internal OpSubset(OpCluster cluster, OpSet set, OpTraitSet traits)
+        : base(cluster, traits)
     {
         Set = set;
-        BestCost = infiniteCost;
-        UpperBound = infiniteCost;
+        BestCost = cluster.Planner.CostFactory.MakeInfiniteCost();
+        UpperBound = BestCost;
     }
 
     /// <summary>
@@ -61,7 +61,7 @@ public sealed class OpSubset : AbstractOp
     /// The cost of <see cref="Best"/> (infinite until a member is costed).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "bestCost")]
-    public IOpCost BestCost { get; internal set; }
+    internal IOpCost BestCost;
 
     /// <summary>
     /// Adds <paramref name="op"/> as an equivalent expression in this subset's set: notifies listeners
@@ -74,7 +74,7 @@ public sealed class OpSubset : AbstractOp
         if (Set.Ops.Contains(op))
             return;
 
-        ((AbstractOpPlanner)Set.Cluster.Planner).FireOpEquivalenceFound(op, Set.Id, !op.Convention.Equals(Convention.None));
+        ((AbstractOpPlanner)op.Cluster.Planner).FireOpEquivalenceFound(op, Set.Id, !op.Convention.Equals(Convention.None));
         Set.AddInternal(op);
     }
 
@@ -84,13 +84,13 @@ public sealed class OpSubset : AbstractOp
     /// This subset's optimization task state, or <c>null</c> if it has not been optimized.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "taskState")]
-    internal OptimizeState? TaskState { get; private set; }
+    internal OptimizeState? TaskState;
 
     /// <summary>
     /// The upper bound from the last optimize call (a winner must cost no more than this).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "upperBound")]
-    internal IOpCost UpperBound { get; set; }
+    internal IOpCost UpperBound = null!;
 
     bool _delivered;
     bool _required;
@@ -100,7 +100,7 @@ public sealed class OpSubset : AbstractOp
     /// Whether this subset should trigger rules now that it has become delivered.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "triggerRule")]
-    internal bool TriggerRule { get; set; }
+    internal bool TriggerRule;
 
     HashSet<IOp>? _passThroughCache;
 
@@ -457,7 +457,7 @@ public sealed class OpSubset : AbstractOp
             if (traitSet1.Equals(Traits))
                 return this;
 
-            return Set.GetOrCreateSubset(traitSet1, IsRequired);
+            return Set.GetOrCreateSubset(Cluster, traitSet1, IsRequired);
         }
 
         throw new NotSupportedException();

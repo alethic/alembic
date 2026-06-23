@@ -28,7 +28,7 @@ public abstract class RuleQueue
     /// The planner whose matches this queue holds.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue", "planner")]
-    protected VolcanoPlanner Planner { get; }
+    protected readonly VolcanoPlanner Planner;
 
     /// <summary>
     /// Adds a match to the queue.

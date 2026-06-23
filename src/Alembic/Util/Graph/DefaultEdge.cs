@@ -19,13 +19,13 @@ public class DefaultEdge
     /// The tail of the edge.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultEdge", "source")]
-    public object Source { get; }
+    public readonly object Source;
 
     /// <summary>
     /// The head of the edge.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultEdge", "target")]
-    public object Target { get; }
+    public readonly object Target;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultEdge", "hashCode()")]
     public override int GetHashCode()

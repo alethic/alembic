@@ -27,13 +27,13 @@ public class Pair<T1, T2> : IEquatable<Pair<T1, T2>>
     /// The left value.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.Pair", "left")]
-    public T1 Left { get; }
+    public readonly T1 Left;
 
     /// <summary>
     /// The right value.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.Pair", "right")]
-    public T2 Right { get; }
+    public readonly T2 Right;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.Pair", "equals(Object)")]
