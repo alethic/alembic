@@ -9,10 +9,11 @@ namespace Alembic.Algebra;
 /// concrete types and the rules that rewrite them.
 /// </summary>
 /// <remarks>
-/// Ops are immutable. The planner rewrites by producing new ops via <see cref="Copy"/>,
-/// sharing the subtrees it does not touch. An op's own <c>Equals</c>/<c>GetHashCode</c> are
-/// left as reference identity; structural equivalence — the value the planner deduplicates on —
-/// is the separate <see cref="DeepEquals"/> / <see cref="DeepHashCode"/> contract.
+/// The planner rewrites either by replacing an op's inputs in place (<see cref="ReplaceInput"/>, as
+/// Calcite's planner does during registration) or by producing new ops via <see cref="Copy"/>. An op's
+/// own <c>Equals</c>/<c>GetHashCode</c> are left as reference identity; structural equivalence — the
+/// value the planner deduplicates on — is the separate <see cref="DeepEquals"/> / <see cref="DeepHashCode"/>
+/// contract.
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode")]
 public interface IOp
@@ -41,6 +42,12 @@ public interface IOp
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "copy(RelTraitSet, List<RelNode>)")]
     IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children);
+
+    /// <summary>
+    /// Replaces this op's <paramref name="ordinalInParent"/>th input with <paramref name="p"/>, in place.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "replaceInput(int, RelNode)")]
+    void ReplaceInput(int ordinalInParent, IOp p);
 
     /// <summary>
     /// Whether this op is structurally equivalent to <paramref name="other"/>.

@@ -315,14 +315,39 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
             return RegisterSubset(set, equivSubset);
         }
 
-        // A converter lives in the same set as the input it converts.
+        // Converters are in the same set as their children.
         if (op is IConverter converter)
         {
-            var childSet = EquivRoot(((OpSubset)converter.Input).Set);
-            if (set is not null && set != childSet && set.EquivalentSet is null)
+            var input = converter.Input;
+            var childSet = EquivRoot(((OpSubset)input).Set);
+            if (set is not null
+                && set != childSet
+                && set.EquivalentSet is null)
+            {
                 Merge(set, childSet);
+
+                // During the mergers, the child set may have changed, and since we're not registered
+                // yet, we won't have been informed. So check whether we are now equivalent to an
+                // existing expression.
+                if (FixUpInputs(op))
+                {
+                    var digest = op.GetDigest();
+                    var equivOp = _digestToOp.GetValueOrDefault(digest);
+                    if (equivOp != op && equivOp is not null)
+                    {
+                        // make sure this bad op didn't get into the set in any way (fixUpInputs will do
+                        // this but it doesn't know if it should so it does it anyway)
+                        set.ObliterateOp(op);
+
+                        // There is already an equivalent expression. Use that one, and forget about this one.
+                        return GetSubsetNonNull(equivOp);
+                    }
+                }
+            }
             else
+            {
                 set = childSet;
+            }
         }
 
         if (set is null)
@@ -811,89 +836,94 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     internal void MapOpToSubset(IOp op, OpSubset subset) => _opToSubset[op] = subset;
 
     /// <summary>
-    /// Re-points an op's child subsets at their live (merged) sets, rebuilding the op if any child
-    /// moved. Returns the rebuilt op, or <c>null</c> if nothing changed. The op is immutable, so the
-    /// re-pointing produces a fresh copy rather than mutating in place.
+    /// Re-points an op's child subsets at their live (merged) sets, replacing them in place; returns
+    /// whether anything changed, recomputing the op's digest if so.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "fixUpInputs(RelNode)")]
-    IOp? FixUpInputs(IOp op)
+    bool FixUpInputs(IOp op)
     {
-        var changed = false;
-        var children = ImmutableArray.CreateBuilder<IOp>(op.Children.Length);
-        foreach (var child in op.Children)
+        var inputs = op.Children;
+        var newInputs = new List<IOp>(inputs.Length);
+        int changeCount = 0;
+        foreach (var input in inputs)
         {
-            var childSubset = (OpSubset)child;
-            var live = EquivRoot(childSubset.Set);
-            var resolved = live == childSubset.Set ? childSubset : live.GetOrCreateSubset(childSubset.Traits);
-            if (!ReferenceEquals(resolved, child))
-                changed = true;
+            var subset = (OpSubset)input;
+            OpSubset newSubset = Canonize(subset);
+            newInputs.Add(newSubset);
+            if (newSubset != subset)
+            {
+                if (subset.Set != newSubset.Set)
+                {
+                    subset.Set.Parents.Remove(op);
+                    newSubset.Set.Parents.Add(op);
+                }
 
-            children.Add(resolved);
+                changeCount++;
+            }
         }
 
-        if (!changed)
-            return null;
+        if (changeCount > 0)
+        {
+            _digestToOp.Remove(op.GetDigest());
+            for (int i = 0; i < inputs.Length; i++)
+                op.ReplaceInput(i, newInputs[i]);
 
-        return op.Copy(op.Traits, children.MoveToImmutable());
+            op.RecomputeDigest();
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
-    /// Recomputes an op's digest after its children have been renamed (their sets merged), replacing it
-    /// in place. If the recomputed op coincides with an existing one, their sets are merged instead.
+    /// Re-computes the digest of an op. Since an op's digest contains the identifiers of its children,
+    /// this is called when a child has been renamed — for example if the child's set merges with another.
+    /// If the op then coincides with one already registered, that one is kept and this op is forgotten
+    /// (its sets merged).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "rename(RelNode)")]
     internal void Rename(IOp op)
     {
-        if (!_opToSubset.TryGetValue(op, out var subset))
-            return;
-
-        var rebuilt = FixUpInputs(op);
-        if (rebuilt is null)
-            return;
-
-        var set = EquivRoot(subset.Set);
-
-        // The old op is being replaced; drop its back-links from its (live) child sets so a stale op
-        // never lingers in a set's parent list (one removal per input, matching how registration added them).
-        foreach (var child in op.Children)
-            EquivRoot(((OpSubset)child).Set).ObliterateOp(op);
-
-        _digestToOp.Remove(op.GetDigest());
-        set.Ops.Remove(op);
-        _opToSubset.Remove(op);
-
-        // The re-pointed op may now be a duplicate of one already registered; if so, fold the sets
-        // together rather than keeping two copies (carrying over the pruned state).
-        if (_digestToOp.TryGetValue(rebuilt.GetDigest(), out var equiv))
+        if (FixUpInputs(op))
         {
-            CheckPruned(equiv, op);
-
-            // Any subset whose best was the removed op now uses its equivalent.
-            foreach (var s in set.Subsets)
+            var newDigest = op.GetDigest();
+            _digestToOp.TryGetValue(newDigest, out var equiv);
+            _digestToOp[newDigest] = op;
+            if (equiv is not null)
             {
-                if (ReferenceEquals(s.Best, op))
+                // There's already an equivalent with the same name, and we just knocked it out. Put it
+                // back, and forget about op.
+                _digestToOp[newDigest] = equiv;
+                CheckPruned(equiv, op);
+
+                var equivOpSubset = GetSubsetNonNull(equiv);
+
+                // Remove back-links from children.
+                foreach (var input in op.Children)
+                    ((OpSubset)input).Set.Parents.Remove(op);
+
+                // Remove op from its subset. (This may leave the subset empty, but if so, that will be
+                // dealt with when the sets get merged.)
+                var subset = _opToSubset[op];
+                _opToSubset[op] = equivOpSubset;
+                bool existed = subset.Set.Ops.Remove(op);
+                if (!existed)
+                    throw new InvalidOperationException("op was not known to its set");
+
+                var equivSubset = GetSubsetNonNull(equiv);
+                foreach (var s in subset.Set.Subsets)
                 {
-                    s.Best = equiv;
-                    PropagateCostImprovements(equiv);
+                    if (ReferenceEquals(s.Best, op))
+                    {
+                        s.Best = equiv;
+                        PropagateCostImprovements(equiv);
+                    }
                 }
+
+                if (equivSubset != subset)
+                    Merge(equivSubset.Set, subset.Set);
             }
-
-            var equivSet = EquivRoot(_opToSubset[equiv].Set);
-            if (equivSet != set)
-                Merge(set, equivSet);
-
-            return;
         }
-
-        var added = set.Add(rebuilt);
-        _opToSubset[rebuilt] = added;
-        _digestToOp[rebuilt.GetDigest()] = rebuilt;
-
-        // Link the rebuilt op into its (live) child sets' parent lists.
-        foreach (var child in rebuilt.Children)
-            EquivRoot(((OpSubset)child).Set).Parents.Add(rebuilt);
-
-        PropagateCostImprovements(rebuilt);
     }
 
     /// <summary>

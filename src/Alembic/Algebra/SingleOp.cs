@@ -13,21 +13,27 @@ namespace Alembic.Algebra;
 public abstract class SingleOp : AbstractOp
 {
 
+    IOp _input;
+
     /// <summary>
     /// Initializes the op with its traits and single child.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel", "SingleRel(RelOptCluster, RelTraitSet, RelNode)")]
     protected SingleOp(OpTraitSet traits, IOp child)
-        : base(child.Cluster, traits, ImmutableArray.Create(child))
+        : base(child.Cluster, traits)
     {
-
+        _input = child;
     }
 
     /// <summary>
     /// This op's single child.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel", "getInput()")]
-    public IOp Child => Children[0];
+    public IOp Child => _input;
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel", "getInputs()")]
+    public override ImmutableArray<IOp> Children => ImmutableArray.Create(_input);
 
     /// <inheritdoc />
     public override IOpWriter ExplainTerms(IOpWriter writer)
@@ -35,6 +41,14 @@ public abstract class SingleOp : AbstractOp
         base.ExplainTerms(writer);
         writer.Input("input", Child);
         return writer;
+    }
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel", "replaceInput(int, RelNode)")]
+    public override void ReplaceInput(int ordinalInParent, IOp rel)
+    {
+        _input = rel;
+        RecomputeDigest();
     }
 
 }

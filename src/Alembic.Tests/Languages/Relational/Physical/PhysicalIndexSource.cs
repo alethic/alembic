@@ -15,7 +15,7 @@ sealed class PhysicalIndexSource : AbstractOp
     readonly string _table;
 
     public PhysicalIndexSource(OpCluster cluster, OpTraitSet traits, string table)
-        : base(cluster, traits, ImmutableArray<IOp>.Empty)
+        : base(cluster, traits)
     {
         _table = table;
     }

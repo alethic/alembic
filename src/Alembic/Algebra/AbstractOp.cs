@@ -23,11 +23,10 @@ public abstract class AbstractOp : IOp
     /// Initializes the op with its cluster, traits, and children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "AbstractRelNode(RelOptCluster, RelTraitSet)")]
-    protected AbstractOp(OpCluster cluster, OpTraitSet traits, ImmutableArray<IOp> children)
+    protected AbstractOp(OpCluster cluster, OpTraitSet traits)
     {
         Cluster = cluster;
         Traits = traits;
-        Children = children;
         _digest = new InnerOpDigest(this);
     }
 
@@ -41,7 +40,7 @@ public abstract class AbstractOp : IOp
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getInputs()")]
-    public ImmutableArray<IOp> Children { get; }
+    public virtual ImmutableArray<IOp> Children => ImmutableArray<IOp>.Empty;
 
     /// <summary>
     /// Lists this op's identity-bearing terms. A subclass calls <c>base.ExplainTerms</c>, then adds its
@@ -65,6 +64,13 @@ public abstract class AbstractOp : IOp
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "copy(RelTraitSet, List<RelNode>)")]
     public abstract IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children);
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "replaceInput(int, RelNode)")]
+    public virtual void ReplaceInput(int ordinalInParent, IOp p)
+    {
+        throw new NotSupportedException("replaceInput called on " + this);
+    }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]

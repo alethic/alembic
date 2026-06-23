@@ -21,7 +21,7 @@ sealed class HepOpVertex : AbstractOp
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "HepRelVertex(RelNode)")]
     public HepOpVertex(IOp currentOp)
-        : base(currentOp.Cluster, currentOp.Traits, ImmutableArray<IOp>.Empty)
+        : base(currentOp.Cluster, currentOp.Traits)
     {
         _currentOp = currentOp;
     }

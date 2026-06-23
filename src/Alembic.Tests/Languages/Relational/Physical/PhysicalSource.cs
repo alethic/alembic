@@ -19,7 +19,7 @@ sealed class PhysicalSource : AbstractOp, IPhysicalOp
     readonly string _table;
 
     public PhysicalSource(OpCluster cluster, OpTraitSet traits, string table)
-        : base(cluster, traits, ImmutableArray<IOp>.Empty)
+        : base(cluster, traits)
     {
         _table = table;
     }

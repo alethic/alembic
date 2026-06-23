@@ -14,7 +14,7 @@ sealed class LogicalSource : AbstractOp
     readonly string _table;
 
     public LogicalSource(OpCluster cluster, OpTraitSet traits, string table)
-        : base(cluster, traits, ImmutableArray<IOp>.Empty)
+        : base(cluster, traits)
     {
         _table = table;
     }

@@ -14,7 +14,7 @@ sealed class PhysicalLiteral : AbstractOp
     readonly int _value;
 
     public PhysicalLiteral(OpCluster cluster, OpTraitSet traits, int value)
-        : base(cluster, traits, ImmutableArray<IOp>.Empty)
+        : base(cluster, traits)
     {
         _value = value;
     }

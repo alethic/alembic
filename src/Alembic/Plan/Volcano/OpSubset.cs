@@ -16,7 +16,7 @@ public sealed class OpSubset : AbstractOp
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "RelSubset(RelOptCluster, RelSet, RelTraitSet)")]
     internal OpSubset(OpSet set, OpTraitSet traits, IOpCost infiniteCost)
-        : base(set.Cluster, traits, ImmutableArray<IOp>.Empty)
+        : base(set.Cluster, traits)
     {
         Set = set;
         BestCost = infiniteCost;

@@ -15,7 +15,7 @@ sealed class LogicalParameter : AbstractOp
     readonly string _name;
 
     public LogicalParameter(OpCluster cluster, OpTraitSet traits, string name)
-        : base(cluster, traits, ImmutableArray<IOp>.Empty)
+        : base(cluster, traits)
     {
         _name = name;
     }

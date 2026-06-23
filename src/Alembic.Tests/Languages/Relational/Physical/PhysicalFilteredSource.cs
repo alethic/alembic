@@ -18,7 +18,7 @@ sealed class PhysicalFilteredSource : AbstractOp
     readonly string _predicate;
 
     public PhysicalFilteredSource(OpCluster cluster, OpTraitSet traits, string table, string predicate)
-        : base(cluster, traits, ImmutableArray<IOp>.Empty)
+        : base(cluster, traits)
     {
         _table = table;
         _predicate = predicate;

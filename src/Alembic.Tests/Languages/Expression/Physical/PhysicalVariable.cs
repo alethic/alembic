@@ -14,7 +14,7 @@ sealed class PhysicalVariable : AbstractOp
     readonly string _name;
 
     public PhysicalVariable(OpCluster cluster, OpTraitSet traits, string name)
-        : base(cluster, traits, ImmutableArray<IOp>.Empty)
+        : base(cluster, traits)
     {
         _name = name;
     }

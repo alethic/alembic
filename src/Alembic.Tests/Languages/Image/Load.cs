@@ -15,7 +15,7 @@ sealed class Load : AbstractOp, IImageOperation
     readonly string _source;
 
     public Load(OpCluster cluster, OpTraitSet traits, string source)
-        : base(cluster, traits, ImmutableArray<IOp>.Empty)
+        : base(cluster, traits)
     {
         _source = source;
     }
