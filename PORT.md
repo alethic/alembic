@@ -278,6 +278,28 @@ Three themes recur across the Volcano findings below and are worth fixing as uni
 
 ---
 
+### Re-audit (2026-06-23) — fresh cold-fork agents, corrected scope
+
+A second pass with isolated cold agents re-comparing each ported class to its Calcite original (much had changed since the first pass). **Scope correction (per the project owner):** only genuinely **relational** concerns are out of scope (row types/`RelDataType`, `RexNode`, SQL, `RelBuilder`, materialized views, hints, correlation variables) — because the engine is medium-agnostic. **Non-relational differences are NOT auto-approved as "DIVERGENT-OK":** dropped Java `assert`s, `checkCancel`, `ruleCallStack`, listener-event counts, metadata-query cost plumbing, and structural restructures are all genuine divergences flagged for an explicit decision. Under this lens the first pass's "faithful" counts were inflated.
+
+Legend: ✅ re-confirmed faithful · ⚠️ divergence, behaviour-preserving or unverified-severity (needs a decision) · 🔴 verified behaviour-affecting.
+
+- **ConventionTraitDef** — ✅ logic faithful. ⚠️ `DeregisterConverterRule`/`Convert`/`ChangeConvention` drop Calcite `assert`s; `Convert` replaces `getCost(rel, mq)` with `GetCost(op)` (metadata-query cost plumbing — tied to the deferred metadata subsystem, **not** relational).
+- **VolcanoRuleMatch** — ✅ faithful (`ComputeDigest` uses `Rule.Description` ≡ `getRule().toString()`).
+- **RuleQueue / IterativeRuleQueue** — ⚠️ `skipMatch` returns a bool instead of Calcite's `Util.FoundOne` exception (behaviour identical); `Clear()` is `void` vs Calcite `boolean`; `size()`/`poll()` inlined into `PopMatch`; a pop `assert` dropped. No behaviour-affecting findings.
+- **OpSubset** — ⚠️ constructor omits `computeBestCost`'s init-scan over subsuming subsets (best/bestCost not seeded from already-costed subsuming subsets — was recorded OK, **re-flag**); accessors route through `LiveSet` (equiv-root) — behaviour-equivalent; dropped `assert`s in `add`/`startOptimize`.
+- **OpSet** — 🔴 **`MergeWith` diverges substantially** from Calcite's `mergeWith`: no subset-merge loop (so no `changedRels` best-cost propagation, no `passThroughCache` merge), no enforcer-parent prune, **no post-`rename` `if (equivalentSet != null) return;` guard**, no second `propagateCostImprovements` over `getParentRels()`, and `fireRules` only on ops not also on subsets. (PORT.md previously marked `mergeWith` RESOLVED — incorrect.) ⚠️ `Add` drops `traitSet.simplify()`; dropped listener `postEquivalenceEvent` + canonize `assert`. ✅ `AddConverters` `toTrait == null` guard is moot (Alembic `Get` returns the dimension default and the def is always present here) — **not** a bug.
+- **VolcanoPlanner** — 🔴 `SetTopDownOpt` omits Calcite's `if (value == current) return;` no-op guard (always rebuilds the rule driver, discarding state). ⚠️ `RegisterImpl` equivalence branch / already-registered early-return / `fireRules(subset)` differences (**unverified — re-check**); `SetRoot` uses `EnsureRegistered` vs `registerImpl` and defers `ensureRootConverters` to `FindBestPlan`; `EquivRoot` is a plain loop vs Calcite's tortoise/hare cycle-detection; dropped `Rename`/`registerImpl` `assert`s. (The "Merge never calls `onSetMerged`" flag was a **false positive** — it's invoked inside `MergeWith`.)
+- **AbstractOp** — ⚠️ `DeepHashCode`/`DeepEquals` fold type + term-names (stronger than Calcite, which folds values only — was recorded OK, **re-flag for decision**); ⚠️ `DigestWriter.Item` does not string-normalise array values as Calcite does (latent — dormant for current ops).
+- **VolcanoRuleCall** — ⚠️ fires the rule-production event once (`false`) vs Calcite's `true`-then-`false` pair (listener observability); `OnMatch` adds a `Rule.Matches` gate Calcite only `assert`s and omits `checkCancel` / `ruleCallStack` (planner features, **not** relational); omits `SubstitutionRule.autoPruneOld` (substitution rules unported — substitution relates to materialized views).
+- **OpRule / OpRuleOperand** — ✅ mostly. ⚠️ `ConvertOperand` drops the converter-on-converter `matches` guard (was recorded OK); dropped operand child-policy validation `assert`s; loose provenance on `Any`/`Leaf` factories (they cite `any()`/`none()`, which in Calcite return a `RelOptRuleOperandChildren`, not an operand).
+- **ConverterRule / Converter / ConverterImpl / TraitMatchingRule** — ✅ faithful. ⚠️ `ConverterRule.OnMatch` drops the `contains(inTrait)` re-check (operand already constrains to `Source`).
+- **OpTraitSet** — _audit pending._
+
+**Verified behaviour-affecting (to fix):** `OpSet.MergeWith`, `VolcanoPlanner.SetTopDownOpt`. **To re-verify:** `VolcanoPlanner.RegisterImpl` subset/equivalence branches, `OpSubset` constructor `computeBestCost` scan. **Decisions needed (non-relational, not auto-OK):** the dropped-`assert` category, listener-event counts (`VolcanoRuleCall` production event), `checkCancel`/`ruleCallStack`, `Clear()` void-vs-bool, `EquivRoot` cycle-detection, `AbstractOp` digest hash/equals strength.
+
+---
+
 ### Audit summary — triage
 
 Across **all ~45 classes**, the algebra/graph/cost/program layers are faithful; the divergences concentrate in the **un-audited Volcano core** and a few **cross-cutting semantic defaults**. Prioritized:
