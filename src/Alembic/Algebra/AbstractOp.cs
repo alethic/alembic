@@ -98,6 +98,30 @@ public abstract class AbstractOp : IOp
     }
 
     /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "onRegister(RelOptPlanner)")]
+    public virtual IOp OnRegister(IOpPlanner planner)
+    {
+        var oldInputs = Children;
+        var inputs = ImmutableArray.CreateBuilder<IOp>(oldInputs.Length);
+        var changed = false;
+        foreach (var input in oldInputs)
+        {
+            var registered = planner.EnsureRegistered(input, null);
+            if (!ReferenceEquals(registered, input))
+                changed = true;
+
+            inputs.Add(registered);
+        }
+
+        IOp r = this;
+        if (changed)
+            r = Copy(Traits, inputs.MoveToImmutable());
+
+        r.RecomputeDigest();
+        return r;
+    }
+
+    /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "deepEquals(Object)")]
     public virtual bool DeepEquals(IOp? other)
     {

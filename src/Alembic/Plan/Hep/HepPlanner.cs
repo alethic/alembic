@@ -147,6 +147,10 @@ public class HepPlanner : AbstractOpPlanner
     }
 
     /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "ensureRegistered(RelNode, RelNode)")]
+    public override IOp EnsureRegistered(IOp op, IOp? equivalent) => op;
+
+    /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "findBestExp()")]
     public override IOp FindBestPlan()
     {

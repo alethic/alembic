@@ -110,6 +110,14 @@ public interface IOpPlanner
     IOp ChangeTraits(IOp op, OpTraitSet toTraits);
 
     /// <summary>
+    /// Registers <paramref name="op"/> if it is not already registered, returning its registered form (for
+    /// the cost-based planner, the equivalence subset). <paramref name="equivalent"/>, when non-null, is an
+    /// already-registered op known to be equivalent. Called by <see cref="IOp.OnRegister"/> for each input.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "ensureRegistered(RelNode, RelNode)")]
+    IOp EnsureRegistered(IOp op, IOp? equivalent);
+
+    /// <summary>
     /// Runs the planner and returns the resulting plan.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "findBestExp()")]

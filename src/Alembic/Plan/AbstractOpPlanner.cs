@@ -236,4 +236,8 @@ public abstract class AbstractOpPlanner : IOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "findBestExp()")]
     public abstract IOp FindBestPlan();
 
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "ensureRegistered(RelNode, RelNode)")]
+    public abstract IOp EnsureRegistered(IOp op, IOp? equivalent);
+
 }

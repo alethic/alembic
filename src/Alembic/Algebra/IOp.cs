@@ -85,6 +85,15 @@ public interface IOp
     }
 
     /// <summary>
+    /// Registers this op's inputs with <paramref name="planner"/> and returns the op to register in its
+    /// place: each input replaced by its registered form, as a <see cref="Copy"/> if any changed, with the
+    /// digest recomputed. (Unlike Calcite, Alembic does no convention coercion here — see
+    /// <c>VolcanoPlanner.CoerceInputConventions</c>.)
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "onRegister(RelOptPlanner)")]
+    IOp OnRegister(IOpPlanner planner);
+
+    /// <summary>
     /// This op's convention.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getConvention()")]
