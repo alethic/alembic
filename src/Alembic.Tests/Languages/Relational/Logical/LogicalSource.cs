@@ -13,7 +13,7 @@ sealed class LogicalSource : AbstractOp
 
     readonly string _table;
 
-    public LogicalSource(Cluster cluster, TraitSet traits, string table)
+    public LogicalSource(OpCluster cluster, OpTraitSet traits, string table)
         : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         _table = table;
@@ -28,7 +28,7 @@ sealed class LogicalSource : AbstractOp
         return writer;
     }
 
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new LogicalSource(Cluster, traits, _table);
     }

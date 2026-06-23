@@ -18,7 +18,7 @@ sealed class PhysicalSource : AbstractOp, IPhysicalNode
 
     readonly string _table;
 
-    public PhysicalSource(Cluster cluster, TraitSet traits, string table)
+    public PhysicalSource(OpCluster cluster, OpTraitSet traits, string table)
         : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         _table = table;
@@ -26,11 +26,11 @@ sealed class PhysicalSource : AbstractOp, IPhysicalNode
 
     public string Table => _table;
 
-    public override ICost ComputeSelfCost(IPlanner planner) => planner.CostFactory.MakeCost(100, 0);
+    public override IOpCost ComputeSelfCost(IOpPlanner planner) => planner.CostFactory.MakeCost(100, 0);
 
-    public Pair<TraitSet, IList<TraitSet>>? PassThroughTraits(TraitSet required)
+    public Pair<OpTraitSet, IList<OpTraitSet>>? PassThroughTraits(OpTraitSet required)
     {
-        return Pair.Of(required, (IList<TraitSet>)Array.Empty<TraitSet>());
+        return Pair.Of(required, (IList<OpTraitSet>)Array.Empty<OpTraitSet>());
     }
 
     public override IOpWriter ExplainTerms(IOpWriter writer)
@@ -40,7 +40,7 @@ sealed class PhysicalSource : AbstractOp, IPhysicalNode
         return writer;
     }
 
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new PhysicalSource(Cluster, traits, _table);
     }

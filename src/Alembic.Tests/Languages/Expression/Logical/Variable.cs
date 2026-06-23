@@ -13,7 +13,7 @@ sealed class Variable : AbstractOp
 
     readonly string _name;
 
-    public Variable(Cluster cluster, TraitSet traits, string name)
+    public Variable(OpCluster cluster, OpTraitSet traits, string name)
         : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         _name = name;
@@ -28,7 +28,7 @@ sealed class Variable : AbstractOp
         return writer;
     }
 
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new Variable(Cluster, traits, _name);
     }

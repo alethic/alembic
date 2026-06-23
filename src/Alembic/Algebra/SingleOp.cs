@@ -17,7 +17,7 @@ public abstract class SingleOp : AbstractOp
     /// Initializes the op with its traits and single child.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel", "SingleRel(RelOptCluster, RelTraitSet, RelNode)")]
-    protected SingleOp(TraitSet traits, IOpNode child)
+    protected SingleOp(OpTraitSet traits, IOpNode child)
         : base(child.Cluster, traits, ImmutableArray.Create(child))
     {
 

@@ -6,11 +6,11 @@ using System.Linq;
 namespace Alembic.Plan;
 
 /// <summary>
-/// The non-generic base of a <see cref="CompositeTrait{T}"/>, so a <see cref="TraitSet"/> can recognize
+/// The non-generic base of a <see cref="OpCompositeTrait{T}"/>, so a <see cref="OpTraitSet"/> can recognize
 /// and flatten composite traits without knowing the member type.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait")]
-public abstract class CompositeTrait : ITrait
+public abstract class OpCompositeTrait : IOpTrait
 {
 
     /// <summary>
@@ -23,32 +23,32 @@ public abstract class CompositeTrait : ITrait
     /// The member trait at the given index.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "trait(int)")]
-    public abstract ITrait TraitAt(int index);
+    public abstract IOpTrait TraitAt(int index);
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "getTraitDef()")]
-    public abstract TraitDef TraitDef { get; }
+    public abstract OpTraitDef TraitDef { get; }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "satisfies(RelTrait)")]
-    public abstract bool Satisfies(ITrait other);
+    public abstract bool Satisfies(IOpTrait other);
 
 }
 
 /// <summary>
 /// A trait that consists of a list of traits, all of the same dimension. It lets a
-/// <see cref="TraitSet"/> hold several values on one dimension (e.g. several sort orders).
+/// <see cref="OpTraitSet"/> hold several values on one dimension (e.g. several sort orders).
 /// </summary>
 /// <typeparam name="T">The member trait type.</typeparam>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait")]
-public sealed class CompositeTrait<T> : CompositeTrait
-    where T : class, IMultipleTrait
+public sealed class OpCompositeTrait<T> : OpCompositeTrait
+    where T : class, IOpMultipleTrait
 {
 
-    readonly TraitDef _def;
+    readonly OpTraitDef _def;
     readonly ImmutableArray<T> _traits;
 
-    CompositeTrait(TraitDef def, ImmutableArray<T> traits)
+    OpCompositeTrait(OpTraitDef def, ImmutableArray<T> traits)
     {
         _def = def;
         _traits = traits;
@@ -59,7 +59,7 @@ public sealed class CompositeTrait<T> : CompositeTrait
     /// is one, otherwise a composite.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "of(RelTraitDef, List)")]
-    public static ITrait Of(TraitDef<T> def, IReadOnlyList<T> traits)
+    public static IOpTrait Of(OpTraitDef<T> def, IReadOnlyList<T> traits)
     {
         if (traits.Count == 0)
             return def.Default;
@@ -71,7 +71,7 @@ public sealed class CompositeTrait<T> : CompositeTrait
         foreach (var trait in traits)
             canonized.Add((T)def.Canonize(trait));
 
-        return def.Canonize(new CompositeTrait<T>(def, canonized.MoveToImmutable()));
+        return def.Canonize(new OpCompositeTrait<T>(def, canonized.MoveToImmutable()));
     }
 
     /// <summary>
@@ -86,17 +86,17 @@ public sealed class CompositeTrait<T> : CompositeTrait
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "trait(int)")]
-    public override ITrait TraitAt(int index) => _traits[index];
+    public override IOpTrait TraitAt(int index) => _traits[index];
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "getTraitDef()")]
-    public override TraitDef TraitDef => _def;
+    public override OpTraitDef TraitDef => _def;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "satisfies(RelTrait)")]
-    public override bool Satisfies(ITrait other)
+    public override bool Satisfies(IOpTrait other)
     {
-        if (other is CompositeTrait<T> composite)
+        if (other is OpCompositeTrait<T> composite)
             return composite._traits.All(required => _traits.Any(t => t.Satisfies(required)));
 
         return _traits.Any(t => t.Satisfies(other));
@@ -106,7 +106,7 @@ public sealed class CompositeTrait<T> : CompositeTrait
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "equals(Object)")]
     public override bool Equals(object? obj)
     {
-        return obj is CompositeTrait<T> other && _traits.SequenceEqual(other._traits);
+        return obj is OpCompositeTrait<T> other && _traits.SequenceEqual(other._traits);
     }
 
     /// <inheritdoc />

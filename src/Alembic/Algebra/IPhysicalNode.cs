@@ -10,14 +10,14 @@ namespace Alembic.Algebra;
 /// <summary>
 /// An op that implements its convention physically and can participate in the top-down search's trait
 /// derivation. A physical op may <see cref="PassThrough"/> a required trait set down to its inputs, or
-/// <see cref="Derive(TraitSet, int)"/> a delivered trait set up from an already-optimized input.
+/// <see cref="Derive(OpTraitSet, int)"/> a delivered trait set up from an already-optimized input.
 /// </summary>
 /// <remarks>
 /// The pair returned by <see cref="PassThroughTraits"/> / <see cref="DeriveTraits"/> is
 /// (the op's resulting trait set, the trait set required of each input). The default
-/// <see cref="PassThrough"/> / <see cref="Derive(TraitSet, int)"/> compose that pair into a new op by
+/// <see cref="PassThrough"/> / <see cref="Derive(OpTraitSet, int)"/> compose that pair into a new op by
 /// converting each input; ops that derive traits override the <c>…Traits</c> methods (or, for
-/// <see cref="DeriveMode.Omakase"/>, <see cref="Derive(IList{IList{TraitSet}})"/>).
+/// <see cref="DeriveMode.Omakase"/>, <see cref="Derive(IList{IList{OpTraitSet}})"/>).
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode")]
 public interface IPhysicalNode : IOpNode
@@ -28,7 +28,7 @@ public interface IPhysicalNode : IOpNode
     /// <c>null</c> if it cannot.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "passThrough(RelTraitSet)")]
-    IOpNode? PassThrough(TraitSet required)
+    IOpNode? PassThrough(OpTraitSet required)
     {
         var pair = PassThroughTraits(required);
         if (pair is null)
@@ -47,7 +47,7 @@ public interface IPhysicalNode : IOpNode
     /// requirement cannot be passed through.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "passThroughTraits(RelTraitSet)")]
-    Pair<TraitSet, IList<TraitSet>>? PassThroughTraits(TraitSet required)
+    Pair<OpTraitSet, IList<OpTraitSet>>? PassThroughTraits(OpTraitSet required)
     {
         throw new NotSupportedException(GetType().Name + " does not implement PassThroughTraits.");
     }
@@ -57,7 +57,7 @@ public interface IPhysicalNode : IOpNode
     /// <paramref name="childTraits"/>), returning the derived op, or <c>null</c>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "derive(RelTraitSet, int)")]
-    IOpNode? Derive(TraitSet childTraits, int childId)
+    IOpNode? Derive(OpTraitSet childTraits, int childId)
     {
         var pair = DeriveTraits(childTraits, childId);
         if (pair is null)
@@ -76,7 +76,7 @@ public interface IPhysicalNode : IOpNode
     /// deliver (the pair's right), or <c>null</c>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "deriveTraits(RelTraitSet, int)")]
-    Pair<TraitSet, IList<TraitSet>>? DeriveTraits(TraitSet childTraits, int childId)
+    Pair<OpTraitSet, IList<OpTraitSet>>? DeriveTraits(OpTraitSet childTraits, int childId)
     {
         throw new NotSupportedException(GetType().Name + " does not implement DeriveTraits.");
     }
@@ -86,7 +86,7 @@ public interface IPhysicalNode : IOpNode
     /// <see cref="DeriveMode.Omakase"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.PhysicalNode", "derive(List<List<RelTraitSet>>)")]
-    IList<IOpNode> Derive(IList<IList<TraitSet>> inputTraits)
+    IList<IOpNode> Derive(IList<IList<OpTraitSet>> inputTraits)
     {
         throw new NotSupportedException(GetType().Name + " does not implement Derive.");
     }

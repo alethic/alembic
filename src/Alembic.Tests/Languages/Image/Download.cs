@@ -14,18 +14,18 @@ namespace Alembic.Tests.Languages.Image;
 sealed class Download : ConverterImpl
 {
 
-    public Download(TraitSet traits, IOpNode input)
+    public Download(OpTraitSet traits, IOpNode input)
         : base(ConventionTraitDef.Instance, traits, input)
     {
 
     }
 
-    public override ICost ComputeSelfCost(IPlanner planner)
+    public override IOpCost ComputeSelfCost(IOpPlanner planner)
     {
         return planner.CostFactory.MakeCost(ImageConventions.TransferCost, 0);
     }
 
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new Download(traits, children[0]);
     }

@@ -13,9 +13,9 @@ namespace Alembic.Tests.Languages.Expression.Rules;
 sealed class LiteralConverter : ConverterRule
 {
 
-    readonly TraitSet _physical;
+    readonly OpTraitSet _physical;
 
-    public LiteralConverter(TraitSet physical)
+    public LiteralConverter(OpTraitSet physical)
         : base(ExpressionConventions.Logical, ExpressionConventions.Physical)
     {
         _physical = physical;

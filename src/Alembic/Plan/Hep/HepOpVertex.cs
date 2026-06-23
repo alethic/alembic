@@ -49,7 +49,7 @@ sealed class HepOpVertex : AbstractOp
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "copy(RelTraitSet, List<RelNode>)")]
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return this;
     }

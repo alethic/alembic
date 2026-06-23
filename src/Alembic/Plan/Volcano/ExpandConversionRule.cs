@@ -8,7 +8,7 @@ namespace Alembic.Plan.Volcano;
 /// converter rules. A <see cref="VolcanoPlanner"/> registers one of these automatically.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter.ExpandConversionRule")]
-public sealed class ExpandConversionRule : Rule
+public sealed class ExpandConversionRule : OpRule
 {
 
     public ExpandConversionRule()
@@ -19,7 +19,7 @@ public sealed class ExpandConversionRule : Rule
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter.ExpandConversionRule", "onMatch(RelOptRuleCall)")]
-    public override void OnMatch(RuleCall call)
+    public override void OnMatch(OpRuleCall call)
     {
         var converter = (AbstractConverter)call.Op(0);
         var planner = (VolcanoPlanner)call.Planner;

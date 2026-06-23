@@ -6,7 +6,7 @@ namespace Alembic.Plan;
 /// dimensions, etc.).
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCost")]
-public interface ICost
+public interface IOpCost
 {
 
     /// <summary>
@@ -31,44 +31,44 @@ public interface ICost
     /// Whether this cost is less than or equal to <paramref name="other"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCost", "isLe(RelOptCost)")]
-    bool IsLessThanOrEqual(ICost other);
+    bool IsLessThanOrEqual(IOpCost other);
 
     /// <summary>
     /// Whether this cost is strictly less than <paramref name="other"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCost", "isLt(RelOptCost)")]
-    bool IsLessThan(ICost other);
+    bool IsLessThan(IOpCost other);
 
     /// <summary>
     /// This cost combined with <paramref name="other"/> (e.g. an op's self-cost plus its inputs').
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCost", "plus(RelOptCost)")]
-    ICost Plus(ICost other);
+    IOpCost Plus(IOpCost other);
 
     /// <summary>
     /// This cost with <paramref name="other"/> removed (the inverse of <see cref="Plus"/>); used by the
     /// top-down search to apportion an upper bound across an op and its inputs.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCost", "minus(RelOptCost)")]
-    ICost Minus(ICost other);
+    IOpCost Minus(IOpCost other);
 
     /// <summary>
     /// This cost scaled by <paramref name="factor"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCost", "multiplyBy(double)")]
-    ICost MultiplyBy(double factor);
+    IOpCost MultiplyBy(double factor);
 
     /// <summary>
     /// This cost divided by <paramref name="other"/>, as a single ratio: the geometric mean of the
     /// per-component ratios over the components that are non-zero and finite in both (1.0 if none are).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCost", "divideBy(RelOptCost)")]
-    double DivideBy(ICost other);
+    double DivideBy(IOpCost other);
 
     /// <summary>
     /// Whether this cost equals <paramref name="other"/> within a small epsilon on every component.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCost", "isEqWithEpsilon(RelOptCost)")]
-    bool IsEqWithEpsilon(ICost other);
+    bool IsEqWithEpsilon(IOpCost other);
 
 }

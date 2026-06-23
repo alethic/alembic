@@ -27,7 +27,7 @@ public class ImagePlanningTests
         // the cheapest plan uploads after the load, runs the transforms on the GPU, and downloads once:
         // 10 (load) + 5 (up) + 1 + 1 + 1 + 5 (down) = 23, versus 40 all on the CPU.
         var planner = MakePlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = Threshold(Grayscale(Blur(Load(cluster, "photo.png"))));
 
         var best = Plan(planner, root, Cpu);
@@ -51,7 +51,7 @@ public class ImagePlanningTests
     public void Skips_the_final_download_when_gpu_output_is_requested()
     {
         var planner = MakePlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = Threshold(Grayscale(Blur(Load(cluster, "photo.png"))));
 
         var best = Plan(planner, root, Gpu);
@@ -70,7 +70,7 @@ public class ImagePlanningTests
         // after). The planner uploads for the first run, downloads to inpaint, uploads again for the
         // second run, and downloads the result: CPU -> GPU -> CPU -> GPU -> CPU.
         var planner = MakePlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = Threshold(Blur(Inpaint(Grayscale(Blur(Load(cluster, "photo.png"))))));
 
         var best = Plan(planner, root, Cpu);
@@ -90,7 +90,7 @@ public class ImagePlanningTests
         // costs more than just running it on the CPU (10), so the planner keeps everything on the CPU
         // and inserts no transfers at all.
         var planner = MakePlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = Inpaint(Blur(Inpaint(Load(cluster, "photo.png"))));
 
         var best = Plan(planner, root, Cpu);
@@ -100,15 +100,15 @@ public class ImagePlanningTests
         AssertAllCpu(best);
     }
 
-    static IOpNode Load(Cluster cluster, string source) => new Load(cluster, Logical, source);
+    static IOpNode Load(OpCluster cluster, string source) => new Load(cluster, Logical, source);
     static IOpNode Blur(IOpNode input) => new Blur(Logical, input);
     static IOpNode Grayscale(IOpNode input) => new Grayscale(Logical, input);
     static IOpNode Threshold(IOpNode input) => new Threshold(Logical, input);
     static IOpNode Inpaint(IOpNode input) => new Inpaint(Logical, input);
 
-    static readonly TraitSet Logical = TraitSet.CreateEmpty().Plus(ImageConventions.Logical);
-    static readonly TraitSet Cpu = TraitSet.CreateEmpty().Plus(ImageConventions.Cpu);
-    static readonly TraitSet Gpu = TraitSet.CreateEmpty().Plus(ImageConventions.Gpu);
+    static readonly OpTraitSet Logical = OpTraitSet.CreateEmpty().Plus(ImageConventions.Logical);
+    static readonly OpTraitSet Cpu = OpTraitSet.CreateEmpty().Plus(ImageConventions.Cpu);
+    static readonly OpTraitSet Gpu = OpTraitSet.CreateEmpty().Plus(ImageConventions.Gpu);
 
     static VolcanoPlanner MakePlanner()
     {
@@ -120,7 +120,7 @@ public class ImagePlanningTests
         return planner;
     }
 
-    IOpNode Plan(VolcanoPlanner planner, IOpNode root, TraitSet required)
+    IOpNode Plan(VolcanoPlanner planner, IOpNode root, OpTraitSet required)
     {
         planner.SetRoot(root);
         planner.SetRoot(planner.ChangeTraits(root, required));

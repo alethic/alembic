@@ -8,7 +8,7 @@ namespace Alembic.Tests;
 /// A toy multi-valued trait: a single sort key. An op may carry several at once (sorted by more than
 /// one key), so several can live on one dimension via a composite.
 /// </summary>
-sealed class SortKey : IMultipleTrait
+sealed class SortKey : IOpMultipleTrait
 {
 
     public static readonly SortKey None = new SortKey("");
@@ -22,16 +22,16 @@ sealed class SortKey : IMultipleTrait
 
     public string Key => _key;
 
-    TraitDef ITrait.TraitDef => SortKeyTraitDef.Instance;
+    OpTraitDef IOpTrait.TraitDef => SortKeyTraitDef.Instance;
 
     public bool IsTop => _key.Length == 0;
 
-    public bool Satisfies(ITrait other)
+    public bool Satisfies(IOpTrait other)
     {
         return other is SortKey key && (key._key.Length == 0 || string.Equals(key._key, _key, StringComparison.Ordinal));
     }
 
-    public int CompareTo(IMultipleTrait? other)
+    public int CompareTo(IOpMultipleTrait? other)
     {
         return string.CompareOrdinal(_key, (other as SortKey)?._key ?? string.Empty);
     }

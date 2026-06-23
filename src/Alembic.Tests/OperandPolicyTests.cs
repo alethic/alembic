@@ -23,8 +23,8 @@ namespace Alembic.Tests;
 public class OperandPolicyTests
 {
 
-    static readonly TraitSet Expr = TraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
-    static readonly TraitSet Rel = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
+    static readonly OpTraitSet Expr = OpTraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
+    static readonly OpTraitSet Rel = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
 
     [Fact]
     public void Leaf_matches_only_childless_ops()
@@ -36,7 +36,7 @@ public class OperandPolicyTests
     [Fact]
     public void Any_matches_regardless_of_children()
     {
-        IOpNode Filter(Cluster c) => new LogicalFilter(Rel, new LogicalSource(c, Rel, "t"), "p");
+        IOpNode Filter(OpCluster c) => new LogicalFilter(Rel, new LogicalSource(c, Rel, "t"), "p");
 
         // Any matches the filter even though it has a child; Leaf would not.
         Assert.True(Run(SpyRule.AnyOf<LogicalFilter>(), Filter).Fired);
@@ -46,7 +46,7 @@ public class OperandPolicyTests
     [Fact]
     public void Some_matches_children_positionally()
     {
-        IOpNode MakeAdd(Cluster c) => new Add(Expr, new Variable(c, Expr, "a"), new Literal(c, Expr, 5));
+        IOpNode MakeAdd(OpCluster c) => new Add(Expr, new Variable(c, Expr, "a"), new Literal(c, Expr, 5));
 
         Assert.True(Run(SpyRule.SomeOf<Add>(SpyRule.LeafOf<Variable>(), SpyRule.LeafOf<Literal>()), MakeAdd).Fired);
         Assert.False(Run(SpyRule.SomeOf<Add>(SpyRule.LeafOf<Literal>(), SpyRule.LeafOf<Variable>()), MakeAdd).Fired);
@@ -55,8 +55,8 @@ public class OperandPolicyTests
     [Fact]
     public void Unordered_matches_a_child_in_any_position()
     {
-        IOpNode VarThenLit(Cluster c) => new Add(Expr, new Variable(c, Expr, "a"), new Literal(c, Expr, 5));
-        IOpNode LitThenVar(Cluster c) => new Add(Expr, new Literal(c, Expr, 5), new Variable(c, Expr, "a"));
+        IOpNode VarThenLit(OpCluster c) => new Add(Expr, new Variable(c, Expr, "a"), new Literal(c, Expr, 5));
+        IOpNode LitThenVar(OpCluster c) => new Add(Expr, new Literal(c, Expr, 5), new Variable(c, Expr, "a"));
 
         // A single unordered child operand matches whichever child satisfies it, regardless of position.
         Assert.True(Run(SpyRule.UnorderedOf<Add>(SpyRule.LeafOf<Literal>()), VarThenLit).Fired);
@@ -69,7 +69,7 @@ public class OperandPolicyTests
     [Fact]
     public void Unordered_binds_the_parent_and_the_matched_child()
     {
-        IOpNode VarThenLit(Cluster c) => new Add(Expr, new Variable(c, Expr, "a"), new Literal(c, Expr, 5));
+        IOpNode VarThenLit(OpCluster c) => new Add(Expr, new Variable(c, Expr, "a"), new Literal(c, Expr, 5));
 
         // The literal is the right child, but the unordered operand finds it and binds it after the parent.
         var spy = Run(SpyRule.UnorderedOf<Add>(SpyRule.LeafOf<Literal>()), VarThenLit);
@@ -79,11 +79,11 @@ public class OperandPolicyTests
         Assert.IsType<Literal>(spy.Binding[1]);
     }
 
-    static SpyRule Run(RuleOperand operand, Func<Cluster, IOpNode> build)
+    static SpyRule Run(OpRuleOperand operand, Func<OpCluster, IOpNode> build)
     {
         var rule = new SpyRule(operand);
         var planner = new HepPlanner(HepProgram.Builder().AddRuleInstance(rule).Build());
-        planner.SetRoot(build(new Cluster(planner)));
+        planner.SetRoot(build(new OpCluster(planner)));
         planner.FindBestPlan();
         return rule;
     }
@@ -93,10 +93,10 @@ public class OperandPolicyTests
     /// factory methods expose the (otherwise <c>protected</c>) operand builders so tests can describe a
     /// pattern.
     /// </summary>
-    sealed class SpyRule : Rule
+    sealed class SpyRule : OpRule
     {
 
-        public SpyRule(RuleOperand operand)
+        public SpyRule(OpRuleOperand operand)
             : base(operand)
         {
         }
@@ -105,19 +105,19 @@ public class OperandPolicyTests
 
         public ImmutableArray<IOpNode> Binding { get; private set; }
 
-        public override void OnMatch(RuleCall call)
+        public override void OnMatch(OpRuleCall call)
         {
             Fired = true;
             Binding = call.Ops;
         }
 
-        public static RuleOperand AnyOf<TOp>() where TOp : IOpNode => Any<TOp>();
+        public static OpRuleOperand AnyOf<TOp>() where TOp : IOpNode => Any<TOp>();
 
-        public static RuleOperand LeafOf<TOp>() where TOp : IOpNode => Leaf<TOp>();
+        public static OpRuleOperand LeafOf<TOp>() where TOp : IOpNode => Leaf<TOp>();
 
-        public static RuleOperand SomeOf<TOp>(params RuleOperand[] children) where TOp : IOpNode => Some<TOp>(children);
+        public static OpRuleOperand SomeOf<TOp>(params OpRuleOperand[] children) where TOp : IOpNode => Some<TOp>(children);
 
-        public static RuleOperand UnorderedOf<TOp>(params RuleOperand[] children) where TOp : IOpNode => Unordered<TOp>(children);
+        public static OpRuleOperand UnorderedOf<TOp>(params OpRuleOperand[] children) where TOp : IOpNode => Unordered<TOp>(children);
 
     }
 

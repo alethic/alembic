@@ -13,7 +13,7 @@ sealed class LogicalFilter : SingleOp
 
     readonly string _predicate;
 
-    public LogicalFilter(TraitSet traits, IOpNode input, string predicate)
+    public LogicalFilter(OpTraitSet traits, IOpNode input, string predicate)
         : base(traits, input)
     {
         _predicate = predicate;
@@ -30,7 +30,7 @@ sealed class LogicalFilter : SingleOp
         return writer;
     }
 
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new LogicalFilter(traits, children[0], _predicate);
     }

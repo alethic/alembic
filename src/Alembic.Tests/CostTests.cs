@@ -7,7 +7,7 @@ namespace Alembic.Tests;
 
 /// <summary>
 /// Exercises the cost-arithmetic helpers (<c>MultiplyBy</c> / <c>DivideBy</c> / <c>IsEqWithEpsilon</c>)
-/// on both the scalar <see cref="Cost"/> and the two-component <see cref="VolcanoCost"/>.
+/// on both the scalar <see cref="OpCost"/> and the two-component <see cref="VolcanoCost"/>.
 /// </summary>
 public class CostTests
 {
@@ -15,16 +15,16 @@ public class CostTests
     [Fact]
     public void Scalar_cost_arithmetic()
     {
-        var c = new Cost(10.0);
+        var c = new OpCost(10.0);
 
         // The scalar magnitude is not exposed (no getRows analog), so costs are compared to each other.
-        Assert.True(c.MultiplyBy(2.0).IsEqWithEpsilon(new Cost(20.0)));
-        Assert.Equal(2.0, c.DivideBy(new Cost(5.0)));
-        Assert.True(c.IsEqWithEpsilon(new Cost(10.0 + 1e-9)));
-        Assert.False(c.IsEqWithEpsilon(new Cost(11.0)));
+        Assert.True(c.MultiplyBy(2.0).IsEqWithEpsilon(new OpCost(20.0)));
+        Assert.Equal(2.0, c.DivideBy(new OpCost(5.0)));
+        Assert.True(c.IsEqWithEpsilon(new OpCost(10.0 + 1e-9)));
+        Assert.False(c.IsEqWithEpsilon(new OpCost(11.0)));
 
         // Scaling an infinite cost leaves it infinite.
-        Assert.True(((Cost)new Cost(double.PositiveInfinity).MultiplyBy(2.0)).IsInfinite);
+        Assert.True(((OpCost)new OpCost(double.PositiveInfinity).MultiplyBy(2.0)).IsInfinite);
     }
 
     [Fact]

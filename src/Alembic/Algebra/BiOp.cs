@@ -17,7 +17,7 @@ public abstract class BiOp : AbstractOp
     /// Initializes the op with its traits and its left and right children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.BiRel", "BiRel(RelOptCluster, RelTraitSet, RelNode, RelNode)")]
-    protected BiOp(TraitSet traits, IOpNode left, IOpNode right)
+    protected BiOp(OpTraitSet traits, IOpNode left, IOpNode right)
         : base(left.Cluster, traits, ImmutableArray.Create(left, right))
     {
 

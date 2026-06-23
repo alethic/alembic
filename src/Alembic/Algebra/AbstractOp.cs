@@ -23,7 +23,7 @@ public abstract class AbstractOp : IOpNode
     /// Initializes the op with its cluster, traits, and children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "AbstractRelNode(RelOptCluster, RelTraitSet)")]
-    protected AbstractOp(Cluster cluster, TraitSet traits, ImmutableArray<IOpNode> children)
+    protected AbstractOp(OpCluster cluster, OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         Cluster = cluster;
         Traits = traits;
@@ -33,11 +33,11 @@ public abstract class AbstractOp : IOpNode
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getCluster()")]
-    public Cluster Cluster { get; }
+    public OpCluster Cluster { get; }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getTraitSet()")]
-    public TraitSet Traits { get; }
+    public OpTraitSet Traits { get; }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getInputs()")]
@@ -64,11 +64,11 @@ public abstract class AbstractOp : IOpNode
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "copy(RelTraitSet, List<RelNode>)")]
-    public abstract IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children);
+    public abstract IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children);
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
-    public virtual ICost ComputeSelfCost(IPlanner planner)
+    public virtual IOpCost ComputeSelfCost(IOpPlanner planner)
     {
         return planner.CostFactory.MakeTinyCost();
     }

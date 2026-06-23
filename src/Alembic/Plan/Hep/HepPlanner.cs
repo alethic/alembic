@@ -20,18 +20,18 @@ namespace Alembic.Plan.Hep;
 /// mark-and-sweep garbage collection.
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner")]
-public sealed class HepPlanner : AbstractPlanner
+public sealed class HepPlanner : AbstractOpPlanner
 {
 
     readonly HepProgram _mainProgram;
     readonly Dictionary<IOpDigest, HepOpVertex> _mapDigestToVertex = new Dictionary<IOpDigest, HepOpVertex>();
     readonly DirectedGraph<HepOpVertex, DefaultEdge> _graph = DefaultDirectedGraph<HepOpVertex, DefaultEdge>.Create();
-    readonly Dictionary<FiredKey, HashSet<Rule>> _firedRulesCache = new Dictionary<FiredKey, HashSet<Rule>>();
+    readonly Dictionary<FiredKey, HashSet<OpRule>> _firedRulesCache = new Dictionary<FiredKey, HashSet<OpRule>>();
     readonly Dictionary<IOpNode, HashSet<FiredKey>> _firedRulesCacheIndex = new Dictionary<IOpNode, HashSet<FiredKey>>();
 
     HepOpVertex? _root;
     IOpNode? _rootOp;
-    TraitSet? _requestedRootTraits;
+    OpTraitSet? _requestedRootTraits;
     int _nTransformations;
     int _graphSizeLastGC;
     int _nTransformationsLastGC;
@@ -41,7 +41,7 @@ public sealed class HepPlanner : AbstractPlanner
 
     /// <summary>
     /// Creates a planner driven by the given program. More rules can be added with
-    /// <see cref="AbstractPlanner.AddRule"/> (e.g. by a convention's <see cref="ITrait.Register"/>).
+    /// <see cref="AbstractOpPlanner.AddRule"/> (e.g. by a convention's <see cref="IOpTrait.Register"/>).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "HepPlanner(HepProgram)")]
     public HepPlanner(HepProgram program)
@@ -53,7 +53,7 @@ public sealed class HepPlanner : AbstractPlanner
     /// Creates a planner driven by the given program, costing ops with <paramref name="costFactory"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "HepPlanner(HepProgram, Context, boolean, Function2<RelNode, RelNode, Void>, RelOptCostFactory)")]
-    public HepPlanner(HepProgram program, ICostFactory costFactory)
+    public HepPlanner(HepProgram program, IOpCostFactory costFactory)
         : base(costFactory)
     {
         _mainProgram = program;
@@ -125,7 +125,7 @@ public sealed class HepPlanner : AbstractPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "clearRules()")]
     public void ClearRules()
     {
-        foreach (var rule in new List<Rule>(Rules))
+        foreach (var rule in new List<OpRule>(Rules))
             RemoveRule(rule);
 
         _firedRulesCache.Clear();
@@ -137,7 +137,7 @@ public sealed class HepPlanner : AbstractPlanner
     /// request is enforced when <see cref="FindBestPlan"/> finishes.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "changeTraits(RelNode, RelTraitSet)")]
-    public override IOpNode ChangeTraits(IOpNode op, TraitSet toTraits)
+    public override IOpNode ChangeTraits(IOpNode op, OpTraitSet toTraits)
     {
         if (ReferenceEquals(op, _rootOp) || (_root is not null && ReferenceEquals(op, _root.CurrentOp)))
             _requestedRootTraits = toTraits;
@@ -170,7 +170,7 @@ public sealed class HepPlanner : AbstractPlanner
     /// ops in place rather than wrapping them, a complete plan is uniform throughout, so a single
     /// surviving op that falls short means no rule chain could finish the job.
     /// </summary>
-    static void EnsureSatisfies(IOpNode op, TraitSet required)
+    static void EnsureSatisfies(IOpNode op, OpTraitSet required)
     {
         if (!op.Traits.Satisfies(required))
             throw new CannotPlanException($"No plan satisfies the requested traits; '{op.GetType().Name}' remained in convention '{op.Convention}'.");
@@ -250,7 +250,7 @@ public sealed class HepPlanner : AbstractPlanner
 
         if (state.RuleSet is null)
         {
-            state.RuleSet = new HashSet<Rule>();
+            state.RuleSet = new HashSet<OpRule>();
             foreach (var rule in Rules)
                 if (instruction.RuleType.IsInstanceOfType(rule))
                     state.RuleSet.Add(rule);
@@ -273,7 +273,7 @@ public sealed class HepPlanner : AbstractPlanner
     {
         if (state.RuleSet is null)
         {
-            state.RuleSet = new HashSet<Rule>();
+            state.RuleSet = new HashSet<OpRule>();
             foreach (var rule in Rules)
             {
                 if (rule is not ConverterRule converter || converter.IsGuaranteed != instruction.Guaranteed)
@@ -296,7 +296,7 @@ public sealed class HepPlanner : AbstractPlanner
     {
         if (state.RuleSet is null)
         {
-            state.RuleSet = new HashSet<Rule>();
+            state.RuleSet = new HashSet<OpRule>();
             foreach (var rule in Rules)
                 if (rule is ICommonSubExprRule)
                     state.RuleSet.Add(rule);
@@ -334,7 +334,7 @@ public sealed class HepPlanner : AbstractPlanner
     // ~ Rule application -----------------------------------------------------
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "depthFirstApply(HepProgram.State, Iterator<HepRelVertex>, Collection<RelOptRule>, boolean, int)")]
-    int DepthFirstApply(HepProgram.State programState, IEnumerator<HepOpVertex> iter, IReadOnlyList<Rule> rules, bool forceConversions, int nMatches)
+    int DepthFirstApply(HepProgram.State programState, IEnumerator<HepOpVertex> iter, IReadOnlyList<OpRule> rules, bool forceConversions, int nMatches)
     {
         while (iter.MoveNext())
         {
@@ -360,7 +360,7 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "applyRules(HepProgram.State, Collection<RelOptRule>, boolean)")]
-    void ApplyRules(HepProgram.State programState, IEnumerable<Rule> rules, bool forceConversions)
+    void ApplyRules(HepProgram.State programState, IEnumerable<OpRule> rules, bool forceConversions)
     {
         var group = programState.Group;
         if (group is not null)
@@ -371,7 +371,7 @@ public sealed class HepPlanner : AbstractPlanner
             return;
         }
 
-        var ruleList = rules as IReadOnlyList<Rule> ?? new List<Rule>(rules);
+        var ruleList = rules as IReadOnlyList<OpRule> ?? new List<OpRule>(rules);
         var fullRestart = programState.MatchOrder != HepMatchOrder.Arbitrary && programState.MatchOrder != HepMatchOrder.DepthFirst;
 
         // In large-plan mode an unordered/depth-first pass uses a vertex iterator that can resume from a
@@ -452,7 +452,7 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "applyRule(RelOptRule, HepRelVertex, boolean)")]
-    HepOpVertex? ApplyRule(Rule rule, HepOpVertex vertex, bool forceConversions)
+    HepOpVertex? ApplyRule(OpRule rule, HepOpVertex vertex, bool forceConversions)
     {
         if (IsRuleExcluded(rule))
             return null;
@@ -460,7 +460,7 @@ public sealed class HepPlanner : AbstractPlanner
         if (!_graph.VertexSet.Contains(vertex))
             return null;
 
-        ITrait? parentTrait = null;
+        IOpTrait? parentTrait = null;
         if (rule is ConverterRule converter)
         {
             // Converter rules fire only where the conversion is actually wanted, or they run away.
@@ -501,7 +501,7 @@ public sealed class HepPlanner : AbstractPlanner
         if (key is not null)
         {
             if (!_firedRulesCache.TryGetValue(key, out var fired))
-                _firedRulesCache[key] = fired = new HashSet<Rule>();
+                _firedRulesCache[key] = fired = new HashSet<OpRule>();
             fired.Add(rule);
 
             foreach (var op in bindings.Value)
@@ -556,7 +556,7 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "applyTransformationResults(HepRelVertex, HepRuleCall, RelTrait)")]
-    HepOpVertex ApplyTransformationResults(HepOpVertex vertex, HepRuleCall call, ITrait? parentTrait)
+    HepOpVertex ApplyTransformationResults(HepOpVertex vertex, HepRuleCall call, IOpTrait? parentTrait)
     {
         IOpNode? bestRel;
         if (call.Results.Count == 1)
@@ -566,7 +566,7 @@ public sealed class HepPlanner : AbstractPlanner
         else
         {
             bestRel = null;
-            ICost? bestCost = null;
+            IOpCost? bestCost = null;
             foreach (var rel in call.Results)
             {
                 var thisCost = GetCost(rel);
@@ -855,7 +855,7 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getCost(RelNode, RelMetadataQuery)")]
-    ICost GetCost(IOpNode op)
+    IOpCost GetCost(IOpNode op)
     {
         var current = op is HepOpVertex vertex ? vertex.CurrentOp : op;
         var cost = current.ComputeSelfCost(this);
@@ -867,14 +867,14 @@ public sealed class HepPlanner : AbstractPlanner
 
     // ~ RuleOperand matching (sees through vertices) -----------------------------
 
-    static ImmutableArray<IOpNode>? Match(RuleOperand operand, IOpNode op)
+    static ImmutableArray<IOpNode>? Match(OpRuleOperand operand, IOpNode op)
     {
         var bound = new List<IOpNode>();
         return MatchOperand(operand, op, bound) ? bound.ToImmutableArray() : null;
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "matchOperands(RelOptRuleOperand, RelNode, List<RelNode>, Map<RelNode, List<RelNode>>)")]
-    static bool MatchOperand(RuleOperand operand, IOpNode op, List<IOpNode> bound)
+    static bool MatchOperand(OpRuleOperand operand, IOpNode op, List<IOpNode> bound)
     {
         while (op is HepOpVertex vertex)
             op = vertex.CurrentOp;

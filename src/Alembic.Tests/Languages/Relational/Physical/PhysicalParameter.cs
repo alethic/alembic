@@ -13,7 +13,7 @@ sealed class PhysicalParameter : AbstractOp
 
     readonly string _name;
 
-    public PhysicalParameter(Cluster cluster, TraitSet traits, string name)
+    public PhysicalParameter(OpCluster cluster, OpTraitSet traits, string name)
         : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         _name = name;
@@ -28,7 +28,7 @@ sealed class PhysicalParameter : AbstractOp
         return writer;
     }
 
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new PhysicalParameter(Cluster, traits, _name);
     }

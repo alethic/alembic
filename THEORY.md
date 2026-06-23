@@ -115,24 +115,24 @@ Two further properties make a trait *useful to the optimizer*:
    it's needed.
 
 Often there is a **partial order**: sorted-by-`[a,b,c]` already satisfies a request for sorted-by-`[a]`.
-That order is `ITrait.Satisfies` — a value can stand in for a weaker one.
+That order is `IOpTrait.Satisfies` — a value can stand in for a weaker one.
 
 ### Trait machinery
 
-- **`TraitDef`** — a *dimension* / axis (e.g. "sortedness", "convention"). Has a `Name` and a
-  `Default`. A non-generic abstract base, with the strongly-typed `TraitDef<TTrait>` subclass.
-- **`ITrait`** — a *value* on a dimension (e.g. "Sorted"). `Def` names its dimension; `Satisfies(other)`
+- **`OpTraitDef`** — a *dimension* / axis (e.g. "sortedness", "convention"). Has a `Name` and a
+  `Default`. A non-generic abstract base, with the strongly-typed `OpTraitDef<TTrait>` subclass.
+- **`IOpTrait`** — a *value* on a dimension (e.g. "Sorted"). `Def` names its dimension; `Satisfies(other)`
   is the partial order (defaults to equality); `Register(planner)` lets a trait contribute rules.
-- **`TraitSet`** — one value per dimension: an op's full physical fingerprint, a point in trait-space.
+- **`OpTraitSet`** — one value per dimension: an op's full physical fingerprint, a point in trait-space.
   It is **interned** (equal sets are one shared instance, via a cache shared by every set derived from
   a common `CreateEmpty()`), and ordered, with a linear `FindIndex`. Key operations: `Plus(trait)`
   (add or replace), `Replace(def, value)`, `Get(def)`, `Satisfies(required)` (does this set meet a
   requirement on every named dimension?), `Convention`.
 - **Multi-valued dimensions** — some traits can hold several values at once (sorted by two keys).
-  `IMultipleTrait` marks such a trait; `CompositeTrait<T>` bundles several values of one dimension; and
-  `TraitSet.Replace(def, list)` / `GetList(def)` store and read them.
+  `IOpMultipleTrait` marks such a trait; `OpCompositeTrait<T>` bundles several values of one dimension; and
+  `OpTraitSet.Replace(def, list)` / `GetList(def)` store and read them.
 
-An op's identity includes its traits, but traits are compared specially (interned `TraitSet` equality),
+An op's identity includes its traits, but traits are compared specially (interned `OpTraitSet` equality),
 not as ordinary terms — which is both faithful to the model and efficient.
 
 ---
@@ -141,7 +141,7 @@ not as ordinary terms — which is both faithful to the model and efficient.
 
 A **convention** is the coarsest, most important trait: the *family* an op belongs to. It answers
 "in what world does this operation run?" — a logical world (abstract), or a particular physical backend
-(CPU, GPU, an interpreter, a codegen target). It is just an `ITrait` whose dimension is always present
+(CPU, GPU, an interpreter, a codegen target). It is just an `IOpTrait` whose dimension is always present
 (`ConventionTraitDef`).
 
 This is where the **logical vs. physical** distinction lives, and it is central:
@@ -182,7 +182,7 @@ The optimizer never invents transformations on its own; it applies **rules** you
   plus optional child operands (matched positionally); `Operand.Of<T>()` matches an op type, and a
   child-less predicate operand matches "anything." Matching is done by `OperandMatcher`, outside the
   planner.
-- **`OnMatch(RuleCall)`** — the action. Given a match, the rule builds one or more **equivalent** ops
+- **`OnMatch(OpRuleCall)`** — the action. Given a match, the rule builds one or more **equivalent** ops
   and registers them via `call.Transform(equivalent)`.
 
 A crucial detail: a rule reaches its matched ops through **`call.Op(i)`** (the operand-bound ops),
@@ -191,14 +191,14 @@ the cost-based planner they are equivalence *subsets* — so only the operand-bo
 to be the concrete types the rule expects. Because rules use `Op(i)`, **the same rule works under both
 planners**.
 
-`RuleCall` is the context of a single match (the bound ops + `Transform`); each planner provides its
+`OpRuleCall` is the context of a single match (the bound ops + `Transform`); each planner provides its
 own subclass that decides what `Transform` does — replace-in-place (heuristic) or register-an-equivalent
 (cost-based).
 
 ### Converter rules
 
 A **converter rule** (`IConverterRule`) is the special, central kind of rule that changes a *trait*:
-it declares a `Source` trait and a `Target` trait (both `ITrait` — usually conventions, but any
+it declares a `Source` trait and a `Target` trait (both `IOpTrait` — usually conventions, but any
 dimension, e.g. unsorted→sorted), and a `Convert(op)` that returns the converted op, or `null` to
 decline. The operand (match anything carrying the `Source` trait) and the match action are provided as
 a mixin; `ConverterRule` is a convenience base. Lowering rules and trait enforcers are all converter
@@ -274,7 +274,7 @@ The lifecycle:
 ### When to use which
 
 - **Heuristic** — deterministic transformations, no cost trade-offs, "always apply these rewrites."
-- **Cost-based** — genuine choices between alternatives, lowering where the cheapest backend depends on
+- **OpCost-based** — genuine choices between alternatives, lowering where the cheapest backend depends on
   context, trait enforcement with transfer costs (the image GPU/CPU example).
 
 ---
@@ -297,7 +297,7 @@ form.**
    `ExpandConversionRule` (registered automatically) then turns each abstract converter into a real
    conversion via `ChangeTraitsUsingConverters`, which applies the registered converter rules.
 
-This is why converter `Source`/`Target` are `ITrait`, not just conventions: the same machinery enforces
+This is why converter `Source`/`Target` are `IOpTrait`, not just conventions: the same machinery enforces
 *any* trait. A `Sort` is the enforcer for sortedness; a `Download`/`Upload` is the enforcer for the
 CPU/GPU dimension. The planner inserts them, costs them, and only keeps them when they pay off.
 
@@ -308,16 +308,16 @@ cost — and *declines* to cross for a lone op when the round-trip costs more th
 
 ---
 
-## 9. Cost
+## 9. OpCost
 
-Cost is how the optimizer chooses. The model is intentionally small and opaque:
+OpCost is how the optimizer chooses. The model is intentionally small and opaque:
 
-- **`ICost`** — a comparable, combinable cost: `IsInfinite`, `IsLessThanOrEqual`, `IsLessThan`,
+- **`IOpCost`** — a comparable, combinable cost: `IsInfinite`, `IsLessThanOrEqual`, `IsLessThan`,
   `Plus`. The engine only ever compares costs and adds them up; it attaches no units.
-- **`ICostFactory`** — makes the well-known costs the planner needs: `MakeCost(cpu, io)`, plus
+- **`IOpCostFactory`** — makes the well-known costs the planner needs: `MakeCost(cpu, io)`, plus
   `MakeZeroCost` (a free leaf), `MakeInfiniteCost` (unimplementable/rejected), and huge/tiny bookends.
-  A planner carries one (`IPlanner.CostFactory`) and ops build their costs through it.
-- **`Cost`** — a scalar default (a single magnitude). **`VolcanoCost`** — the cost-based planner's
+  A planner carries one (`IOpPlanner.CostFactory`) and ops build their costs through it.
+- **`OpCost`** — a scalar default (a single magnitude). **`VolcanoCost`** — the cost-based planner's
   default, with CPU and I/O dimensions (compared on CPU). *(There is deliberately no row count — the
   engine is not a database.)*
 
@@ -374,7 +374,7 @@ line) that makes that search efficient on large inputs.
 5. **Inspect** — `IOpNode.ToPlanString()` renders the result as an indented tree (type, traits,
    attributes; inputs nested), which is how the tests display the plans they produce.
 
-Supporting cast: a **`Cluster`** is the per-session environment (wraps the planner, offers `TraitSet`
+Supporting cast: a **`OpCluster`** is the per-session environment (wraps the planner, offers `OpTraitSet`
 / `TraitSetOf`); **`IPlannerListener`** receives events (equivalences found, rules attempted/succeeded,
 ops chosen) for tracing; **`IOpImplementor`** is the marker for a convention's "turn this plan into
 something runnable" callback.
@@ -405,13 +405,13 @@ to any tree-shaped computation.
 | A plan op | `IOpNode`; bases `AbstractOp`, `SingleOp`, `BiOp` |
 | Structural identity | `DeepEquals` / `DeepHashCode`; `Explain(IOpWriter)`; `IOpDigest` |
 | Plan rendering | `IOpNode.ToPlanString()` |
-| A physical property (value / dimension) | `ITrait` / `TraitDef`; multi-valued: `IMultipleTrait`, `CompositeTrait` |
-| An op's full property fingerprint | `TraitSet` |
+| A physical property (value / dimension) | `IOpTrait` / `OpTraitDef`; multi-valued: `IOpMultipleTrait`, `OpCompositeTrait` |
+| An op's full property fingerprint | `OpTraitSet` |
 | Calling convention (logical/physical family) | `IConvention` / `Convention` |
-| A transformation rule | `IRule`, `Operand`, `OperandMatcher`, `RuleCall` |
+| A transformation rule | `IRule`, `Operand`, `OperandMatcher`, `OpRuleCall` |
 | A trait-changing rule / op | `IConverterRule` / `ConverterRule`; `IConverter` / `ConverterImpl`; `AbstractConverter` |
-| Cost | `ICost`, `ICostFactory`, `Cost`, `VolcanoCost`; `IOpNode.ComputeSelfCost` |
+| OpCost | `IOpCost`, `IOpCostFactory`, `OpCost`, `VolcanoCost`; `IOpNode.ComputeSelfCost` |
 | Heuristic planner | `HepPlanner`, `HepProgram`, `HepRuleCall` |
-| Cost-based planner | `VolcanoPlanner`, `OpSet`, `OpSubset`, `RuleQueue`, `IRuleDriver` / `IterativeRuleDriver`, `VolcanoRuleCall` / `VolcanoRuleMatch` / `DeferringRuleCall`, `ExpandConversionRule` |
-| Session / observation | `Cluster`, `IPlannerListener`, `IOpImplementor` |
+| OpCost-based planner | `VolcanoPlanner`, `OpSet`, `OpSubset`, `RuleQueue`, `IRuleDriver` / `IterativeRuleDriver`, `VolcanoRuleCall` / `VolcanoRuleMatch` / `DeferringRuleCall`, `ExpandConversionRule` |
+| Session / observation | `OpCluster`, `IPlannerListener`, `IOpImplementor` |
 | Failure to plan | `CannotPlanException` |

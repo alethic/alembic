@@ -19,14 +19,14 @@ namespace Alembic.Tests.Holistic;
 public class ConverterProgramTests
 {
 
-    static readonly TraitSet Logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
-    static readonly TraitSet Physical = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
+    static readonly OpTraitSet Logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
+    static readonly OpTraitSet Physical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
 
     [Fact]
     public void Add_converters_lowers_to_the_requested_convention()
     {
         var planner = new HepPlanner(HepProgram.Builder().AddConverters(true).Build());
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(Logical, new LogicalSource(cluster, Logical, "t"), "x > 5");
 
         planner.AddRule(new SourceConverter(Physical));
@@ -44,19 +44,19 @@ public class ConverterProgramTests
     {
         // The input is already physical, but the filter's converter is non-guaranteed and no parent
         // requests the physical trait, so the raw converter never fires on its own.
-        IOpNode Root(Cluster cluster) => new LogicalFilter(Logical, new PhysicalSource(cluster, Physical, "t"), "x > 5");
+        IOpNode Root(OpCluster cluster) => new LogicalFilter(Logical, new PhysicalSource(cluster, Physical, "t"), "x > 5");
 
         // The raw converter alone: doesConverterApply is false (no parent wants physical, not the root
         // request), so the filter stays logical.
         var raw = new HepPlanner(HepProgram.Builder().AddRuleInstance(new UnguaranteedFilterConverter(Physical)).Build());
-        raw.SetRoot(Root(new Cluster(raw)));
+        raw.SetRoot(Root(new OpCluster(raw)));
         Assert.IsType<LogicalFilter>(raw.FindBestPlan());
 
         // AddConverters(false) also installs a TraitMatchingRule, which fires the converter bottom-up
         // because the single input is already physical.
         var matched = new HepPlanner(HepProgram.Builder().AddConverters(false).Build());
         matched.AddRule(new UnguaranteedFilterConverter(Physical));
-        matched.SetRoot(Root(new Cluster(matched)));
+        matched.SetRoot(Root(new OpCluster(matched)));
         Assert.IsType<PhysicalFilter>(matched.FindBestPlan());
     }
 
@@ -66,9 +66,9 @@ public class ConverterProgramTests
     sealed class UnguaranteedFilterConverter : ConverterRule
     {
 
-        readonly TraitSet _physical;
+        readonly OpTraitSet _physical;
 
-        public UnguaranteedFilterConverter(TraitSet physical)
+        public UnguaranteedFilterConverter(OpTraitSet physical)
             : base(RelationalConventions.Logical, RelationalConventions.Physical)
         {
             _physical = physical;

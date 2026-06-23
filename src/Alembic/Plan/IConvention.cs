@@ -10,7 +10,7 @@ namespace Alembic.Plan;
 /// a target convention. Its default implementation is <see cref="Convention"/>.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention")]
-public interface IConvention : ITrait
+public interface IConvention : IOpTrait
 {
 
     /// <summary>
@@ -44,7 +44,7 @@ public interface IConvention : ITrait
     /// to <paramref name="toTraits"/>. A convention opts in to handling each trait's conversion here.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention", "useAbstractConvertersForConversion(RelTraitSet, RelTraitSet)")]
-    bool UseAbstractConvertersForConversion(TraitSet fromTraits, TraitSet toTraits) => false;
+    bool UseAbstractConvertersForConversion(OpTraitSet fromTraits, OpTraitSet toTraits) => false;
 
     /// <summary>
     /// Produces an enforcer op that delivers <paramref name="input"/> with the required traits (a
@@ -52,7 +52,7 @@ public interface IConvention : ITrait
     /// unimplemented.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention", "enforce(RelNode, RelTraitSet)")]
-    IOpNode? Enforce(IOpNode input, TraitSet required)
+    IOpNode? Enforce(IOpNode input, OpTraitSet required)
     {
         throw new NotImplementedException($"{GetType().Name}.Enforce is not implemented.");
     }

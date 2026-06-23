@@ -25,13 +25,13 @@ public class TraitConversionTests
     [Fact]
     public void A_trait_def_hook_enforces_a_trait_without_a_converter_rule()
     {
-        var unsorted = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical).Plus(Sortedness.Unsorted);
-        var sorted = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical).Plus(Sortedness.Sorted);
+        var unsorted = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical).Plus(Sortedness.Unsorted);
+        var sorted = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical).Plus(Sortedness.Sorted);
 
         // No converter rule for sortedness is registered; the planner must reach the sorted form
         // through SortednessTraitDef's own conversion hook, which wraps the input in a PhysicalSort.
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new PhysicalSource(cluster, unsorted, "t");
 
         planner.AddTraitDef(SortednessTraitDef.Instance);
@@ -47,13 +47,13 @@ public class TraitConversionTests
     [Fact]
     public void A_multi_step_chain_reaches_a_convention_through_an_intermediate()
     {
-        var logical = TraitSet.CreateEmpty().Plus(ImageConventions.Logical);
-        var gpu = TraitSet.CreateEmpty().Plus(ImageConventions.Gpu);
+        var logical = OpTraitSet.CreateEmpty().Plus(ImageConventions.Logical);
+        var gpu = OpTraitSet.CreateEmpty().Plus(ImageConventions.Gpu);
 
         // Only logical->CPU and CPU->GPU converters are registered (no direct logical->GPU). Reaching
         // the GPU therefore requires chaining the two: load on the CPU, then upload.
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new Load(cluster, logical, "x.png");
 
         planner.AddRule(new LowerToCpu());

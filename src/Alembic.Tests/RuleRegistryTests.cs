@@ -20,7 +20,7 @@ namespace Alembic.Tests;
 public class RuleRegistryTests
 {
 
-    static readonly TraitSet Logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical).Plus(Sortedness.Unsorted);
+    static readonly OpTraitSet Logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical).Plus(Sortedness.Unsorted);
 
     [Fact]
     public void Adding_a_duplicate_rule_is_a_no_op()
@@ -43,7 +43,7 @@ public class RuleRegistryTests
         var planner = new HepPlanner(HepProgram.Builder().AddRuleInstance(new MarkSorted()).Build());
         planner.SetRuleDescExclusionFilter(new Regex("MarkSorted"));
 
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         planner.SetRoot(new LogicalSource(cluster, Logical, "t"));
         var best = planner.FindBestPlan();
 
@@ -58,7 +58,7 @@ public class RuleRegistryTests
         planner.SetRuleDescExclusionFilter(new Regex("MarkSorted"));
         planner.SetRuleDescExclusionFilter(null);
 
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         planner.SetRoot(new LogicalSource(cluster, Logical, "t"));
         var best = planner.FindBestPlan();
 
@@ -88,7 +88,7 @@ public class RuleRegistryTests
         Assert.True(planner.AddRule(new NoOp()));
     }
 
-    sealed class NoOp : Rule
+    sealed class NoOp : OpRule
     {
 
         public NoOp()
@@ -96,7 +96,7 @@ public class RuleRegistryTests
         {
         }
 
-        public override void OnMatch(RuleCall call)
+        public override void OnMatch(OpRuleCall call)
         {
         }
 

@@ -11,7 +11,7 @@ namespace Alembic.Tests.Languages.Image;
 abstract class ImageOp : SingleOp, IImageOperation
 {
 
-    protected ImageOp(TraitSet traits, IOpNode input)
+    protected ImageOp(OpTraitSet traits, IOpNode input)
         : base(traits, input)
     {
 
@@ -24,7 +24,7 @@ abstract class ImageOp : SingleOp, IImageOperation
     /// </summary>
     public virtual bool SupportsGpu => true;
 
-    public override ICost ComputeSelfCost(IPlanner planner)
+    public override IOpCost ComputeSelfCost(IOpPlanner planner)
     {
         return planner.CostFactory.MakeCost(ImageConventions.OpCost(Traits.Convention), 0);
     }

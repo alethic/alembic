@@ -24,14 +24,14 @@ public class SharedDagTests
     [Fact]
     public void Common_subexpressions_are_shared_and_rewritten_once()
     {
-        var logical = TraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
+        var logical = OpTraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
 
         var program = HepProgram.Builder()
             .AddRuleInstance(new FoldMultiply())
             .Build();
 
         var planner = new HepPlanner(program);
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
 
         // (2 * 3) + (2 * 3): the two multiplies are the same subexpression, so the graph interns them to
         // one vertex. Folding it once rewrites both occurrences, and the result shares one op.

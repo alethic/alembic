@@ -14,7 +14,7 @@ sealed class Load : AbstractOp, IImageOperation
 
     readonly string _source;
 
-    public Load(Cluster cluster, TraitSet traits, string source)
+    public Load(OpCluster cluster, OpTraitSet traits, string source)
         : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         _source = source;
@@ -24,7 +24,7 @@ sealed class Load : AbstractOp, IImageOperation
 
     public bool SupportsGpu => false;
 
-    public override ICost ComputeSelfCost(IPlanner planner)
+    public override IOpCost ComputeSelfCost(IOpPlanner planner)
     {
         return planner.CostFactory.MakeCost(ImageConventions.OpCost(Traits.Convention), 0);
     }
@@ -36,7 +36,7 @@ sealed class Load : AbstractOp, IImageOperation
         return writer;
     }
 
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new Load(Cluster, traits, _source);
     }

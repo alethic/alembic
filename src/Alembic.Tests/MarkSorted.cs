@@ -7,7 +7,7 @@ namespace Alembic.Tests;
 /// Marks any not-yet-sorted op as <see cref="Sortedness.Sorted"/>, proving a custom trait
 /// dimension can be read and written through the engine and preserved across rewrites.
 /// </summary>
-sealed class MarkSorted : Rule
+sealed class MarkSorted : OpRule
 {
 
     public MarkSorted()
@@ -15,7 +15,7 @@ sealed class MarkSorted : Rule
     {
     }
 
-    public override void OnMatch(RuleCall call)
+    public override void OnMatch(OpRuleCall call)
     {
         var op = call.Op(0);
         var traits = op.Traits.Replace(SortednessTraitDef.Instance, Sortedness.Sorted);

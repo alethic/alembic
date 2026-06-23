@@ -52,7 +52,7 @@ public abstract class HepInstruction
             internal readonly RuleClass Instruction;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleClass.State.ruleSet")]
-            internal HashSet<Rule>? RuleSet;
+            internal HashSet<OpRule>? RuleSet;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleClass.State", "State(PrepareContext)")]
             internal State(PrepareContext px, RuleClass instruction) : base(px) => Instruction = instruction;
@@ -71,10 +71,10 @@ public abstract class HepInstruction
     {
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleCollection.rules")]
-        internal readonly ImmutableArray<Rule> Rules;
+        internal readonly ImmutableArray<OpRule> Rules;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleCollection", "RuleCollection(Collection<RelOptRule>)")]
-        internal RuleCollection(IEnumerable<Rule> rules)
+        internal RuleCollection(IEnumerable<OpRule> rules)
         {
             Rules = rules.ToImmutableArray();
         }
@@ -121,7 +121,7 @@ public abstract class HepInstruction
             internal readonly ConverterRules Instruction;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.ConverterRules.State.ruleSet")]
-            internal HashSet<Rule>? RuleSet;
+            internal HashSet<OpRule>? RuleSet;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.ConverterRules.State", "State(PrepareContext)")]
             internal State(PrepareContext px, ConverterRules instruction) : base(px) => Instruction = instruction;
@@ -149,7 +149,7 @@ public abstract class HepInstruction
             internal readonly CommonRelSubExprRules Instruction;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules.State.ruleSet")]
-            internal HashSet<Rule>? RuleSet;
+            internal HashSet<OpRule>? RuleSet;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules.State", "State(PrepareContext)")]
             internal State(PrepareContext px, CommonRelSubExprRules instruction) : base(px) => Instruction = instruction;
@@ -168,10 +168,10 @@ public abstract class HepInstruction
     {
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleInstance.rule")]
-        internal readonly Rule Rule;
+        internal readonly OpRule Rule;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleInstance", "RuleInstance(RelOptRule)")]
-        internal RuleInstance(Rule rule)
+        internal RuleInstance(OpRule rule)
         {
             Rule = rule;
         }
@@ -218,7 +218,7 @@ public abstract class HepInstruction
             internal readonly RuleLookup Instruction;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleLookup.State.rule")]
-            internal Rule? Rule;
+            internal OpRule? Rule;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleLookup.State", "State(PrepareContext)")]
             internal State(PrepareContext px, RuleLookup instruction) : base(px) => Instruction = instruction;
@@ -409,7 +409,7 @@ public abstract class HepInstruction
             internal readonly EndGroup Instruction;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.EndGroup.State.ruleSet")]
-            internal readonly HashSet<Rule> RuleSet = new HashSet<Rule>();
+            internal readonly HashSet<OpRule> RuleSet = new HashSet<OpRule>();
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.EndGroup.State.collecting")]
             internal bool Collecting = true;

@@ -29,7 +29,7 @@ public class ExpressionLoweringTests
         var (logical, physical) = Setup();
 
         var planner = BuildPlanner(Converters(physical));
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new Add(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b"));
 
         var result = Lower(planner, root, physical);
@@ -45,7 +45,7 @@ public class ExpressionLoweringTests
         var (logical, physical) = Setup();
 
         var planner = BuildPlanner(Converters(physical));
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new Add(logical, new Multiply(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b")), new Variable(cluster, logical, "c"));
 
         var result = Lower(planner, root, physical);
@@ -62,7 +62,7 @@ public class ExpressionLoweringTests
 
         // Lower, then fuse the physical multiply-then-add into a single fused multiply-add.
         var planner = BuildPlanner([.. Converters(physical), new FuseMultiplyAdd()]);
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new Add(logical, new Multiply(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b")), new Variable(cluster, logical, "c"));
 
         var result = Lower(planner, root, physical);
@@ -79,7 +79,7 @@ public class ExpressionLoweringTests
         var (logical, _) = Setup();
 
         var planner = BuildPlanner(new FoldAdd());
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new Add(logical, new Literal(cluster, logical, 2), new Literal(cluster, logical, 3));
 
         var result = Simplify(planner, root);
@@ -94,7 +94,7 @@ public class ExpressionLoweringTests
 
         // (2 * 3) + 4 folds bottom-up to 10.
         var planner = BuildPlanner(new FoldMultiply(), new FoldAdd());
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new Add(logical, new Multiply(logical, new Literal(cluster, logical, 2), new Literal(cluster, logical, 3)), new Literal(cluster, logical, 4));
 
         var result = Simplify(planner, root);
@@ -108,7 +108,7 @@ public class ExpressionLoweringTests
         var (logical, physical) = Setup();
 
         var planner = BuildPlanner(new FoldAdd());
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new Add(logical, new Literal(cluster, logical, 2), new Literal(cluster, logical, 3));
 
         var folded = Simplify(planner, root);
@@ -124,12 +124,12 @@ public class ExpressionLoweringTests
         // The program applies every converter rule; the physical convention contributes them to the
         // planner, rather than the caller listing them by hand.
         var planner = new HepPlanner(HepProgram.Builder().AddRuleClass<ConverterRule>().Build());
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
 
         ExpressionConventions.Physical.Register(planner);
 
-        var logical = TraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
-        var physical = TraitSet.CreateEmpty().Plus(ExpressionConventions.Physical);
+        var logical = OpTraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
+        var physical = OpTraitSet.CreateEmpty().Plus(ExpressionConventions.Physical);
         IOpNode root = new Multiply(logical, new Variable(cluster, logical, "a"), new Literal(cluster, logical, 7));
 
         planner.SetRoot(root);
@@ -149,25 +149,25 @@ public class ExpressionLoweringTests
         // Omit the variable converter: the variables can never reach the physical convention, so the
         // planner cannot satisfy the requested output traits.
         var planner = BuildPlanner(new LiteralConverter(physical), new AddConverter(physical), new MultiplyConverter(physical));
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new Add(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b"));
 
         Assert.Throws<CannotPlanException>(() => Lower(planner, root, physical));
     }
 
-    static (TraitSet Logical, TraitSet Physical) Setup()
+    static (OpTraitSet Logical, OpTraitSet Physical) Setup()
     {
         return (
-            TraitSet.CreateEmpty().Plus(ExpressionConventions.Logical),
-            TraitSet.CreateEmpty().Plus(ExpressionConventions.Physical));
+            OpTraitSet.CreateEmpty().Plus(ExpressionConventions.Logical),
+            OpTraitSet.CreateEmpty().Plus(ExpressionConventions.Physical));
     }
 
-    static Rule[] Converters(TraitSet physical)
+    static OpRule[] Converters(OpTraitSet physical)
     {
         return [new LiteralConverter(physical), new VariableConverter(physical), new AddConverter(physical), new MultiplyConverter(physical)];
     }
 
-    IOpNode Lower(HepPlanner planner, IOpNode root, TraitSet required)
+    IOpNode Lower(HepPlanner planner, IOpNode root, OpTraitSet required)
     {
         planner.SetRoot(root);
         planner.ChangeTraits(root, required);
@@ -186,7 +186,7 @@ public class ExpressionLoweringTests
         return best;
     }
 
-    static HepPlanner BuildPlanner(params Rule[] rules)
+    static HepPlanner BuildPlanner(params OpRule[] rules)
     {
         // Fire all the rules together to a fixed point (a rule collection), so lowering can cascade
         // across them in one instruction.

@@ -42,7 +42,7 @@ variant `PhysicalNode` → `IPhysicalNode`, which keep "Node". `getX()`/`setX()`
 | `recomputeDigest()` | `RecomputeDigest()` | default member; discards the cached digest (`GetDigest().Clear()`) |
 | `getRowType()`, `estimateRowCount(mq)` | — | relational / metadata |
 | `getId()` | — | id |
-| `onRegister(planner)`, `register(planner)` | — | planners register internally; trait registration is `ITrait.Register` |
+| `onRegister(planner)`, `register(planner)` | — | planners register internally; trait registration is `IOpTrait.Register` |
 | `accept(RelShuttle/RexShuttle)`, `childrenAccept(RelVisitor)` | — | visitor |
 | `getCluster()` | `Cluster` | every op carries its cluster, as in Calcite |
 
@@ -115,7 +115,7 @@ Structural analog only — Calcite's is Enumerable/Java-codegen specific; Alembi
 
 ## 2. Traits & conventions
 
-### `RelTrait` (interface) → `ITrait` (`src/Alembic/Plan/ITrait.cs`)
+### `RelTrait` (interface) → `IOpTrait` (`src/Alembic/Plan/IOpTrait.cs`)
 
 | Calcite | Alembic | Notes |
 |---|---|---|
@@ -125,25 +125,25 @@ Structural analog only — Calcite's is Enumerable/Java-codegen specific; Alembi
 | `equals`/`hashCode`/`toString` | (value semantics required) | |
 | `apply(mapping)`, `isDefault()` | — | relational (mapping) |
 
-### `RelTraitDef<T>` → `TraitDef` (base) + `TraitDef<T>` (`src/Alembic/Plan/TraitDef.cs`)
+### `RelTraitDef<T>` → `OpTraitDef` (base) + `OpTraitDef<T>` (`src/Alembic/Plan/OpTraitDef.cs`)
 
 Calcite's `RelTraitDef<T>` is a single abstract class, used raw where the trait type isn't known. C# has no
-raw generics, so it is rendered as a non-generic abstract base class `TraitDef` (the non-generic handle) plus
-the strongly-typed `TraitDef<T> : TraitDef`. (There is no interface — an earlier `ITraitDef` was removed, since
+raw generics, so it is rendered as a non-generic abstract base class `OpTraitDef` (the non-generic handle) plus
+the strongly-typed `OpTraitDef<T> : OpTraitDef`. (There is no interface — an earlier `ITraitDef` was removed, since
 Calcite has no such interface.)
 
 | Calcite | Alembic | Notes |
 |---|---|---|
-| `getSimpleName()` | `Name` | abstract on base `TraitDef` |
-| `getDefault()` | `Default` | abstract `ITrait` on base; covariantly re-typed `TTrait` on `TraitDef<T>` |
-| `canConvert(planner, from, to)` | `CanConvert(planner, from, to)` | virtual on base `TraitDef` |
-| `convert(planner, rel, toTrait, allowInfinite)` | `Convert(planner, op, toTrait, allowInfiniteCostConverters)` | virtual on base `TraitDef` |
-| `getTraitClass()` | `TraitClass` | abstract on base; `typeof(TTrait)` on `TraitDef<T>` |
-| `canonize(t)` | `Canonize(t)` | base `TraitDef`; per-def `WeakInterner<ITrait>` (weak values, as Calcite's `newWeakInterner`) |
+| `getSimpleName()` | `Name` | abstract on base `OpTraitDef` |
+| `getDefault()` | `Default` | abstract `IOpTrait` on base; covariantly re-typed `TTrait` on `OpTraitDef<T>` |
+| `canConvert(planner, from, to)` | `CanConvert(planner, from, to)` | virtual on base `OpTraitDef` |
+| `convert(planner, rel, toTrait, allowInfinite)` | `Convert(planner, op, toTrait, allowInfiniteCostConverters)` | virtual on base `OpTraitDef` |
+| `getTraitClass()` | `TraitClass` | abstract on base; `typeof(TTrait)` on `OpTraitDef<T>` |
+| `canonize(t)` | `Canonize(t)` | base `OpTraitDef`; per-def `WeakInterner<IOpTrait>` (weak values, as Calcite's `newWeakInterner`) |
 | `registerConverterRule` / `deregisterConverterRule` | `RegisterConverterRule` / `DeregisterConverterRule` | virtual no-ops on base, as in Calcite |
 | `multiple()` | `Multiple` | virtual `false` on base |
 
-### `RelTraitSet` → `TraitSet` (`src/Alembic/Plan/TraitSet.cs`)
+### `RelTraitSet` → `OpTraitSet` (`src/Alembic/Plan/OpTraitSet.cs`)
 
 | Calcite | Alembic | Notes |
 |---|---|---|
@@ -151,17 +151,17 @@ Calcite has no such interface.)
 | `getTrait(traitDef)` | `Get<T>(def)` / `Get(def)` | |
 | `getTraits(index)` (multi) | `GetList<T>(def)` | |
 | `replace(index/def, trait)` | `Plus(trait)` / `Replace<T>(def, value)` | `Plus` adds-or-replaces |
-| `replace(RelTrait)` (ignore-if-absent) | `Replace(ITrait)` | substitutes if the dimension is present, else returns `this` (distinct from `Plus`, which adds) |
-| `replace(List<T>)` (multi) | `Replace<T>(def, values)` | folds to a `CompositeTrait` |
+| `replace(RelTrait)` (ignore-if-absent) | `Replace(IOpTrait)` | substitutes if the dimension is present, else returns `this` (distinct from `Plus`, which adds) |
+| `replace(List<T>)` (multi) | `Replace<T>(def, values)` | folds to a `OpCompositeTrait` |
 | `replaceIf(def, supplier)` / `replaceIfs(def, supplier)` | `ReplaceIf<T>(def, Func<T?>)` / `ReplaceIfs<T>(def, Func<IReadOnlyList<T>?>)` | supplier-driven conditional replace |
-| `plusAll(traits)` / `merge(traitSet)` | `PlusAll(IEnumerable<ITrait>)` / `Merge(TraitSet)` | bulk add |
+| `plusAll(traits)` / `merge(traitSet)` | `PlusAll(IEnumerable<IOpTrait>)` / `Merge(OpTraitSet)` | bulk add |
 | `simplify()` / `allSimple()` | `Simplify()` / `AllSimple()` | flatten composites / composite-free check |
 | `difference(traitSet)` | `Difference(traitSet)` | the argument's traits that differ, position for position |
 | `getConvention()` | `Convention` | |
 | `satisfies(that)` | `Satisfies(required)` | |
 | `canonize(t)` | `Canonize(t)` | delegates to the def; sets are also interned via `Cache` |
 | `contains` / `comprises` / `matches` | `Contains` / `Comprises` / `Matches` | |
-| iterable (`Iterable<RelTrait>`) | `IEnumerable<ITrait>` (`GetEnumerator`) | enumerates the traits in order |
+| iterable (`Iterable<RelTrait>`) | `IEnumerable<IOpTrait>` (`GetEnumerator`) | enumerates the traits in order |
 | `getCollation()`, `getDistribution()`, `isDefaultSansConvention()`, `apply(mapping)` | — | relational trait dimensions |
 
 ### `Convention` (interface) → `IConvention` (`src/Alembic/Plan/IConvention.cs`)
@@ -196,13 +196,13 @@ Calcite has no such interface.)
 | `getDefault()` | `Default` (→ `Convention.None`) | |
 | `convert(...)` / `canConvert(...)` | (inherited defaults) | convention conversion is rule-driven |
 
-### `RelMultipleTrait` → `IMultipleTrait` (`src/Alembic/Plan/IMultipleTrait.cs`)
+### `RelMultipleTrait` → `IOpMultipleTrait` (`src/Alembic/Plan/IOpMultipleTrait.cs`)
 
 | Calcite | Alembic | Notes |
 |---|---|---|
 | `isTop()` | (marker only) | marks a trait dimension as multi-valued |
 
-### `RelCompositeTrait<T>` → `CompositeTrait` (base) + `CompositeTrait<T>` (`src/Alembic/Plan/CompositeTrait.cs`)
+### `RelCompositeTrait<T>` → `OpCompositeTrait` (base) + `OpCompositeTrait<T>` (`src/Alembic/Plan/OpCompositeTrait.cs`)
 
 | Calcite | Alembic | Notes |
 |---|---|---|
@@ -210,13 +210,13 @@ Calcite has no such interface.)
 | `traitList()` | `Traits` | |
 | `getTraitDef()` | `TraitDef` | |
 | `satisfies(trait)` | `Satisfies(other)` | |
-| `trait(i)` / `size()` | `TraitAt(i)` / `Count` (on non-generic base `CompositeTrait`) | a `TraitSet` flattens composites via the base class without knowing the member type |
+| `trait(i)` / `size()` | `TraitAt(i)` / `Count` (on non-generic base `OpCompositeTrait`) | a `OpTraitSet` flattens composites via the base class without knowing the member type |
 
 ---
 
-## 3. Cost
+## 3. OpCost
 
-### `RelOptCost` (interface) → `ICost` (`src/Alembic/Plan/ICost.cs`)
+### `RelOptCost` (interface) → `IOpCost` (`src/Alembic/Plan/IOpCost.cs`)
 
 | Calcite | Alembic | Notes |
 |---|---|---|
@@ -225,11 +225,11 @@ Calcite has no such interface.)
 | `isLt(cost)` | `IsLessThan(other)` | |
 | `plus(cost)` | `Plus(other)` | |
 | `equals(cost)` | `Equals` | |
-| `getCpu()` / `getIo()` | `Cpu` / `Io` | on the interface; `Cost` reports `0` for both (as `RelOptCostImpl` does — the scalar is used only to compare/combine) |
+| `getCpu()` / `getIo()` | `Cpu` / `Io` | on the interface; `OpCost` reports `0` for both (as `RelOptCostImpl` does — the scalar is used only to compare/combine) |
 | `getRows()` | — | row count dropped (relational; not a database) |
-| `minus`, `multiplyBy`, `divideBy`, `isEqWithEpsilon` | `Minus`, `MultiplyBy`, `DivideBy`, `IsEqWithEpsilon` | all present on `ICost` |
+| `minus`, `multiplyBy`, `divideBy`, `isEqWithEpsilon` | `Minus`, `MultiplyBy`, `DivideBy`, `IsEqWithEpsilon` | all present on `IOpCost` |
 
-### `RelOptCostFactory` (interface) → `ICostFactory` (`src/Alembic/Plan/ICostFactory.cs`)
+### `RelOptCostFactory` (interface) → `IOpCostFactory` (`src/Alembic/Plan/IOpCostFactory.cs`)
 
 | Calcite | Alembic | Notes |
 |---|---|---|
@@ -239,13 +239,13 @@ Calcite has no such interface.)
 | `makeHugeCost()` | `MakeHugeCost()` | |
 | `makeTinyCost()` | `MakeTinyCost()` | |
 
-### `RelOptCostImpl` → `Cost` (`src/Alembic/Plan/Cost.cs`)
+### `RelOptCostImpl` → `OpCost` (`src/Alembic/Plan/OpCost.cs`)
 
 Scalar cost mirroring `RelOptCostImpl` member-for-member over a single `double`: `Cpu`/`Io` report `0`;
-comparison and arithmetic (`plus`/`minus`/`multiplyBy` as plain `new Cost(...)`, `divideBy` as plain
+comparison and arithmetic (`plus`/`minus`/`multiplyBy` as plain `new OpCost(...)`, `divideBy` as plain
 division) use the scalar, matching Calcite exactly (no infinite short-circuits). No `getRows()`
 (relational) and no public cost constants — the named cost singletons live on `VolcanoCost`. The inner
-`Factory` makes each named cost inline (`new Cost(0.0)`, `new Cost(double.PositiveInfinity)`, …).
+`Factory` makes each named cost inline (`new OpCost(0.0)`, `new OpCost(double.PositiveInfinity)`, …).
 
 ### `VolcanoCost` → `VolcanoCost` (`src/Alembic/Plan/Volcano/VolcanoCost.cs`)
 
@@ -260,17 +260,17 @@ division) use the scalar, matching Calcite exactly (no infinite short-circuits).
 
 ## 4. Planner core
 
-### `RelOptPlanner` (interface) → `IPlanner` + `AbstractPlanner` (`src/Alembic/Plan/IPlanner.cs`, `AbstractPlanner.cs`)
+### `RelOptPlanner` (interface) → `IOpPlanner` + `AbstractOpPlanner` (`src/Alembic/Plan/IOpPlanner.cs`, `AbstractOpPlanner.cs`)
 
 | Calcite | Alembic | Notes |
 |---|---|---|
 | `setRoot(rel)` | `SetRoot(op)` | |
-| `getRoot()` | `Root` | on `IPlanner` |
+| `getRoot()` | `Root` | on `IOpPlanner` |
 | `changeTraits(rel, toTraits)` | `ChangeTraits(op, toTraits)` | |
 | `findBestExp()` | `FindBestPlan()` | |
 | `addRule(rule)` | `AddRule(rule)` | returns `bool`; rejects a duplicate description (description-keyed registry) |
-| `removeRule(rule)` | `RemoveRule(rule)` | on `IPlanner` |
-| `getRuleByDescription(desc)` | `GetRuleByDescription(desc)` | `protected` on `AbstractPlanner` |
+| `removeRule(rule)` | `RemoveRule(rule)` | on `IOpPlanner` |
+| `getRuleByDescription(desc)` | `GetRuleByDescription(desc)` | `protected` on `AbstractOpPlanner` |
 | `setRuleDescExclusionFilter(pattern)` / `isRuleExcluded(rule)` | `SetRuleDescExclusionFilter(Regex?)` / `IsRuleExcluded(rule)` | description-regex exclusion filter; consulted in `VolcanoRuleCall.OnMatch` / `HepPlanner.ApplyRule` |
 | `prune(rel)` | `Prune(op)` | base no-op; `VolcanoPlanner` marks the op pruned |
 | `addRelTraitDef(def)` | `AddTraitDef(def)` | |
@@ -284,7 +284,7 @@ division) use the scalar, matching Calcite exactly (no infinite short-circuits).
 | `chooseDelegate()`, `registerSchema`, `registerClass`, `registerMetadataProviders`, `onCopy` | — | relational / metadata / multi-planner |
 | `emptyTraitSet()` | `EmptyTraitSet` | the default trait set built from the registered defs |
 
-### `RelOptCluster` → `Cluster` (`src/Alembic/Plan/Cluster.cs`)
+### `RelOptCluster` → `OpCluster` (`src/Alembic/Plan/OpCluster.cs`)
 
 | Calcite | Alembic | Notes |
 |---|---|---|
@@ -317,7 +317,7 @@ division) use the scalar, matching Calcite exactly (no infinite short-circuits).
 
 ## 5. Rules
 
-### `RelOptRule` (abstract) → `Rule` (abstract) (`src/Alembic/Plan/Rules/Rule.cs`)
+### `RelOptRule` (abstract) → `OpRule` (abstract) (`src/Alembic/Plan/Rules/OpRule.cs`)
 
 | Calcite | Alembic | Notes |
 |---|---|---|
@@ -331,10 +331,10 @@ division) use the scalar, matching Calcite exactly (no infinite short-circuits).
 | `equals` / `hashCode` | `Equals` / `GetHashCode` | equal = same type + description + operand; hash = description (planner requires unique descriptions) |
 | `operand`/`some`/`any`/`none`/`unordered`/`convertOperand` statics | `Some`/`Any`/`Leaf`/`Unordered`/`ConvertOperand` (`protected static`) | the only way to build operands (closed world) |
 
-### `RelOptRuleOperand` → `RuleOperand` (`src/Alembic/Plan/Rules/RuleOperand.cs`)
+### `RelOptRuleOperand` → `OpRuleOperand` (`src/Alembic/Plan/Rules/OpRuleOperand.cs`)
 
 Constructors are **`internal`**: operands form a closed world, built only through the `protected static`
-factory methods on `Rule` (mirrors Calcite, where `RelOptRuleOperand`'s constructor is package-private and
+factory methods on `OpRule` (mirrors Calcite, where `RelOptRuleOperand`'s constructor is package-private and
 operands are created via `RelOptRule`'s static methods). `[InternalsVisibleTo]` lets tests reach them.
 
 | Calcite | Alembic | Notes |
@@ -348,7 +348,7 @@ operands are created via `RelOptRule`'s static methods). `[InternalsVisibleTo]` 
 | `getRule()`/`setRule()` | `Rule` | back-reference, set during flattening |
 | `getParent()`/`setParent()` | `Parent` | |
 | `ordinalInParent` | `OrdinalInParent` | |
-| `ordinalInRule` | `OrdinalInRule` | index into `Rule.Operands` |
+| `ordinalInRule` | `OrdinalInRule` | index into `OpRule.Operands` |
 | `solveOrder` | `SolveOrder` | seed-then-parents-then-rest order used by the matcher |
 | `equals` / `hashCode` | `Equals` / `GetHashCode` | by matched class + trait + child operands (predicate/policy excluded, as Calcite) |
 
@@ -359,7 +359,7 @@ operands are created via `RelOptRule`'s static methods). `[InternalsVisibleTo]` 
 |---|---|
 | `ANY` / `LEAF` / `SOME` / `UNORDERED` | `Any` / `Leaf` / `Some` / `Unordered` |
 
-### `RelOptRuleCall` → `RuleCall` (`src/Alembic/Plan/Rules/RuleCall.cs`)
+### `RelOptRuleCall` → `OpRuleCall` (`src/Alembic/Plan/Rules/OpRuleCall.cs`)
 
 | Calcite | Alembic | Notes |
 |---|---|---|
@@ -367,17 +367,17 @@ operands are created via `RelOptRule`'s static methods). `[InternalsVisibleTo]` 
 | `getRels()` / `getRelList()` | `Ops` | |
 | `transformTo(rel)` | `TransformTo(equivalent)` | |
 | `transformTo(rel, equiv)` | `TransformTo(equivalent, equiv)` | secondary-equivalence map (each key registered as equivalent to its value) |
-| `getRule()` | `Rule` | on the base `RuleCall` (derived from `Operand0`) |
-| `getPlanner()` | `Planner` | on the base `RuleCall` |
-| `getOperand0()` | `Operand0` | on the base `RuleCall`; the seed operand the rule (and bound ops) are reached through |
+| `getRule()` | `Rule` | on the base `OpRuleCall` (derived from `Operand0`) |
+| `getPlanner()` | `Planner` | on the base `OpRuleCall` |
+| `getOperand0()` | `Operand0` | on the base `OpRuleCall`; the seed operand the rule (and bound ops) are reached through |
 | `id` / `nextId` | `Id` | per-call id, assigned from a static counter in creation order |
 | `getChildRels`, `getParents`, `getMetadataQuery`, `builder()`, `isRuleExcluded` | — | metadata / builder |
 
-### `ConverterRule` (abstract) → `ConverterRule : Rule` (`src/Alembic/Plan/Rules/ConverterRule.cs`)
+### `ConverterRule` (abstract) → `ConverterRule : OpRule` (`src/Alembic/Plan/Rules/ConverterRule.cs`)
 
 | Calcite | Alembic | Notes |
 |---|---|---|
-| `getInTrait()` | `Source` | generalized from `Convention` to any `ITrait` |
+| `getInTrait()` | `Source` | generalized from `Convention` to any `IOpTrait` |
 | `getOutTrait()` / `getOutConvention()` | `Target` | |
 | `getTraitDef()` | `TraitDef` (→ `Source.TraitDef`) | the dimension converted on |
 | `convert(rel)` | `Convert(op)` | |
@@ -420,7 +420,7 @@ Marker interface; fired by `HepProgramBuilder.AddCommonRelSubExprInstruction()` 
 | `changeTraits` | `ChangeTraits` | matches `root` / `root.CurrentOp` |
 | `findBestExp()` | `FindBestPlan()` | `ExecuteProgram` → `CollectGarbage` → `BuildFinalPlan` |
 | `buildFinalPlan()` / `buildFinalPlan(vertex)` | `BuildFinalPlan(vertex, memo)` | memoized (immutable rebuild preserves sharing) |
-| ctors `(program)`, `(program, …, costFactory)`, no-arg `()` | `HepPlanner(program)`, `HepPlanner(program, ICostFactory)`, `HepPlanner()` | the no-arg form mirrors Calcite's: empty program, large-plan mode + fired-rules cache on. `(program, Context)` / `onCopyHook` have no analog |
+| ctors `(program)`, `(program, …, costFactory)`, no-arg `()` | `HepPlanner(program)`, `HepPlanner(program, IOpCostFactory)`, `HepPlanner()` | the no-arg form mirrors Calcite's: empty program, large-plan mode + fired-rules cache on. `(program, Context)` / `onCopyHook` have no analog |
 | `clear()` | `Clear()` | `base.Clear()` + `ClearRules()` (materializations are relational, omitted) |
 | `clearRules()` | `ClearRules()` | |
 | `setEnableFiredRulesCache(b)` | `SetEnableFiredRulesCache(b)` | + `NoDag`, `LargePlanMode` properties |
@@ -529,7 +529,7 @@ Marker interface; fired by `HepProgramBuilder.AddCommonRelSubExprInstruction()` 
 | `register` / `ensureRegistered` | `Register(op, equiv)` | |
 | `registerImpl` | `RegisterImpl` | |
 | `addRule` / `removeRule` | `AddRule` / `RemoveRule` | build/tear down the dispatch table; register converter rules with their trait def |
-| `classOperands` | `_classOperands` | `Dictionary<Type, List<RuleOperand>>`: op class → operands that can bind it |
+| `classOperands` | `_classOperands` | `Dictionary<Type, List<OpRuleOperand>>`: op class → operands that can bind it |
 | `subClasses(matchedClass)` | `SubClasses` | seen classes assignable to a matched class |
 | `onNewClass(rel)` / `registerClass` | `OnNewClass` | indexes operands for an op class the first time it is seen |
 | `fireRules(rel)` | `FireRules` | seeds a `DeferringRuleCall` per matching operand from the table |
@@ -595,7 +595,7 @@ Marker interface; fired by `HepProgramBuilder.AddCommonRelSubExprInstruction()` 
 |---|---|---|
 | `getRule()` | `Rule` | |
 | `getPlanner()` | `Planner` | |
-| `getOperand0()` / `rels` | `RuleCall.Operand0` / `Rels` | `Operand0` now lives on the `RuleCall` base (Calcite's `RelOptRuleCall.operand0`); `Rels` is the per-operand bound ops (by `OrdinalInRule`) |
+| `getOperand0()` / `rels` | `OpRuleCall.Operand0` / `Rels` | `Operand0` now lives on the `OpRuleCall` base (Calcite's `RelOptRuleCall.operand0`); `Rels` is the per-operand bound ops (by `OrdinalInRule`) |
 | `onMatch()` | `OnMatch()` | base applies the rule (after the staleness guard: skips a match whose bound op lost its subset, had its set merged away, was removed from its subset, or was pruned); `DeferringRuleCall` overrides to enqueue |
 | `transformTo(rel, equiv, handler)` | `TransformTo(equivalent)` / `TransformTo(equivalent, equiv)` | registers the equivalent (+ each `equiv` map entry); guards that a transformation rule may not produce an `IPhysicalNode`; the hint `handler` is relational, omitted |
 | `match(rel)` / `matchRecurse(solve)` | `Match(op)` / `MatchRecurse(solve)` | seed-and-solve over subsets using `Operand0.SolveOrder` |
@@ -662,9 +662,9 @@ branch-and-bound structure is faithful; lower-bound pruning is inert pending met
 
 | Calcite | Alembic | Notes |
 |---|---|---|
-| `passThrough` / `passThroughTraits` | `PassThrough` / `PassThroughTraits` | default `PassThrough` composes the `Pair<TraitSet, IList<TraitSet>>`; `PassThroughTraits` throws until overridden |
-| `derive(traits, childId)` / `deriveTraits` | `Derive(TraitSet, int)` / `DeriveTraits` | as above |
-| `derive(List)` (OMAKASE) | `Derive(IList<IList<TraitSet>>)` | |
+| `passThrough` / `passThroughTraits` | `PassThrough` / `PassThroughTraits` | default `PassThrough` composes the `Pair<OpTraitSet, IList<OpTraitSet>>`; `PassThroughTraits` throws until overridden |
+| `derive(traits, childId)` / `deriveTraits` | `Derive(OpTraitSet, int)` / `DeriveTraits` | as above |
+| `derive(List)` (OMAKASE) | `Derive(IList<IList<OpTraitSet>>)` | |
 | `getDeriveMode()` | `DeriveMode` | default `LeftFirst` |
 
 ### `DeriveMode` → `DeriveMode` (`src/Alembic/Plan/DeriveMode.cs`)
@@ -779,7 +779,7 @@ ported** (no substitution rules), so `IsSubstituteRule` is always false.
 
 | Upstream | Alembic | Notes |
 |---|---|---|
-| Guava `Interners.newWeakInterner()` (used by `RelTraitDef.canonize`) | `WeakInterner<T>.Intern(value)` | weak-value interner backing `TraitDef.Canonize`; no Calcite class of its own. **TODO (§11):** rework into an exact line-by-line Guava port. |
+| Guava `Interners.newWeakInterner()` (used by `RelTraitDef.canonize`) | `WeakInterner<T>.Intern(value)` | weak-value interner backing `OpTraitDef.Canonize`; no Calcite class of its own. **TODO (§11):** rework into an exact line-by-line Guava port. |
 
 ---
 
@@ -801,7 +801,7 @@ Whole subsystems Alembic does not implement, by design or as future work:
 | `Convention.getRelFactories` | **out of scope** — relational operator factories |
 | `TransformationRule` / `PhysicalNode` markers and the convention-pruning they drive in `matchRecurse` / `addRule` | **n/a** — Alembic has no built-in logical/physical rule split; `MatchRecurse` therefore omits the "skip transformation-rule matches that cross conventions" filter |
 | `RelSubset.class` operands + `getSubsetsSatisfyingThis`, and `setChildRels`/`getChildRels` bookkeeping in `matchRecurse` | **not ported** — Alembic operands never match a subset directly, and Calcite itself notes the unordered `childRels` path is unused |
-| `RelRule.Config` / per-rule `Config` (immutables) | **n/a** — Config exists to keep Calciteʼs built-in rule library uniformly configurable; Alembic ships no rules, so rules take constructor args. A consumer who builds a rule library can layer the same pattern over `Rule` themselves (C# records + `with`). |
+| `RelRule.Config` / per-rule `Config` (immutables) | **n/a** — Config exists to keep Calciteʼs built-in rule library uniformly configurable; Alembic ships no rules, so rules take constructor args. A consumer who builds a rule library can layer the same pattern over `OpRule` themselves (C# records + `with`). |
 
 ---
 
@@ -830,10 +830,10 @@ Compiled across the project; everything not listed here is annotated — except 
 which are exempt from provenance (implementation detail, not public surface) and so are neither annotated
 nor listed here.
 
-- **`Cluster`**: its ctor (Calcite's `RelOptCluster` ctors are relational/package-private). **`IPlannerListener.PlannerEvent`**: `Source` (JDK `EventObject`).
-- **`TraitDef` / `CompositeTrait`**: the non-generic abstract base classes themselves are an Alembic structural device — Calcite has a single generic class (`RelTraitDef<T>` / `RelCompositeTrait<T>`) used raw, which C# can't express, so the non-generic base + generic subclass split stands in for it. Their members map to the Calcite class (annotated), but the *split into two types* has no Calcite analog. Also Alembic-original: **`TraitDef`**'s `_interned` field. **`TraitSet`**: the explicit non-generic `IEnumerable.GetEnumerator` and the typed `Equals(TraitSet?)` overload (the private ctor, nested `Cache`, `ReplaceAt`, and `FindIndex` are now annotated to their `RelTraitSet` analogs). **`IMultipleTrait`**: the inherited `IComparable<>`. **`Convention`**: the single-arg ctor and `Equals`/`GetHashCode` (by-name — Calcite's `Impl` uses identity).
-- **`RuleOperand`**: the convenience constructors (Calcite has only the two real ctors; ours add default-filling overloads). **`TraitMatchingRule`**: the `_converterRule` field.
-- **`OpSet`**: the `Cluster` property and the single-arg `GetOrCreateSubset(traits)`. **`OpSubset`**: `LiveSet` (EXTRA — equiv-root resolution). **`VolcanoPlanner`**: `ChangeTraits` (the `setRoot`+`changeTraits` convenience), `RootSubset`, `CostEquals`, `OperandsFor`, the multi-step conversion BFS (`FindConversionPath`/`ConversionEdges`/`Reconstruct`/`ConversionStep`), and `_classes`/`_cluster`. **Rule queues/drivers**: the `_seen` dedup sets (replace Calcite's `MatchList`/`names`). **`ExpandConversionRule`**: its public ctor (replaces Calcite's `Config`/singleton).
+- **`OpCluster`**: its ctor (Calcite's `RelOptCluster` ctors are relational/package-private). **`IPlannerListener.PlannerEvent`**: `Source` (JDK `EventObject`).
+- **`OpTraitDef` / `OpCompositeTrait`**: the non-generic abstract base classes themselves are an Alembic structural device — Calcite has a single generic class (`RelTraitDef<T>` / `RelCompositeTrait<T>`) used raw, which C# can't express, so the non-generic base + generic subclass split stands in for it. Their members map to the Calcite class (annotated), but the *split into two types* has no Calcite analog. Also Alembic-original: **`OpTraitDef`**'s `_interned` field. **`OpTraitSet`**: the explicit non-generic `IEnumerable.GetEnumerator` and the typed `Equals(OpTraitSet?)` overload (the private ctor, nested `Cache`, `ReplaceAt`, and `FindIndex` are now annotated to their `RelTraitSet` analogs). **`IOpMultipleTrait`**: the inherited `IComparable<>`. **`Convention`**: the single-arg ctor and `Equals`/`GetHashCode` (by-name — Calcite's `Impl` uses identity).
+- **`OpRuleOperand`**: the convenience constructors (Calcite has only the two real ctors; ours add default-filling overloads). **`TraitMatchingRule`**: the `_converterRule` field.
+- **`OpSet`**: the `OpCluster` property and the single-arg `GetOrCreateSubset(traits)`. **`OpSubset`**: `LiveSet` (EXTRA — equiv-root resolution). **`VolcanoPlanner`**: `ChangeTraits` (the `setRoot`+`changeTraits` convenience), `RootSubset`, `CostEquals`, `OperandsFor`, the multi-step conversion BFS (`FindConversionPath`/`ConversionEdges`/`Reconstruct`/`ConversionStep`), and `_classes`/`_cluster`. **OpRule queues/drivers**: the `_seen` dedup sets (replace Calcite's `MatchList`/`names`). **`ExpandConversionRule`**: its public ctor (replaces Calcite's `Config`/singleton).
 - **`HepPlanner`**: the `NoDag` property (a get/set accessor with no Calcite analog — Calcite's `noDag` is a private ctor-set field), `EnsureSatisfies`, `ShallowEqual`, `RemoveFiredRules`, `Match`, and the nested **`FiredKey`** type (replaces Calcite's `ImmutableIntList` cache key). **`HepProgram`**: the `_program` back-ref. **`HepProgramBuilder`**: the `Check` helper. **`HepInstruction` states**: the explicit `Instruction` back-references (Java uses the implicit outer `this`).
 - **Graph iterators** (`DepthFirst`/`BreadthFirst`/`Topological`/`HepVertexIterator`): the `IEnumerator` plumbing (`Current`, `Reset`, `Dispose`). **`Pair`**: the non-generic `Pair` companion (a C# type-inference workaround — Alembic-original type). **`DefaultDirectedGraph`**: the `VertexSetView`. **`DefaultEdge`**: the `DefaultEdgeFactory` (Calcite uses a lambda).
 - **`WeakInterner`**: class-level provenance points to Guava `Interners.newWeakInterner` with `Source = ProvenanceSource.Other` (not Calcite); its members are un-annotated (the .NET implementation is hand-rolled, not a member-for-member port). **`ProvenanceAttribute`** / **`ProvenanceSource`**: Alembic-original infrastructure — no upstream analog.
@@ -848,7 +848,7 @@ nor listed here.
 | ctor / `disableEnforcing` / `startOptimize` asserts | DIVERGENT-OK (DEBUG) | Java `assert`s dropped |
 | `computeBestCost` | DIVERGENT-OK (METADATA) | init-scan of subsuming subsets dropped; cost is passed into the ctor instead |
 | `CheapestPlanReplacer.visit` | DIVERGENT-OK (DEBUG) | omits the `provenanceMap` write after `copy` (provenance/dump not ported) and the dead-end diagnostic dump |
-| `add(rel)` | **RESOLVED (moved)** | now ported onto `OpSubset.Add` to match Calcite's three-method layering: `OpSet.Add` (entry — `getOrCreateSubset` → `subset.Add` → return subset) / `OpSubset.Add` (guard on already-present → fire the equivalence-found event → delegate) / `OpSet.AddInternal` (the raw `Ops` insert + representative `Rel`). The equivalence event moved out of `VolcanoPlanner.AddOpToSet` into `OpSubset.Add`, and is fired the faithful way — via `Set.Cluster.Planner` (Calcite's `rel.getCluster().getPlanner()`). This required fixing the test fixtures so an op's cluster is bound to the planner optimizing it (the shared throwaway-planner `Clusters.Default` was deleted; each test now builds `new Cluster(planner)`), restoring Calcite's cluster↔planner invariant that `IPhysicalNode.PassThrough`/`Derive` already assumed. Merge-time op moves (`OpSet.MergeWith`) deliberately use the raw `AddInternal` path (no add-event), matching Calcite's merge routing through `reregister`, not `subset.add`. |
+| `add(rel)` | **RESOLVED (moved)** | now ported onto `OpSubset.Add` to match Calcite's three-method layering: `OpSet.Add` (entry — `getOrCreateSubset` → `subset.Add` → return subset) / `OpSubset.Add` (guard on already-present → fire the equivalence-found event → delegate) / `OpSet.AddInternal` (the raw `Ops` insert + representative `Rel`). The equivalence event moved out of `VolcanoPlanner.AddOpToSet` into `OpSubset.Add`, and is fired the faithful way — via `Set.Cluster.Planner` (Calcite's `rel.getCluster().getPlanner()`). This required fixing the test fixtures so an op's cluster is bound to the planner optimizing it (the shared throwaway-planner `Clusters.Default` was deleted; each test now builds `new OpCluster(planner)`), restoring Calcite's cluster↔planner invariant that `IPhysicalNode.PassThrough`/`Derive` already assumed. Merge-time op moves (`OpSet.MergeWith`) deliberately use the raw `AddInternal` path (no add-event), matching Calcite's merge routing through `reregister`, not `subset.add`. |
 | `LiveSet`, `infiniteCost` ctor param | EXTRA (justified) | equiv-root resolution; cost decoupled from metadata. |
 
 Three themes recur across the Volcano findings below and are worth fixing as units rather than piecemeal:
@@ -858,15 +858,15 @@ Three themes recur across the Volcano findings below and are worth fixing as uni
 
 | Calcite member | Verdict | Note |
 |---|---|---|
-| `propagateCostImprovements` | **RESOLVED (fixed)** | ported verbatim: a `Dictionary<IOpNode,ICost>` (`propagateRels`, identity-keyed) + a `PriorityQueue<IOpNode,ICost>` ordered by cost; reads the current cost from the map, walks `subset.GetParents()` (per-subset, not raw `set.Parents`), and the two `continue` guards match Calcite. No more recursion/stack-overflow. The one adaptation: .NET's `PriorityQueue` has no `remove`, so the decrease-key re-enqueues and the stale entry is harmlessly skipped on poll (the cost is read from the map, so a re-poll is a no-op) — Calcite's `remove`+`offer` and this produce identical processing. |
+| `propagateCostImprovements` | **RESOLVED (fixed)** | ported verbatim: a `Dictionary<IOpNode,IOpCost>` (`propagateRels`, identity-keyed) + a `PriorityQueue<IOpNode,IOpCost>` ordered by cost; reads the current cost from the map, walks `subset.GetParents()` (per-subset, not raw `set.Parents`), and the two `continue` guards match Calcite. No more recursion/stack-overflow. The one adaptation: .NET's `PriorityQueue` has no `remove`, so the decrease-key re-enqueues and the stale entry is harmlessly skipped on poll (the cost is read from the map, so a re-poll is a no-op) — Calcite's `remove`+`offer` and this produce identical processing. |
 | `merge` | **RESOLVED (fixed)** | ported the swap (`GetChildSets` + `IsSmaller` → always merge the newer/smaller into the older/larger, or a child into its parent) and the root re-point (re-point `_root` to the survivor's subset for the root traits + re-run `EnsureRootConverters` when the absorbed set held the root). `OnSetMerged` stays in `MergeWith` (the swap just changes which object is `this`). |
 | `ensureRegistered` | **RESOLVED (fixed)** | when the op is already registered and a known `equivalent` lives in a different set, the two sets are now merged; the result is `Canonize`d (re-resolved on the live set) — Calcite's `ensureRegistered` + `canonize`. |
 | `ensureRootConverters` | DIVERGENT-BUG (superseded) | omits the single-trait-difference guard and the AbstractConverter dedup set — seeds a converter for every differing subset. Now largely moot: the ported per-subset `OpSet.AddConverters` (theme C) carries those guards and seeds the root's converters correctly; `EnsureRootConverters` is redundant and slated for removal. |
 | `getCost` (NONE convention) | DIVERGENT-BUG | omits infinite cost for `Convention.None` ops and the positive-cost nudge; cost diverges for none-convention/zero-cost ops. |
 | `canonize(subset)` | DIVERGENT-BUG | `EquivRoot` returns the live set only; never re-resolves a subset to the leader set's subset (theme B). |
-| `prune` / `prunedOps` / `checkPruned` | **RESOLVED (ported)** | `VolcanoPlanner` now has a `_prunedOps` identity set with `Prune` (public, overriding the `IPlanner`/`AbstractPlanner` no-op), `IsPruned`, and `CheckPruned` (propagates pruned-ness across a discovered equivalence, wired into the `RegisterImpl` and `Rename` dedup branches). *Omitted as unreachable:* the `registerImpl` pruned-skip-add — Alembic has no caller that prunes an op before it is registered, so an op is never pruned at registration time; pruning is consulted by the `OnMatch` guard and `SkipMatch` below. The `prune()` call sites in Calcite (a `SubstitutionRule`'s auto-prune, `mergeWith`'s redundant-enforcer prune) depend on features Alembic doesn't have yet, so `Prune` is public-and-available rather than self-invoked. |
+| `prune` / `prunedOps` / `checkPruned` | **RESOLVED (ported)** | `VolcanoPlanner` now has a `_prunedOps` identity set with `Prune` (public, overriding the `IOpPlanner`/`AbstractOpPlanner` no-op), `IsPruned`, and `CheckPruned` (propagates pruned-ness across a discovered equivalence, wired into the `RegisterImpl` and `Rename` dedup branches). *Omitted as unreachable:* the `registerImpl` pruned-skip-add — Alembic has no caller that prunes an op before it is registered, so an op is never pruned at registration time; pruning is consulted by the `OnMatch` guard and `SkipMatch` below. The `prune()` call sites in Calcite (a `SubstitutionRule`'s auto-prune, `mergeWith`'s redundant-enforcer prune) depend on features Alembic doesn't have yet, so `Prune` is public-and-available rather than self-invoked. |
 | `setLocked`/`locked` | **RESOLVED (ported)** | `VolcanoPlanner._locked` + `SetLocked(bool)`; `AddRule` returns `false` immediately when locked (before the base dedup), matching Calcite. |
-| `clear` | **RESOLVED (ported)** | `IPlanner.Clear()` (base no-op); `VolcanoPlanner.Clear()` removes all rules and clears `_classOperands`/`_classes`/`_allSets`/`_digestToOp`/`_opToSubset`/`_prunedOps`/the rule driver, and resets root/cluster/`_nextSetId`. (Relational-only state — materializations, lattices, provenance — has no analog.) |
+| `clear` | **RESOLVED (ported)** | `IOpPlanner.Clear()` (base no-op); `VolcanoPlanner.Clear()` removes all rules and clears `_classOperands`/`_classes`/`_allSets`/`_digestToOp`/`_opToSubset`/`_prunedOps`/the rule driver, and resets root/cluster/`_nextSetId`. (Relational-only state — materializations, lattices, provenance — has no analog.) |
 | `registerImpl` converter post-merge `fixUpInputs` recheck | DIVERGENT-BUG | stale digest may slip through after a converter set-merge. |
 | `setRoot` omitting `ensureRootConverters` | DIVERGENT-OK (false-positive) | Alembic runs `EnsureRootConverters` in `FindBestPlan` instead — net equivalent; the agent flagged it without that context. |
 | `ChangeTraitsUsingConverters` | DIVERGENT-OK | reimplemented as BFS over a conversion graph vs Calcite's per-trait-index sequential convert; broader search, plausibly equivalent. |
@@ -876,7 +876,7 @@ Three themes recur across the Volcano findings below and are worth fixing as uni
 | Calcite member | Verdict | Note |
 |---|---|---|
 | `getOrCreateSubset` → `addConverters` | **RESOLVED (ported)** | `OpSet.GetOrCreateSubset(traits, required)` now follows Calcite: tracks `needsConverter` (set on subset creation, or when a subset first becomes required/delivered; cleared for `Convention.None`), and calls `AddConverters` when set. |
-| `addConverters` | **RESOLVED (ported)** | `OpSet.AddConverters(subset, required, useAbstractConverter)` seeds converters from each delivered subset to a new required one (and vice-versa): per-pair dedup via a `_conversions` set, `TraitSet.Difference` + `TraitDef.CanConvert` to decide `needsConverter`, then an `AbstractConverter` (bottom-up: `useAbstractConverter = !TopDownOpt`) or `Convention.Enforce` (top-down), registered against the target subset. `IsEnforceDisabled` and `UseAbstractConvertersForConversion` are honoured. *(The pre-existing `VolcanoPlanner.EnsureRootConverters` now overlaps this for the root subset; harmless — duplicate abstract converters dedup by digest — and a candidate for later removal.)* |
+| `addConverters` | **RESOLVED (ported)** | `OpSet.AddConverters(subset, required, useAbstractConverter)` seeds converters from each delivered subset to a new required one (and vice-versa): per-pair dedup via a `_conversions` set, `OpTraitSet.Difference` + `OpTraitDef.CanConvert` to decide `needsConverter`, then an `AbstractConverter` (bottom-up: `useAbstractConverter = !TopDownOpt`) or `Convention.Enforce` (top-down), registered against the target subset. `IsEnforceDisabled` and `UseAbstractConvertersForConversion` are honoured. *(The pre-existing `VolcanoPlanner.EnsureRootConverters` now overlaps this for the root subset; harmless — duplicate abstract converters dedup by digest — and a candidate for later removal.)* |
 | `obliterateRelNode` | **RESOLVED (ported)** | `OpSet.ObliterateOp(op)` = `Parents.Remove(op)`, matching Calcite. (Its full wiring into the parent-back-link maintenance is part of the P1 4b fix.) |
 | `mergeWith` | **RESOLVED (moved)** | now matches Calcite: orchestration in `VolcanoPlanner.Merge` (equiv-root resolution), migration in `OpSet.MergeWith(planner, other)`; planner's `PropagateCostImprovements`/`FireRules`/`Rename`/`RemoveSet`/`MapOpToSubset` exposed `internal` (the C# analog of Calcite's package-private access). *(The merge's P1 bugs — `isSmaller` direction, root re-point — are now fixed; see the `merge` row above.)* |
 | `rename` + `fixUpInputs` (bundled as `Reregister`) | **RESOLVED (split)** — *decomposition only* | Calcite's `rename(rel)` calls `fixUpInputs(rel)`; the parent re-point on merge had been fused into one `Reregister` method. Now split to match: `FixUpInputs(op)` re-points child subsets at their live sets and returns the rebuilt op (or `null` if unchanged — the immutable analog of Calcite's mutate-in-place + `changeCount>0`); `Rename(op)` calls it, then recomputes the digest, dedups, and merges on collision. The decomposition is faithful. **But see the new `fixUpInputs`/`rename` parent-back-link bug below — a deeper behavioral gap (pre-existing in the old `Reregister`) that the re-verification audit surfaced.** |
@@ -894,7 +894,7 @@ Three themes recur across the Volcano findings below and are worth fixing as uni
 
 ### `TopDownRuleDriver` → `TopDownRuleDriver` — **no bugs/gaps.** All tasks FAITHFUL; the only divergences are the already-documented metadata lower-bound, materialization roots, and timeout omissions (DIVERGENT-OK).
 
-### Rule queues / drivers — findings:
+### OpRule queues / drivers — findings:
 
 | Class · member | Verdict | Note |
 |---|---|---|
@@ -907,9 +907,9 @@ Three themes recur across the Volcano findings below and are worth fixing as uni
 
 | Member | Verdict | Note |
 |---|---|---|
-| `AbstractConverter.explainTerms` | **RESOLVED (ported)** | overridden to emit each enforced trait (`Item(trait.TraitDef.Name, trait)`) after the base terms, as Calcite. Required making `TraitSet` enumerable (`IEnumerable<ITrait>`) — the analog of `RelTraitSet` being `Iterable`. |
+| `AbstractConverter.explainTerms` | **RESOLVED (ported)** | overridden to emit each enforced trait (`Item(trait.TraitDef.Name, trait)`) after the base terms, as Calcite. Required making `OpTraitSet` enumerable (`IEnumerable<IOpTrait>`) — the analog of `RelTraitSet` being `Iterable`. |
 | `ExpandConversionRule.INSTANCE` / `Config` | DIVERGENT-OK | singleton/Config plumbing replaced by a public ctor + inline operand. |
-| `IPhysicalNode.passThrough`/`derive` | FAITHFUL | compose via `IPlanner.ChangeTraits` (= `changeTraits`, `RelOptRule.convert`'s target). |
+| `IPhysicalNode.passThrough`/`derive` | FAITHFUL | compose via `IOpPlanner.ChangeTraits` (= `changeTraits`, `RelOptRule.convert`'s target). |
 
 ### `HepPlanner` → `HepPlanner` — ~56 members; findings (PORT.md's "method-audited" claim was optimistic):
 
@@ -920,7 +920,7 @@ Three themes recur across the Volcano findings below and are worth fixing as uni
 | `applyRule` converter force-conversion guard | **DIVERGENT-BUG** | Calcite skips `doesConverterApply`/`parentTrait` when a non-guaranteed converter is force-converted (`isGuaranteed() \|\| !forceConversions`); Alembic always checks + sets the trait — can suppress forced conversions. |
 | `contractVertices` large-plan recursive merge | **DIVERGENT-BUG** | Alembic omits the `!noDag && largePlanMode` recursive parent-path merge — duplicate parent subexpressions aren't contracted in large-plan DAG mode. |
 | `applyRule` CommonRelSubExprRule parents | DIVERGENT-BUG (verify) | Calcite collects the parent list and passes it to the call; Alembic checks parent count but never passes parents to `HepRuleCall`. |
-| no-arg / `(program, context)` ctors, `clear()` override | **RESOLVED (ported, minus Context)** | added `HepPlanner(program, ICostFactory)` and a no-arg `HepPlanner()` (empty program, large-plan mode + fired-rules cache on, for multi-phase reuse); `Clear()` override = `base.Clear()` + `ClearRules()`. The `(program, Context)` and `onCopyHook` variants have no analog — Alembic has no `Context`/copy-hook. |
+| no-arg / `(program, context)` ctors, `clear()` override | **RESOLVED (ported, minus Context)** | added `HepPlanner(program, IOpCostFactory)` and a no-arg `HepPlanner()` (empty program, large-plan mode + fired-rules cache on, for multi-phase reuse); `Clear()` override = `base.Clear()` + `ClearRules()`. The `(program, Context)` and `onCopyHook` variants have no analog — Alembic has no `Context`/copy-hook. |
 | `onCopyHook`/`onCopy` | MISSING (RELATIONAL) | copy-notification hook absent. |
 | many asserts / `dumpGraph` / `assertNoCycles` / metadata-cache clears | DIVERGENT-OK | DEBUG/METADATA omissions. |
 
@@ -943,22 +943,22 @@ Three themes recur across the Volcano findings below and are worth fixing as uni
 
 ### `HepRuleCall` — `transformTo` drops `verifyTypeEquivalence` (RELATIONAL row-type check) + hint propagation; the `equiv` map is unused by Calcite's HEP anyway → **DIVERGENT-OK**. `results`/`getResults`/ctor FAITHFUL.
 
-### `RelOptRule` → `Rule` / `RelOptRuleOperand` → `RuleOperand` — findings (flatten/solve-order/matches all FAITHFUL):
+### `RelOptRule` → `OpRule` / `RelOptRuleOperand` → `OpRuleOperand` — findings (flatten/solve-order/matches all FAITHFUL):
 
 | Member | Verdict | Note |
 |---|---|---|
-| `RelOptRule.equals`/`hashCode` (by description+class+operand) | **RESOLVED (ported)** | `Rule.GetHashCode` = `Description.GetHashCode`; `Rule.Equals` = same type + same `Description` + equal root `Operand`. Drives the `AddRule` dedup below. |
-| `RuleOperand.equals`/`hashCode` | **RESOLVED (ported)** | by `MatchedClass` + `Trait` + child operands (recursive), as Calcite — predicate and child policy are excluded from identity (matching them is the rule's job). |
-| `ConverterRelOptRuleOperand` (same-`TraitDef` `matches` guard) | DIVERGENT-OK (minor) | `ConvertOperand` yields a plain `RuleOperand` without the n²-guard override. |
+| `RelOptRule.equals`/`hashCode` (by description+class+operand) | **RESOLVED (ported)** | `OpRule.GetHashCode` = `Description.GetHashCode`; `OpRule.Equals` = same type + same `Description` + equal root `Operand`. Drives the `AddRule` dedup below. |
+| `OpRuleOperand.equals`/`hashCode` | **RESOLVED (ported)** | by `MatchedClass` + `Trait` + child operands (recursive), as Calcite — predicate and child policy are excluded from identity (matching them is the rule's job). |
+| `ConverterRelOptRuleOperand` (same-`OpTraitDef` `matches` guard) | DIVERGENT-OK (minor) | `ConvertOperand` yields a plain `OpRuleOperand` without the n²-guard override. |
 | `UNORDERED` child-count assert | DIVERGENT-OK | dev-only invariant dropped. |
 
-### `RelOptRuleCall` → `RuleCall` — findings:
+### `RelOptRuleCall` → `OpRuleCall` — findings:
 
 | Member | Verdict | Note |
 |---|---|---|
-| `operand0` / `getOperand0()` | **RESOLVED (moved)** | Calcite's `operand0` lives on the base `RelOptRuleCall`; ours had been declared on `VolcanoRuleCall`. Now moved to the `RuleCall` base, and `Rule` is *derived* from it (`Rule = operand0.Rule`) as Calcite does — so the base ctor takes the seed operand, not the rule. All subclasses pass an operand0: `VolcanoRuleMatch`/`DeferringRuleCall` carry the real seed operand; `HepRuleCall` and `VolcanoRuleMatch`'s bound-op ctor pass `rule.Operand` (the root). Faithful. |
-| `transformTo(rel, equiv)` | **RESOLVED (ported)** | added on the base `RuleCall` as `TransformTo(equivalent, IReadOnlyDictionary<IOpNode,IOpNode>)`, with the no-arg form delegating to it; `VolcanoRuleCall` registers the map entries, `HepRuleCall` ignores them (single best plan). See the `VolcanoRuleCall` row. |
-| `id`/`nextId` | **RESOLVED (ported)** | `RuleCall.Id`, assigned from a static counter in creation order. |
+| `operand0` / `getOperand0()` | **RESOLVED (moved)** | Calcite's `operand0` lives on the base `RelOptRuleCall`; ours had been declared on `VolcanoRuleCall`. Now moved to the `OpRuleCall` base, and `OpRule` is *derived* from it (`OpRule = operand0.Rule`) as Calcite does — so the base ctor takes the seed operand, not the rule. All subclasses pass an operand0: `VolcanoRuleMatch`/`DeferringRuleCall` carry the real seed operand; `HepRuleCall` and `VolcanoRuleMatch`'s bound-op ctor pass `rule.Operand` (the root). Faithful. |
+| `transformTo(rel, equiv)` | **RESOLVED (ported)** | added on the base `OpRuleCall` as `TransformTo(equivalent, IReadOnlyDictionary<IOpNode,IOpNode>)`, with the no-arg form delegating to it; `VolcanoRuleCall` registers the map entries, `HepRuleCall` ignores them (single best plan). See the `VolcanoRuleCall` row. |
+| `id`/`nextId` | **RESOLVED (ported)** | `OpRuleCall.Id`, assigned from a static counter in creation order. |
 | `getChildRels`/`getParents`/`builder`/`getMetadataQuery`/`isRuleExcluded` | MISSING | RELATIONAL/METADATA/BUILDER. |
 
 ### `ConverterRule` / `Converter` / `ConverterImpl` / `TraitMatchingRule` — findings:
@@ -970,52 +970,52 @@ Three themes recur across the Volcano findings below and are worth fixing as uni
 | `getTraitDef()` | **RESOLVED (ported)** | `ConverterRule.TraitDef => Source.TraitDef`. |
 | `TraitMatchingRule` operand build | DIVERGENT-OK | re-applies the converter operand's predicate (Calcite doesn't); tighter but consistent. |
 
-### `RelOptPlanner` → `IPlanner` + `AbstractPlanner` — findings:
+### `RelOptPlanner` → `IOpPlanner` + `AbstractOpPlanner` — findings:
 
 | Member | Verdict | Note |
 |---|---|---|
 | `addRule` | **DIVERGENT-BUG** | drops description-keyed dedup, the unique-description guard, and the bool add/no-add return — duplicate rules silently accumulate in `_rules`. |
-| `setRuleDescExclusionFilter`/`isRuleExcluded`, `getRuleByDescription` | **RESOLVED (ported)** | `AbstractPlanner` now keeps a `Dictionary<string,Rule>` description map: `AddRule` returns `bool` and rejects a duplicate description (no-op if equal, throws if a different rule collides); `GetRuleByDescription`, `SetRuleDescExclusionFilter(Regex?)`, and `IsRuleExcluded(Rule)` are present, with the exclusion check wired into `VolcanoRuleCall.OnMatch` and `HepPlanner.ApplyRule`. *(Re-verification nit: `IsRuleExcluded` uses unanchored `Regex.IsMatch`, whereas Calcite's `Matcher.matches()` is full-string-anchored; identical for Calcite's always-anchored usage, but a user-supplied unanchored pattern would behave as a substring match. Harmless today; anchor with `^…$` if it ever matters. Calcite's second, hint-driven `ruleCall.isRuleExcluded()` is intentionally not modelled — no hints subsystem.)* |
-| `clear()` / `clearRelTraitDefs()` | **RESOLVED (ported)** | `Clear()` (above) + `ClearTraitDefs()` on `AbstractPlanner` (clears `_traitDefs` and resets the empty-trait-set cache). Implemented on the base because Alembic's trait-def registry lives there, rather than Calcite's base-no-op/Volcano-override split. |
+| `setRuleDescExclusionFilter`/`isRuleExcluded`, `getRuleByDescription` | **RESOLVED (ported)** | `AbstractOpPlanner` now keeps a `Dictionary<string,OpRule>` description map: `AddRule` returns `bool` and rejects a duplicate description (no-op if equal, throws if a different rule collides); `GetRuleByDescription`, `SetRuleDescExclusionFilter(Regex?)`, and `IsRuleExcluded(OpRule)` are present, with the exclusion check wired into `VolcanoRuleCall.OnMatch` and `HepPlanner.ApplyRule`. *(Re-verification nit: `IsRuleExcluded` uses unanchored `Regex.IsMatch`, whereas Calcite's `Matcher.matches()` is full-string-anchored; identical for Calcite's always-anchored usage, but a user-supplied unanchored pattern would behave as a substring match. Harmless today; anchor with `^…$` if it ever matters. Calcite's second, hint-driven `ruleCall.isRuleExcluded()` is intentionally not modelled — no hints subsystem.)* |
+| `clear()` / `clearRelTraitDefs()` | **RESOLVED (ported)** | `Clear()` (above) + `ClearTraitDefs()` on `AbstractOpPlanner` (clears `_traitDefs` and resets the empty-trait-set cache). Implemented on the base because Alembic's trait-def registry lives there, rather than Calcite's base-no-op/Volcano-override split. |
 | `fireRule` orchestration (checkCancel + exclusion + onMatch dispatch) | DIVERGENT-OK | base keeps only the listener split (`FireRuleAttempted`); `onMatch` dispatch is in Hep/Volcano. `checkCancel`/exclusion absent. |
 | `emptyTraitSet` / `addRelTraitDef` / listeners / cost factory | DIVERGENT-OK / FAITHFUL | defaults-population + convention seeding folded into the base (consolidation), with a freeze guard (EXTRA, benign). |
 
-### `RelOptCluster` → `Cluster` / `RelOptListener` → `IPlannerListener` / `RelOptUtil` → `PlanUtil` — findings:
+### `RelOptCluster` → `OpCluster` / `RelOptListener` → `IPlannerListener` / `RelOptUtil` → `PlanUtil` — findings:
 
 | Member | Verdict | Note |
 |---|---|---|
 | `RelEquivalenceEvent.equivalenceClass` + `isPhysical` | **RESOLVED (ported)** | `OpEquivalenceEvent.EquivalenceClass` (the set id, from `OpSubset.Add`) + `IsPhysical` (op carries a non-`None` convention); the cost-based planner populates both, the heuristic planner leaves the defaults. *Re-verification notes (DIVERGENT-OK, listener-observability only):* (a) the payload is the raw set id, not Calcite's `"equivalence class {id}"` string; (b) `IsPhysical` is computed, where Calcite hard-codes `false` — Alembic matches the interface's own intent better; (c) Alembic raises the event only on op-add (not also on bare subset creation as Calcite does), so a listener sees fewer equivalence events. None affect planning. |
 | `RelOptUtil.toString` | DIVERGENT-OK | faithful shape (news up `OpWriterImpl`, calls `Explain`); drops the `SqlExplainLevel` param, adds `.TrimEnd()`. |
-| `Cluster` `getPlanner`/`traitSet`/`traitSetOf` | FAITHFUL | the only in-scope cluster members; the rest (type factory, rex builder, metadata query, hints) correctly RELATIONAL/METADATA. |
+| `OpCluster` `getPlanner`/`traitSet`/`traitSetOf` | FAITHFUL | the only in-scope cluster members; the rest (type factory, rex builder, metadata query, hints) correctly RELATIONAL/METADATA. |
 
-### `RelTrait` → `ITrait` / `RelTraitDef` → `TraitDef` (base) + `TraitDef<T>` — findings:
+### `RelTrait` → `IOpTrait` / `RelTraitDef` → `OpTraitDef` (base) + `OpTraitDef<T>` — findings:
 
 | Member | Verdict | Note |
 |---|---|---|
-| `RelTraitDef.canonize` interner | **RESOLVED (fixed)** | `TraitDef` now uses a `WeakInterner<ITrait>` (`src/Alembic/Util/WeakInterner.cs`) — canonical traits are held weakly (collectible once no `TraitSet` references them), with dead entries swept on insert; the analog of Calcite's `Interners.newWeakInterner`. Thread-safe via a single lock (no lock-free races — the class that caused the earlier flakiness). **TODO (follow-up):** `WeakInterner` is a hand-rolled first cut; it should be checked against Google Guava's `Interners.newWeakInterner` and reworked into an exact line-by-line port (Guava's is more sophisticated, with a better API), using .NET types where a Java/Guava feature has a direct equivalent. |
+| `RelTraitDef.canonize` interner | **RESOLVED (fixed)** | `OpTraitDef` now uses a `WeakInterner<IOpTrait>` (`src/Alembic/Util/WeakInterner.cs`) — canonical traits are held weakly (collectible once no `OpTraitSet` references them), with dead entries swept on insert; the analog of Calcite's `Interners.newWeakInterner`. Thread-safe via a single lock (no lock-free races — the class that caused the earlier flakiness). **TODO (follow-up):** `WeakInterner` is a hand-rolled first cut; it should be checked against Google Guava's `Interners.newWeakInterner` and reworked into an exact line-by-line port (Guava's is more sophisticated, with a better API), using .NET types where a Java/Guava feature has a direct equivalent. |
 | `RelTrait.satisfies` | DIVERGENT-OK | Calcite leaves it abstract; Alembic gives a default `Equals` body (the reflexive base case). |
 
-### `RelTraitSet` → `TraitSet` — findings:
+### `RelTraitSet` → `OpTraitSet` — findings:
 
 | Member | Verdict | Note |
 |---|---|---|
-| `getTrait(RelTraitDef)` | **RESOLVED (fixed)** | typed `Get<T>(def)` now returns `TTrait?` — `null` when the dimension is absent, as Calcite's `getTrait`. (Constraint tightened to `class, ITrait`; the always-present `Convention` accessor uses `!`.) The non-generic `Get(TraitDef)` still returns the dimension default — a separate, deliberate convenience overload. |
-| `replace(RelTrait)` (ignore-if-absent) | **RESOLVED (ported)** | `TraitSet.Replace(ITrait)` infers the dimension from the trait, substitutes if present, returns `this` if absent — Calcite's `replace(RelTrait)` exactly (distinct from `Plus`, which adds an absent dimension). |
+| `getTrait(RelTraitDef)` | **RESOLVED (fixed)** | typed `Get<T>(def)` now returns `TTrait?` — `null` when the dimension is absent, as Calcite's `getTrait`. (Constraint tightened to `class, IOpTrait`; the always-present `Convention` accessor uses `!`.) The non-generic `Get(OpTraitDef)` still returns the dimension default — a separate, deliberate convenience overload. |
+| `replace(RelTrait)` (ignore-if-absent) | **RESOLVED (ported)** | `OpTraitSet.Replace(IOpTrait)` infers the dimension from the trait, substitutes if present, returns `this` if absent — Calcite's `replace(RelTrait)` exactly (distinct from `Plus`, which adds an absent dimension). |
 | `Replace<T>(def, value)` | DIVERGENT-OK | doesn't canonize `value` (Calcite does); relies on callers passing canonical traits. |
-| `simplify` / `allSimple` | **RESOLVED (ported)** | `TraitSet.Simplify()` (one-member composite → its member; many-member → dimension default) and `TraitSet.AllSimple()`. A non-generic base class `CompositeTrait` (`Count`/`TraitAt`) lets the set flatten composites without knowing the member type (mirroring Calcite's raw `RelCompositeTrait`). |
-| `difference` | **RESOLVED (ported)** | `TraitSet.Difference(traitSet)` returns the argument's traits that differ position-for-position — needed by `OpSet.AddConverters` to decide which dimensions a converter must bridge. |
-| `replaceIf`/`replaceIfs`/`plusAll`/`merge` | **RESOLVED (ported)** | `TraitSet.ReplaceIf<T>(def, Func<T?>)`, `ReplaceIfs<T>(def, Func<IReadOnlyList<T>?>)`, `PlusAll(IEnumerable<ITrait>)`, `Merge(TraitSet)` — supplier-driven conditional replace and bulk add, matching Calcite. |
+| `simplify` / `allSimple` | **RESOLVED (ported)** | `OpTraitSet.Simplify()` (one-member composite → its member; many-member → dimension default) and `OpTraitSet.AllSimple()`. A non-generic base class `OpCompositeTrait` (`Count`/`TraitAt`) lets the set flatten composites without knowing the member type (mirroring Calcite's raw `RelCompositeTrait`). |
+| `difference` | **RESOLVED (ported)** | `OpTraitSet.Difference(traitSet)` returns the argument's traits that differ position-for-position — needed by `OpSet.AddConverters` to decide which dimensions a converter must bridge. |
+| `replaceIf`/`replaceIfs`/`plusAll`/`merge` | **RESOLVED (ported)** | `OpTraitSet.ReplaceIf<T>(def, Func<T?>)`, `ReplaceIfs<T>(def, Func<IReadOnlyList<T>?>)`, `PlusAll(IEnumerable<IOpTrait>)`, `Merge(OpTraitSet)` — supplier-driven conditional replace and bulk add, matching Calcite. |
 
-### `Convention` / `ConventionTraitDef` / `CompositeTrait` — findings:
+### `Convention` / `ConventionTraitDef` / `OpCompositeTrait` — findings:
 
 | Member | Verdict | Note |
 |---|---|---|
 | `ConventionTraitDef.convert`/`canConvert`/`registerConverterRule` + `ConversionData` graph | DIVERGENT-OK (architectural) | Calcite implements convention conversion as a per-planner `DirectedGraph` of conventions + shortest-path inside `ConventionTraitDef`; Alembic ports none of it and instead drives convention conversion through rules (`ExpandConversionRule` → `VolcanoPlanner.ChangeTraitsUsingConverters`). Different mechanism, same capability — worth noting as a deliberate relocation, not a silent gap. |
-| `CompositeTrait.of` | **RESOLVED (fixed)** | `Of` now canonizes the single member (size 1) and, for many, canonizes each member then the whole composite (`def.Canonize(...)`), as Calcite — restoring the interning-identity invariant. |
+| `OpCompositeTrait.of` | **RESOLVED (fixed)** | `Of` now canonizes the single member (size 1) and, for many, canonizes each member then the whole composite (`def.Canonize(...)`), as Calcite — restoring the interning-identity invariant. |
 | `Convention.Impl` placement (nested) → top-level `Convention` | **RESOLVED (decision: keep top-level)** | Calcite's concrete convention is `Convention.Impl`, a class nested in the `Convention` interface. Both are extension points for adapters: the interface is implemented directly (`EnumerableConvention`, `BindableConvention`, `InterpretableConvention`) and `Impl` is subclassed as a convenience base (`JdbcConvention extends Convention.Impl`). Alembic splits these into `IConvention` (the interface others implement) + a top-level `Convention` (the extensible concrete base others subclass). **Kept top-level by decision**: a top-level, openly-subclassable class is the idiomatic C# extension point; nesting it inside the interface (the Java form) would only hinder that. This is the chosen Alembic structure, not a deviation to reconcile later. |
 | `Convention.Impl` `equals`/`hashCode` | DIVERGENT-OK (intentional) | Calcite's `Impl` uses reference identity (conventions are singletons); Alembic compares by name. Deliberate, documented. |
 
-### `RelOptCost`/`Cost`/`VolcanoCost` — **no bugs.** `getRows()`/`Value` dropped (relational). The scalar `Cost` now mirrors `RelOptCostImpl` member-for-member: `getCpu()`/`getIo()` return `0`; `plus`/`minus`/`multiplyBy` are plain `new Cost(...)` (no infinite short-circuit) and `divideBy` is plain division, matching Calcite exactly; comparison is on the private scalar. `VolcanoCost` keeps its own component-wise behavior — `multiplyBy`/`minus` infinite short-circuits, geometric-mean `divideBy`, per-component `isEqWithEpsilon` — faithful to Calcite's `VolcanoCost`. The named cost singletons (`INFINITY`/`HUGE`/`ZERO`/`TINY`) live on `VolcanoCost` (annotated), as in Calcite; `RelOptCostImpl`/`Cost` have none and build costs inline in their factory.
+### `RelOptCost`/`OpCost`/`VolcanoCost` — **no bugs.** `getRows()`/`Value` dropped (relational). The scalar `OpCost` now mirrors `RelOptCostImpl` member-for-member: `getCpu()`/`getIo()` return `0`; `plus`/`minus`/`multiplyBy` are plain `new OpCost(...)` (no infinite short-circuit) and `divideBy` is plain division, matching Calcite exactly; comparison is on the private scalar. `VolcanoCost` keeps its own component-wise behavior — `multiplyBy`/`minus` infinite short-circuits, geometric-mean `divideBy`, per-component `isEqWithEpsilon` — faithful to Calcite's `VolcanoCost`. The named cost singletons (`INFINITY`/`HUGE`/`ZERO`/`TINY`) live on `VolcanoCost` (annotated), as in Calcite; `RelOptCostImpl`/`OpCost` have none and build costs inline in their factory.
 
 ### `RelNode`/`AbstractRelNode` → `IOpNode`/`AbstractOp` — findings (structural core FAITHFUL):
 
@@ -1052,20 +1052,20 @@ Across **all ~45 classes**, the algebra/graph/cost/program layers are faithful; 
 **P1 — behavior-affecting bugs to fix:**
 1. ~~`VolcanoPlanner.PropagateCostImprovements` — naive recursion (cycle/stack-overflow risk, possibly-wrong propagation).~~ **RESOLVED**: ported Calcite's `propagateRels` map + cost-ordered `PriorityQueue` worklist over `subset.GetParents()`.
 2. ~~`ConverterRule.IsGuaranteed` default **inverted** (`true` vs Calcite `false`).~~ **RESOLVED**: default now `false`; always-convert converters override to `true`. (Only HEP's `AddConverters` reads it.)
-3. ~~`TraitSet.Get<T>` throws on an absent dimension instead of returning null.~~ **RESOLVED**: `Get<T>` returns `null` when absent (Calcite's `getTrait`).
+3. ~~`OpTraitSet.Get<T>` throws on an absent dimension instead of returning null.~~ **RESOLVED**: `Get<T>` returns `null` when absent (Calcite's `getTrait`).
 4. ~~`VolcanoPlanner.Merge` — missing `isSmaller` direction + root re-point/`ensureRootConverters`.~~ **RESOLVED**: swap (`GetChildSets`+`IsSmaller`) + root re-point ported.
    - 4b. ~~`VolcanoPlanner.FixUpInputs`/`Rename` — no parent back-link maintenance.~~ **RESOLVED**: `Rename` drops the old op's back-links and links the rebuilt op's; collision branch reassigns `best`.
 5. ~~`VolcanoPlanner.EnsureRegistered` — skips the equivalence-driven set merge when already registered.~~ **RESOLVED**: merges the sets, returns the `Canonize`d subset.
-6. ~~`TraitDef.Canonize` — strong-ref interner (leak) vs Calcite's weak interner.~~ **RESOLVED**: `WeakInterner<ITrait>` (weak values, swept, single-lock).
-7. ~~`CompositeTrait.Of` — no canonization (breaks interning identity).~~ **RESOLVED**: canonizes members + the whole composite.
+6. ~~`OpTraitDef.Canonize` — strong-ref interner (leak) vs Calcite's weak interner.~~ **RESOLVED**: `WeakInterner<IOpTrait>` (weak values, swept, single-lock).
+7. ~~`OpCompositeTrait.Of` — no canonization (breaks interning identity).~~ **RESOLVED**: canonizes members + the whole composite.
 8. ~~HEP matcher (`MatchOperand` SOME / `MatchUnordered`) stricter than Calcite — rejects valid matches *(verify)*.~~ **RESOLVED**: SOME now `>=` (binds first n); UNORDERED reworked to Calcite's single-operand/any-child `matchAnyChildren` (model aligned; tests reworked). See the `HepPlanner` findings rows.
 
 **P2 — themes / structural gaps:**
 - ~~**Op pruning** absent (drives the hollow `VolcanoRuleCall.OnMatch` staleness guard, `skipMatch`).~~ — **RESOLVED**: `prunedOps`/`Prune`/`CheckPruned` machinery + the `OnMatch` staleness guard + `SkipMatch` are ported (see the `VolcanoPlanner`/`VolcanoRuleCall`/`RuleQueue` rows).
-- ~~**`transformTo(equiv)`** map dropped port-wide~~ — **RESOLVED**: the equiv-map overload is ported (see `VolcanoRuleCall`/`RuleCall` rows).
+- ~~**`transformTo(equiv)`** map dropped port-wide~~ — **RESOLVED**: the equiv-map overload is ported (see `VolcanoRuleCall`/`OpRuleCall` rows).
 - **Canonization**: `EquivRoot` returns the set, never the leader subset; root not re-canonized after merge.
 - ~~**Per-subset converter seeding** (`RelSet.getOrCreateSubset → addConverters`) absent~~ — **RESOLVED**: `OpSet.AddConverters` ported (see the `RelSet` rows).
-- ~~**Rule registry**: `AddRule` no dedup/unique-description; no `Rule.equals`/exclusion-filter.~~ — **RESOLVED**: description-keyed registry with dedup, `Rule`/`RuleOperand` value equality, and the exclusion filter (see the `RuleOperand`/`AbstractRelOptPlanner` rows).
+- ~~**OpRule registry**: `AddRule` no dedup/unique-description; no `OpRule.equals`/exclusion-filter.~~ — **RESOLVED**: description-keyed registry with dedup, `OpRule`/`OpRuleOperand` value equality, and the exclusion filter (see the `OpRuleOperand`/`AbstractRelOptPlanner` rows).
 - `GetCost` none-convention infinite/nudge; HEP `applyRule` forced-conversion guard; HEP large-plan `contractVertices` merge.
 
 **P3 — minor/cosmetic:** ~~`RelWriter.itemIf`/`getDetailLevel`, `findCycles`, `obliterateRelNode`, `allNotNull`, listener event payloads (`equivalenceClass`/`isPhysical`), `VolcanoRuleMatch`/cost helper gaps~~ — **RESOLVED** (Bucket D + Bucket C): all ported except `getDetailLevel`/`nest`/`expand` (SQL-EXPLAIN-only, no analog). Remaining: digest input-string id (cosmetic, DIVERGENT-OK as recorded).
@@ -1077,8 +1077,8 @@ Across **all ~45 classes**, the algebra/graph/cost/program layers are faithful; 
 ## 11. Follow-ups (tracked, not yet done)
 
 - **`WeakInterner` → Guava parity.** `src/Alembic/Util/WeakInterner.cs` is a hand-rolled first cut; rework it into an exact line-by-line port of Google Guava's `Interners.newWeakInterner` (more sophisticated, better API), using .NET types where a Java/Guava feature has a direct equivalent.
-- **`TraitDef.TraitClass` is concrete; Calcite's `getTraitClass()` is `abstract`.** Ours returns `typeof(TTrait)`; Calcite leaves it abstract. Minor divergence — acceptable.
-- **`TraitDef.TraitClass` should be named `TraitType`** (acceptable-divergence rename; `Type`/`Class` C# idiom).
-- **`TraitDef<TTrait>` generic-typing boundary.** Calcite types `canonize`/`getDefault` (etc.) as `T` throughout; ours types `Canonize`/`CanConvert`/`Convert` as `ITrait` (non-generic, on the base `TraitDef`) and only `Default` as `TTrait` (covariant override on `TraitDef<T>`). Consider tightening `Canonize` to `TTrait Canonize(TTrait)` to match Calcite's `final T canonize(T)`.
-- **`TraitDef.Canonize` does not check for a composite trait.** Calcite's `canonize` special-cases `RelCompositeTrait` (`if (!(trait instanceof RelCompositeTrait)) { assert getTraitClass().isInstance(trait); }`) — guarding a type assertion. Ours interns directly without the check.
+- **`OpTraitDef.TraitClass` is concrete; Calcite's `getTraitClass()` is `abstract`.** Ours returns `typeof(TTrait)`; Calcite leaves it abstract. Minor divergence — acceptable.
+- **`OpTraitDef.TraitClass` should be named `TraitType`** (acceptable-divergence rename; `Type`/`Class` C# idiom).
+- **`OpTraitDef<TTrait>` generic-typing boundary.** Calcite types `canonize`/`getDefault` (etc.) as `T` throughout; ours types `Canonize`/`CanConvert`/`Convert` as `IOpTrait` (non-generic, on the base `OpTraitDef`) and only `Default` as `TTrait` (covariant override on `OpTraitDef<T>`). Consider tightening `Canonize` to `TTrait Canonize(TTrait)` to match Calcite's `final T canonize(T)`.
+- **`OpTraitDef.Canonize` does not check for a composite trait.** Calcite's `canonize` special-cases `RelCompositeTrait` (`if (!(trait instanceof RelCompositeTrait)) { assert getTraitClass().isInstance(trait); }`) — guarding a type assertion. Ours interns directly without the check.
 - ~~**`[Provenance]` attribute — project-wide.**~~ **DONE.** `ProvenanceAttribute(className, member?)` is applied across the whole project — every Calcite-derived type/member/field carries the FQN + real Calcite signature; Alembic-originals are listed in §10. Prose Calcite mentions were scrubbed in the same pass (source is now Calcite-free except machine-readable attribute values).

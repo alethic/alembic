@@ -13,9 +13,9 @@ namespace Alembic.Tests.Languages.Relational.Rules;
 sealed class SourceConverter : ConverterRule
 {
 
-    readonly TraitSet _physical;
+    readonly OpTraitSet _physical;
 
-    public SourceConverter(TraitSet physical)
+    public SourceConverter(OpTraitSet physical)
         : base(RelationalConventions.Logical, RelationalConventions.Physical)
     {
         _physical = physical;

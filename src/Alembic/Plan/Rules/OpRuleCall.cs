@@ -17,7 +17,7 @@ namespace Alembic.Plan.Rules;
 /// guaranteed to be the concrete types the rule expects.
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall")]
-public abstract class RuleCall
+public abstract class OpRuleCall
 {
 
     static int _nextId;
@@ -28,7 +28,7 @@ public abstract class RuleCall
     /// is taken from the seed operand.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "RelOptRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    protected RuleCall(IPlanner planner, RuleOperand operand0, ImmutableArray<IOpNode> ops)
+    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOpNode> ops)
     {
         Id = _nextId++;
         Planner = planner;
@@ -47,20 +47,20 @@ public abstract class RuleCall
     /// The planner that issued this call.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "getPlanner()")]
-    public IPlanner Planner { get; }
+    public IOpPlanner Planner { get; }
 
     /// <summary>
     /// The operand the match is seeded from (the operand bound to the op that started the match). The
     /// rule is reached through it.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "getOperand0()")]
-    public RuleOperand Operand0 { get; }
+    public OpRuleOperand Operand0 { get; }
 
     /// <summary>
     /// The rule this call is for.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "getRule()")]
-    public Rule Rule { get; }
+    public OpRule Rule { get; }
 
     /// <summary>
     /// The ops bound to the rule's operands, in operand order.

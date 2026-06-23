@@ -50,24 +50,24 @@ public class Convention : IConvention
     public Type Interface => _interface;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention.Impl", "getTraitDef()")]
-    TraitDef ITrait.TraitDef => ConventionTraitDef.Instance;
+    OpTraitDef IOpTrait.TraitDef => ConventionTraitDef.Instance;
 
     /// <summary>
     /// A convention satisfies only itself.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention.Impl", "satisfies(RelTrait)")]
-    public virtual bool Satisfies(ITrait trait)
+    public virtual bool Satisfies(IOpTrait trait)
     {
         return Equals(trait);
     }
 
     /// <summary>
     /// Registers the rules that produce this convention with the planner (declared on
-    /// <see cref="ITrait"/>). The default does nothing; a convention that brings its own lowering rules
+    /// <see cref="IOpTrait"/>). The default does nothing; a convention that brings its own lowering rules
     /// overrides this.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention.Impl", "register(RelOptPlanner)")]
-    public virtual void Register(IPlanner planner)
+    public virtual void Register(IOpPlanner planner)
     {
 
     }
@@ -78,11 +78,11 @@ public class Convention : IConvention
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention.Impl", "useAbstractConvertersForConversion(RelTraitSet, RelTraitSet)")]
-    public virtual bool UseAbstractConvertersForConversion(TraitSet fromTraits, TraitSet toTraits) => false;
+    public virtual bool UseAbstractConvertersForConversion(OpTraitSet fromTraits, OpTraitSet toTraits) => false;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention.Impl", "enforce(RelNode, RelTraitSet)")]
-    public virtual IOpNode? Enforce(IOpNode input, TraitSet required) => null;
+    public virtual IOpNode? Enforce(IOpNode input, OpTraitSet required) => null;
 
     /// <inheritdoc />
     public override bool Equals(object? obj)

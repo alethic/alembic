@@ -22,13 +22,13 @@ public interface IOpNode
     /// The cluster this op belongs to — its shared planning context. Every op in a plan shares one.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getCluster()")]
-    Cluster Cluster { get; }
+    OpCluster Cluster { get; }
 
     /// <summary>
     /// The physical properties (convention, etc.) carried by this op.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getTraitSet()")]
-    TraitSet Traits { get; }
+    OpTraitSet Traits { get; }
 
     /// <summary>
     /// This op's child ops, in order.
@@ -40,7 +40,7 @@ public interface IOpNode
     /// Produces a copy of this op with the given traits and children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "copy(RelTraitSet, List<RelNode>)")]
-    IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children);
+    IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children);
 
     /// <summary>
     /// Whether this op is structurally equivalent to <paramref name="other"/>.
@@ -109,7 +109,7 @@ public interface IOpNode
     /// only by overriding this.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
-    ICost ComputeSelfCost(IPlanner planner)
+    IOpCost ComputeSelfCost(IOpPlanner planner)
     {
         return planner.CostFactory.MakeTinyCost();
     }

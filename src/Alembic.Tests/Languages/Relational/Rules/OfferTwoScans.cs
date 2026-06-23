@@ -12,18 +12,18 @@ namespace Alembic.Tests.Languages.Relational.Rules;
 /// and a full source scan — leaving the planner to choose the cheaper. Exercises one rule call
 /// registering several equivalents.
 /// </summary>
-sealed class OfferTwoScans : Rule
+sealed class OfferTwoScans : OpRule
 {
 
-    readonly TraitSet _physical;
+    readonly OpTraitSet _physical;
 
-    public OfferTwoScans(TraitSet physical)
+    public OfferTwoScans(OpTraitSet physical)
         : base(Leaf<LogicalSource>())
     {
         _physical = physical;
     }
 
-    public override void OnMatch(RuleCall call)
+    public override void OnMatch(OpRuleCall call)
     {
         var source = (LogicalSource)call.Op(0);
 

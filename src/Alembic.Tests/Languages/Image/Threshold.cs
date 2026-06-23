@@ -11,13 +11,13 @@ namespace Alembic.Tests.Languages.Image;
 sealed class Threshold : ImageOp
 {
 
-    public Threshold(TraitSet traits, IOpNode input)
+    public Threshold(OpTraitSet traits, IOpNode input)
         : base(traits, input)
     {
 
     }
 
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new Threshold(traits, children[0]);
     }

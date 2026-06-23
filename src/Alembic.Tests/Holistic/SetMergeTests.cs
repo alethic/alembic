@@ -24,10 +24,10 @@ public class SetMergeTests
     [Fact]
     public void Folding_a_subtree_into_an_existing_equivalent_merges_their_sets()
     {
-        var logical = TraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
+        var logical = OpTraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
 
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
 
         // (2 * 3) + 6 — folding 2*3 to 6 makes the left subtree structurally equal to the right child
         // (which is already its own equivalence set), so the planner must merge the two sets.

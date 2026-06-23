@@ -17,7 +17,7 @@ sealed class PhysicalFilteredSource : AbstractOp
     readonly string _table;
     readonly string _predicate;
 
-    public PhysicalFilteredSource(Cluster cluster, TraitSet traits, string table, string predicate)
+    public PhysicalFilteredSource(OpCluster cluster, OpTraitSet traits, string table, string predicate)
         : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         _table = table;
@@ -29,7 +29,7 @@ sealed class PhysicalFilteredSource : AbstractOp
     public string Predicate => _predicate;
 
     // A fused scan-and-filter is cheaper than a separate filter over a separate scan (10 + 100).
-    public override ICost ComputeSelfCost(IPlanner planner) => planner.CostFactory.MakeCost(100, 0);
+    public override IOpCost ComputeSelfCost(IOpPlanner planner) => planner.CostFactory.MakeCost(100, 0);
 
     public override IOpWriter ExplainTerms(IOpWriter writer)
     {
@@ -39,7 +39,7 @@ sealed class PhysicalFilteredSource : AbstractOp
         return writer;
     }
 
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new PhysicalFilteredSource(Cluster, traits, _table, _predicate);
     }

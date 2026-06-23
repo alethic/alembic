@@ -7,11 +7,11 @@ using Alembic.Plan.Rules;
 namespace Alembic.Plan.Hep;
 
 /// <summary>
-/// The <see cref="RuleCall"/> used by <see cref="HepPlanner"/>. A rule may register several equivalents
+/// The <see cref="OpRuleCall"/> used by <see cref="HepPlanner"/>. A rule may register several equivalents
 /// per match; heuristic rewriting applies the first that differs from the matched op.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRuleCall")]
-public sealed class HepRuleCall : RuleCall
+public sealed class HepRuleCall : OpRuleCall
 {
 
     readonly List<IOpNode> _results = new List<IOpNode>();
@@ -20,7 +20,7 @@ public sealed class HepRuleCall : RuleCall
     /// Creates a call seeded at <paramref name="operand0"/> over the operand-bound ops.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRuleCall", "HepRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>, List<RelNode>)")]
-    public HepRuleCall(IPlanner planner, RuleOperand operand0, ImmutableArray<IOpNode> ops)
+    public HepRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOpNode> ops)
         : base(planner, operand0, ops)
     {
 

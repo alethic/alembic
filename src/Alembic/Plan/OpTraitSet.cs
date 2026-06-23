@@ -12,15 +12,15 @@ namespace Alembic.Plan;
 /// common sets are singletons.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet")]
-public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
+public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
 {
 
     readonly Cache _cache;
-    readonly ImmutableArray<ITrait> _traits;
+    readonly ImmutableArray<IOpTrait> _traits;
     int _hash;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "RelTraitSet(Cache, RelTrait[])")]
-    TraitSet(Cache cache, ImmutableArray<ITrait> traits)
+    OpTraitSet(Cache cache, ImmutableArray<IOpTrait> traits)
     {
         _cache = cache;
         _traits = traits;
@@ -30,10 +30,10 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// Creates an empty trait set. It starts a new cache, shared by every set derived from it.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "createEmpty()")]
-    public static TraitSet CreateEmpty()
+    public static OpTraitSet CreateEmpty()
     {
         var cache = new Cache();
-        return cache.GetOrAdd(new TraitSet(cache, ImmutableArray<ITrait>.Empty));
+        return cache.GetOrAdd(new OpTraitSet(cache, ImmutableArray<IOpTrait>.Empty));
     }
 
     /// <summary>
@@ -46,8 +46,8 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// The value carried on the given dimension, or <c>null</c> if the dimension is not present.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "getTrait(RelTraitDef)")]
-    public TTrait? Get<TTrait>(TraitDef<TTrait> def)
-        where TTrait : class, ITrait
+    public TTrait? Get<TTrait>(OpTraitDef<TTrait> def)
+        where TTrait : class, IOpTrait
     {
         var index = FindIndex(def);
         return index < 0 ? null : (TTrait)_traits[index];
@@ -57,7 +57,7 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// The value carried on the given dimension, or the dimension's default if it is not present.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "getTrait(RelTraitDef)")]
-    public ITrait Get(TraitDef def)
+    public IOpTrait Get(OpTraitDef def)
     {
         var index = FindIndex(def);
         return index >= 0 ? _traits[index] : def.Default;
@@ -68,19 +68,19 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// present.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "plus(RelTrait)")]
-    public TraitSet Plus(ITrait trait)
+    public OpTraitSet Plus(IOpTrait trait)
     {
         trait = Canonize(trait);
         var index = FindIndex(trait.TraitDef);
         var next = index >= 0 ? _traits.SetItem(index, trait) : _traits.Add(trait);
-        return _cache.GetOrAdd(new TraitSet(_cache, next));
+        return _cache.GetOrAdd(new OpTraitSet(_cache, next));
     }
 
     /// <summary>
     /// Returns the canonical (interned) instance equal to <paramref name="trait"/>, via its dimension.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "canonize(RelTrait)")]
-    public ITrait Canonize(ITrait trait)
+    public IOpTrait Canonize(IOpTrait trait)
     {
         return trait.TraitDef.Canonize(trait);
     }
@@ -90,45 +90,45 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// dimension is not present, returns this set unchanged.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "replace(int, RelTrait)")]
-    public TraitSet Replace<TTrait>(TraitDef<TTrait> def, TTrait value)
-        where TTrait : class, ITrait
+    public OpTraitSet Replace<TTrait>(OpTraitDef<TTrait> def, TTrait value)
+        where TTrait : class, IOpTrait
     {
         var index = FindIndex(def);
         if (index < 0)
             return this;
 
-        return _cache.GetOrAdd(new TraitSet(_cache, _traits.SetItem(index, value)));
+        return _cache.GetOrAdd(new OpTraitSet(_cache, _traits.SetItem(index, value)));
     }
 
     /// <summary>
     /// Returns an interned set carrying several values on one dimension at once. The values are folded
     /// into a single trait (the dimension's default when empty, the sole value when there is one, a
-    /// <see cref="CompositeTrait{T}"/> otherwise) and added, or replaced if the dimension is present.
+    /// <see cref="OpCompositeTrait{T}"/> otherwise) and added, or replaced if the dimension is present.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "replace(RelTraitDef, List)")]
-    public TraitSet Replace<TTrait>(TraitDef<TTrait> def, IReadOnlyList<TTrait> values)
-        where TTrait : class, IMultipleTrait
+    public OpTraitSet Replace<TTrait>(OpTraitDef<TTrait> def, IReadOnlyList<TTrait> values)
+        where TTrait : class, IOpMultipleTrait
     {
-        var trait = CompositeTrait<TTrait>.Of(def, values);
+        var trait = OpCompositeTrait<TTrait>.Of(def, values);
         var index = FindIndex(def);
         var next = index >= 0 ? _traits.SetItem(index, trait) : _traits.Add(trait);
-        return _cache.GetOrAdd(new TraitSet(_cache, next));
+        return _cache.GetOrAdd(new OpTraitSet(_cache, next));
     }
 
     /// <summary>
-    /// The values carried on a multi-valued dimension: the members of a <see cref="CompositeTrait{T}"/>
+    /// The values carried on a multi-valued dimension: the members of a <see cref="OpCompositeTrait{T}"/>
     /// if one is present, the single value if a plain trait is present, or empty if the dimension is
     /// absent.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "getTraits(RelTraitDef)")]
-    public IReadOnlyList<TTrait> GetList<TTrait>(TraitDef<TTrait> def)
-        where TTrait : class, IMultipleTrait
+    public IReadOnlyList<TTrait> GetList<TTrait>(OpTraitDef<TTrait> def)
+        where TTrait : class, IOpMultipleTrait
     {
         var index = FindIndex(def);
         if (index < 0)
             return Array.Empty<TTrait>();
 
-        return _traits[index] is CompositeTrait<TTrait> composite
+        return _traits[index] is OpCompositeTrait<TTrait> composite
             ? composite.Traits
             : new[] { (TTrait)_traits[index] };
     }
@@ -136,10 +136,10 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// <summary>
     /// Whether an op carrying this set also satisfies a requirement for every dimension named in
     /// <paramref name="required"/>. A dimension absent from this set is never satisfied; present
-    /// dimensions are compared with <see cref="ITrait.Satisfies"/>.
+    /// dimensions are compared with <see cref="IOpTrait.Satisfies"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "satisfies(RelTraitSet)")]
-    public bool Satisfies(TraitSet required)
+    public bool Satisfies(OpTraitSet required)
     {
         foreach (var requirement in required._traits)
         {
@@ -155,7 +155,7 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// Whether this set equals <paramref name="other"/> on every dimension except convention.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "equalsSansConvention(RelTraitSet)")]
-    public bool EqualsSansConvention(TraitSet other)
+    public bool EqualsSansConvention(OpTraitSet other)
     {
         return Replace(ConventionTraitDef.Instance, other.Convention).Equals(other);
     }
@@ -164,7 +164,7 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// Whether this set carries a trait equal to <paramref name="trait"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "contains(RelTrait)")]
-    public bool Contains(ITrait trait)
+    public bool Contains(IOpTrait trait)
     {
         foreach (var t in _traits)
             if (Equals(t, trait))
@@ -177,7 +177,7 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// Whether this set carries exactly <paramref name="traits"/>, in order.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "comprises(RelTrait[])")]
-    public bool Comprises(params ITrait[] traits)
+    public bool Comprises(params IOpTrait[] traits)
     {
         if (traits.Length != _traits.Length)
             return false;
@@ -194,7 +194,7 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// stronger, equality-based counterpart to <see cref="Satisfies"/>).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "matches(RelTraitSet)")]
-    public bool Matches(TraitSet that)
+    public bool Matches(OpTraitSet that)
     {
         var n = Math.Min(_traits.Length, that._traits.Length);
         for (int i = 0; i < n; i++)
@@ -209,9 +209,9 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// i.e. the dimensions on which the two disagree, taken from <paramref name="traitSet"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "difference(RelTraitSet)")]
-    public IReadOnlyList<ITrait> Difference(TraitSet traitSet)
+    public IReadOnlyList<IOpTrait> Difference(OpTraitSet traitSet)
     {
-        var builder = ImmutableArray.CreateBuilder<ITrait>();
+        var builder = ImmutableArray.CreateBuilder<IOpTrait>();
         var n = Math.Min(_traits.Length, traitSet._traits.Length);
         for (int i = 0; i < n; i++)
             if (!Equals(_traits[i], traitSet._traits[i]))
@@ -223,10 +223,10 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// <summary>
     /// Returns an interned set with the given trait substituted onto its dimension, <em>if that dimension
     /// is already present</em>; otherwise returns this set unchanged (the trait is ignored). Contrast with
-    /// <see cref="Plus(ITrait)"/>, which adds an absent dimension.
+    /// <see cref="Plus(IOpTrait)"/>, which adds an absent dimension.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "replace(RelTrait)")]
-    public TraitSet Replace(ITrait trait)
+    public OpTraitSet Replace(IOpTrait trait)
     {
         trait = Canonize(trait);
         var index = FindIndex(trait.TraitDef);
@@ -237,16 +237,16 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     }
 
     /// <summary>
-    /// Folds another set's traits into this one with <see cref="Plus(ITrait)"/>.
+    /// Folds another set's traits into this one with <see cref="Plus(IOpTrait)"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "merge(RelTraitSet)")]
-    public TraitSet Merge(TraitSet additionalTraits) => PlusAll(additionalTraits._traits);
+    public OpTraitSet Merge(OpTraitSet additionalTraits) => PlusAll(additionalTraits._traits);
 
     /// <summary>
-    /// Adds each of <paramref name="traits"/> with <see cref="Plus(ITrait)"/>.
+    /// Adds each of <paramref name="traits"/> with <see cref="Plus(IOpTrait)"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "plusAll(RelTrait[])")]
-    public TraitSet PlusAll(IEnumerable<ITrait> traits)
+    public OpTraitSet PlusAll(IEnumerable<IOpTrait> traits)
     {
         var result = this;
         foreach (var trait in traits)
@@ -260,15 +260,15 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// dimension's default when the supplier returns <c>null</c>); otherwise returns this set unchanged.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "replaceIfs(RelTraitDef, Supplier)")]
-    public TraitSet ReplaceIfs<TTrait>(TraitDef<TTrait> def, Func<IReadOnlyList<TTrait>?> traitSupplier)
-        where TTrait : class, IMultipleTrait
+    public OpTraitSet ReplaceIfs<TTrait>(OpTraitDef<TTrait> def, Func<IReadOnlyList<TTrait>?> traitSupplier)
+        where TTrait : class, IOpMultipleTrait
     {
         var index = FindIndex(def);
         if (index < 0)
             return this;
 
         var traits = traitSupplier();
-        return ReplaceAt(index, traits is null ? def.Default : CompositeTrait<TTrait>.Of(def, traits));
+        return ReplaceAt(index, traits is null ? def.Default : OpCompositeTrait<TTrait>.Of(def, traits));
     }
 
     /// <summary>
@@ -276,25 +276,25 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// when the supplier returns <c>null</c>); otherwise returns this set unchanged.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "replaceIf(RelTraitDef, Supplier)")]
-    public TraitSet ReplaceIf<TTrait>(TraitDef<TTrait> def, Func<TTrait?> traitSupplier)
-        where TTrait : class, ITrait
+    public OpTraitSet ReplaceIf<TTrait>(OpTraitDef<TTrait> def, Func<TTrait?> traitSupplier)
+        where TTrait : class, IOpTrait
     {
         var index = FindIndex(def);
         if (index < 0)
             return this;
 
-        ITrait? value = traitSupplier();
+        IOpTrait? value = traitSupplier();
         return ReplaceAt(index, value ?? def.Default);
     }
 
     /// <summary>
-    /// Whether this set carries no <see cref="CompositeTrait{T}"/> (every dimension holds a single value).
+    /// Whether this set carries no <see cref="OpCompositeTrait{T}"/> (every dimension holds a single value).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "allSimple()")]
     public bool AllSimple()
     {
         foreach (var trait in _traits)
-            if (trait is CompositeTrait)
+            if (trait is OpCompositeTrait)
                 return false;
 
         return true;
@@ -305,11 +305,11 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     /// becomes that member, a many-member composite becomes its dimension's default.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "simplify()")]
-    public TraitSet Simplify()
+    public OpTraitSet Simplify()
     {
         var result = this;
         for (int i = 0; i < _traits.Length; i++)
-            if (_traits[i] is CompositeTrait composite)
+            if (_traits[i] is OpCompositeTrait composite)
                 result = result.ReplaceAt(i, composite.Count == 1 ? composite.TraitAt(0) : _traits[i].TraitDef.Default);
 
         return result;
@@ -317,22 +317,22 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "iterator()")]
-    public IEnumerator<ITrait> GetEnumerator() => ((IEnumerable<ITrait>)_traits).GetEnumerator();
+    public IEnumerator<IOpTrait> GetEnumerator() => ((IEnumerable<IOpTrait>)_traits).GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "replace(int, RelTrait)")]
-    TraitSet ReplaceAt(int index, ITrait trait)
+    OpTraitSet ReplaceAt(int index, IOpTrait trait)
     {
         trait = Canonize(trait);
         if (ReferenceEquals(_traits[index], trait))
             return this;
 
-        return _cache.GetOrAdd(new TraitSet(_cache, _traits.SetItem(index, trait)));
+        return _cache.GetOrAdd(new OpTraitSet(_cache, _traits.SetItem(index, trait)));
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "findIndex(RelTraitDef)")]
-    int FindIndex(TraitDef def)
+    int FindIndex(OpTraitDef def)
     {
         for (int i = 0; i < _traits.Length; i++)
             if (ReferenceEquals(_traits[i].TraitDef, def))
@@ -342,7 +342,7 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     }
 
     /// <inheritdoc />
-    public bool Equals(TraitSet? other)
+    public bool Equals(OpTraitSet? other)
     {
         if (ReferenceEquals(this, other))
             return true;
@@ -360,7 +360,7 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "equals(Object)")]
     public override bool Equals(object? obj)
     {
-        return obj is TraitSet other && Equals(other);
+        return obj is OpTraitSet other && Equals(other);
     }
 
     /// <inheritdoc />
@@ -392,9 +392,9 @@ public sealed class TraitSet : IEquatable<TraitSet>, IEnumerable<ITrait>
     sealed class Cache
     {
 
-        readonly Dictionary<TraitSet, TraitSet> _map = new Dictionary<TraitSet, TraitSet>();
+        readonly Dictionary<OpTraitSet, OpTraitSet> _map = new Dictionary<OpTraitSet, OpTraitSet>();
 
-        public TraitSet GetOrAdd(TraitSet set)
+        public OpTraitSet GetOrAdd(OpTraitSet set)
         {
             if (_map.TryGetValue(set, out var existing))
                 return existing;

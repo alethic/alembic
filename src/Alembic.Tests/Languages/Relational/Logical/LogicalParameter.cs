@@ -14,7 +14,7 @@ sealed class LogicalParameter : AbstractOp
 
     readonly string _name;
 
-    public LogicalParameter(Cluster cluster, TraitSet traits, string name)
+    public LogicalParameter(OpCluster cluster, OpTraitSet traits, string name)
         : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         _name = name;
@@ -29,7 +29,7 @@ sealed class LogicalParameter : AbstractOp
         return writer;
     }
 
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new LogicalParameter(Cluster, traits, _name);
     }

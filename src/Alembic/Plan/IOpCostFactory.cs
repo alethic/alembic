@@ -6,38 +6,38 @@ namespace Alembic.Plan;
 /// to build their own costs.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostFactory")]
-public interface ICostFactory
+public interface IOpCostFactory
 {
 
     /// <summary>
     /// A cost from a CPU and an I/O estimate. A scalar cost model may use only some of them (the
-    /// default <see cref="Cost"/> keeps the CPU estimate).
+    /// default <see cref="OpCost"/> keeps the CPU estimate).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostFactory", "makeCost(double, double, double)")]
-    ICost MakeCost(double cpu, double io);
+    IOpCost MakeCost(double cpu, double io);
 
     /// <summary>
     /// A cost of zero.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostFactory", "makeZeroCost()")]
-    ICost MakeZeroCost();
+    IOpCost MakeZeroCost();
 
     /// <summary>
     /// An infinite cost — an unimplementable or rejected plan.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostFactory", "makeInfiniteCost()")]
-    ICost MakeInfiniteCost();
+    IOpCost MakeInfiniteCost();
 
     /// <summary>
     /// An enormous but finite cost.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostFactory", "makeHugeCost()")]
-    ICost MakeHugeCost();
+    IOpCost MakeHugeCost();
 
     /// <summary>
     /// A small positive cost.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostFactory", "makeTinyCost()")]
-    ICost MakeTinyCost();
+    IOpCost MakeTinyCost();
 
 }

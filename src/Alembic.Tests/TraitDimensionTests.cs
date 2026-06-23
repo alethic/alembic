@@ -15,7 +15,7 @@ public class TraitDimensionTests
     public void Second_dimension_reads_and_interns()
     {
         // Build a set with convention plus a second dimension, via createEmpty + plus.
-        var empty = TraitSet.CreateEmpty().Plus(Convention.None).Plus(Sortedness.Unsorted);
+        var empty = OpTraitSet.CreateEmpty().Plus(Convention.None).Plus(Sortedness.Unsorted);
         var sorted = empty.Replace(SortednessTraitDef.Instance, Sortedness.Sorted);
 
         Assert.Equal(Sortedness.Unsorted, empty.Get(SortednessTraitDef.Instance));

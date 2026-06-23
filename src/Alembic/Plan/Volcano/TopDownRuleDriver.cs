@@ -296,10 +296,10 @@ public sealed class TopDownRuleDriver : IRuleDriver
     {
         readonly TopDownRuleDriver _driver;
         readonly OpSubset _group;
-        readonly ICost _upperBound;
+        readonly IOpCost _upperBound;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.OptimizeGroup", "OptimizeGroup(RelSubset, RelOptCost)")]
-        public OptimizeGroup(TopDownRuleDriver driver, OpSubset group, ICost upperBound)
+        public OptimizeGroup(TopDownRuleDriver driver, OpSubset group, IOpCost upperBound)
         {
             _driver = driver;
             _group = group;
@@ -569,15 +569,15 @@ public sealed class TopDownRuleDriver : IRuleDriver
         readonly IOpNode _mExpr;
         readonly OpSubset _group;
         readonly int _childCount;
-        ICost _upperBound;
-        ICost _upperForInput;
+        IOpCost _upperBound;
+        IOpCost _upperForInput;
         int _processingChild;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.OptimizeInputs", "lowerBounds")]
-        internal List<ICost>? LowerBounds;
+        internal List<IOpCost>? LowerBounds;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.OptimizeInputs", "lowerBoundSum")]
-        internal ICost? LowerBoundSum;
+        internal IOpCost? LowerBoundSum;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.OptimizeInputs", "OptimizeInputs(RelNode, RelSubset)")]
         public OptimizeInputs(TopDownRuleDriver driver, IOpNode rel, OpSubset group)
@@ -609,7 +609,7 @@ public sealed class TopDownRuleDriver : IRuleDriver
                     if (_upperForInput.IsInfinite)
                         _upperForInput = planner.UpperBoundForInputs(_mExpr, _upperBound);
 
-                    LowerBounds = new List<ICost>(_childCount);
+                    LowerBounds = new List<IOpCost>(_childCount);
                     foreach (var input in _mExpr.Children)
                     {
                         var lb = planner.GetLowerBound(input);
@@ -664,13 +664,13 @@ public sealed class TopDownRuleDriver : IRuleDriver
     {
         readonly TopDownRuleDriver _driver;
         readonly OptimizeInputs? _context;
-        readonly ICost _upper;
+        readonly IOpCost _upper;
         readonly IOpNode _parent;
         OpSubset _input;
         readonly int _i;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.CheckInput", "CheckInput(OptimizeInputs, RelNode, RelSubset, int, RelOptCost)")]
-        public CheckInput(TopDownRuleDriver driver, OptimizeInputs? context, IOpNode parent, OpSubset input, int i, ICost upper)
+        public CheckInput(TopDownRuleDriver driver, OptimizeInputs? context, IOpNode parent, OpSubset input, int i, IOpCost upper)
         {
             _driver = driver;
             _context = context;
@@ -767,14 +767,14 @@ public sealed class TopDownRuleDriver : IRuleDriver
 
             var mode = rel.DeriveMode;
             int arity = rel.Children.Length;
-            var inputTraits = new List<IList<TraitSet>>(arity);
+            var inputTraits = new List<IList<OpTraitSet>>(arity);
 
             for (int i = 0; i < arity; i++)
             {
                 int childId = mode == DeriveMode.RightFirst ? arity - i - 1 : i;
 
                 var input = (OpSubset)rel.Children[childId];
-                var traits = new List<TraitSet>();
+                var traits = new List<OpTraitSet>();
                 inputTraits.Add(traits);
 
                 int numSubset = input.Set.Subsets.Count;

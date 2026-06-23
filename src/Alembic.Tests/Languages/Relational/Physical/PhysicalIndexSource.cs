@@ -14,7 +14,7 @@ sealed class PhysicalIndexSource : AbstractOp
 
     readonly string _table;
 
-    public PhysicalIndexSource(Cluster cluster, TraitSet traits, string table)
+    public PhysicalIndexSource(OpCluster cluster, OpTraitSet traits, string table)
         : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         _table = table;
@@ -22,7 +22,7 @@ sealed class PhysicalIndexSource : AbstractOp
 
     public string Table => _table;
 
-    public override ICost ComputeSelfCost(IPlanner planner) => planner.CostFactory.MakeCost(50, 0);
+    public override IOpCost ComputeSelfCost(IOpPlanner planner) => planner.CostFactory.MakeCost(50, 0);
 
     public override IOpWriter ExplainTerms(IOpWriter writer)
     {
@@ -31,7 +31,7 @@ sealed class PhysicalIndexSource : AbstractOp
         return writer;
     }
 
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new PhysicalIndexSource(Cluster, traits, _table);
     }

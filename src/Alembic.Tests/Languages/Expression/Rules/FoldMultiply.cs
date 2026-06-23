@@ -9,7 +9,7 @@ namespace Alembic.Tests.Languages.Expression.Rules;
 /// Constant folding: a multiplication of two literals collapses to a single literal holding their
 /// product.
 /// </summary>
-sealed class FoldMultiply : Rule
+sealed class FoldMultiply : OpRule
 {
 
     public FoldMultiply()
@@ -17,7 +17,7 @@ sealed class FoldMultiply : Rule
     {
     }
 
-    public override void OnMatch(RuleCall call)
+    public override void OnMatch(OpRuleCall call)
     {
         var multiply = (Multiply)call.Op(0);
         var left = (Literal)call.Op(1);

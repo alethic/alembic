@@ -9,7 +9,7 @@ namespace Alembic.Tests.Languages.Expression.Rules;
 /// Constant folding: an addition of two literals collapses to a single literal holding their sum.
 /// Exercises a binary operand whose two children are themselves matched.
 /// </summary>
-sealed class FoldAdd : Rule
+sealed class FoldAdd : OpRule
 {
 
     public FoldAdd()
@@ -17,7 +17,7 @@ sealed class FoldAdd : Rule
     {
     }
 
-    public override void OnMatch(RuleCall call)
+    public override void OnMatch(OpRuleCall call)
     {
         var add = (Add)call.Op(0);
         var left = (Literal)call.Op(1);

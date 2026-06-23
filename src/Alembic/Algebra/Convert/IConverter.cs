@@ -3,7 +3,7 @@ using Alembic.Plan;
 namespace Alembic.Algebra.Convert;
 
 /// <summary>
-/// An op that converts one <see cref="ITrait"/> of its input from one value to another without
+/// An op that converts one <see cref="IOpTrait"/> of its input from one value to another without
 /// changing the result. By declaring itself a converter, an op tells a cost-based planner that its
 /// input and output are logically equivalent but physically different.
 /// </summary>
@@ -15,13 +15,13 @@ public interface IConverter : IOpNode
     /// The traits of the input being converted.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.Converter", "getInputTraits()")]
-    TraitSet InputTraits { get; }
+    OpTraitSet InputTraits { get; }
 
     /// <summary>
     /// The dimension this converter modifies (the others are preserved), or <c>null</c>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.Converter", "getTraitDef()")]
-    TraitDef? TraitDef { get; }
+    OpTraitDef? TraitDef { get; }
 
     /// <summary>
     /// The sole input being converted.

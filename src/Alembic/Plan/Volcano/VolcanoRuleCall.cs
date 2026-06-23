@@ -13,13 +13,13 @@ namespace Alembic.Plan.Volcano;
 /// finds, and the planner keeps them all and later chooses the cheapest.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall")]
-public class VolcanoRuleCall : RuleCall
+public class VolcanoRuleCall : OpRuleCall
 {
 
     readonly VolcanoPlanner _planner;
 
     /// <summary>
-    /// The ops bound to each operand, indexed by <see cref="RuleOperand.OrdinalInRule"/>. Filled in as
+    /// The ops bound to each operand, indexed by <see cref="OpRuleOperand.OrdinalInRule"/>. Filled in as
     /// the match solves outward.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "rels")]
@@ -29,7 +29,7 @@ public class VolcanoRuleCall : RuleCall
     /// Creates a call seeded at <paramref name="operand0"/>, with no ops bound yet.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand)")]
-    internal VolcanoRuleCall(VolcanoPlanner planner, RuleOperand operand0)
+    internal VolcanoRuleCall(VolcanoPlanner planner, OpRuleOperand operand0)
         : base(planner, operand0, ImmutableArray<IOpNode>.Empty)
     {
         _planner = planner;
@@ -41,7 +41,7 @@ public class VolcanoRuleCall : RuleCall
     /// <paramref name="operand0"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    internal VolcanoRuleCall(VolcanoPlanner planner, RuleOperand operand0, ImmutableArray<IOpNode> ops)
+    internal VolcanoRuleCall(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOpNode> ops)
         : base(planner, operand0, ops)
     {
         _planner = planner;
@@ -106,7 +106,7 @@ public class VolcanoRuleCall : RuleCall
     }
 
     /// <summary>
-    /// Seeds the match with <paramref name="op"/> in <see cref="RuleCall.Operand0"/>'s slot and solves the rest.
+    /// Seeds the match with <paramref name="op"/> in <see cref="OpRuleCall.Operand0"/>'s slot and solves the rest.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "match(RelNode)")]
     internal void Match(IOpNode op)
@@ -141,7 +141,7 @@ public class VolcanoRuleCall : RuleCall
         var operand = operands[operandOrdinal];
         var previous = Rels[previousOperandOrdinal]!;
 
-        RuleOperand parentOperand;
+        OpRuleOperand parentOperand;
         IEnumerable<IOpNode> successors;
         if (ascending)
         {

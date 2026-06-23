@@ -28,15 +28,15 @@ public class CascadesTests
         _output = output;
     }
 
-    static readonly TraitSet Logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
-    static readonly TraitSet Physical = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
+    static readonly OpTraitSet Logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
+    static readonly OpTraitSet Physical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
 
     [Fact]
     public void A_transformation_rule_fires_on_logical_ops()
     {
         var spy = new SpyTransformationRule();
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         planner.AddRule(spy);
         planner.SetRoot(new LogicalSource(cluster, Logical, "t"));
         planner.FindBestPlan();
@@ -49,7 +49,7 @@ public class CascadesTests
     {
         var spy = new SpyTransformationRule();
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         planner.AddRule(spy);
 
         // PhysicalSource is an IPhysicalNode, so the dispatch table never offers it to a transformation
@@ -65,7 +65,7 @@ public class CascadesTests
     {
         var planner = new VolcanoPlanner();
         planner.AddTraitDef(SortednessTraitDef.Instance);
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         var sorted = Physical.Plus(Sortedness.Sorted);
 
         var filter = new PhysicalFilter(Physical, new PhysicalSource(cluster, Physical, "t"), "x > 5");
@@ -84,7 +84,7 @@ public class CascadesTests
     {
         var planner = new VolcanoPlanner();
         planner.AddTraitDef(SortednessTraitDef.Instance);
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         var sorted = Physical.Plus(Sortedness.Sorted);
 
         var filter = new PhysicalFilter(Physical, new PhysicalSource(cluster, Physical, "t"), "x > 5");
@@ -104,7 +104,7 @@ public class CascadesTests
         // (natively sort-capable) source both deliver sorted (cost 10 + 100), rather than sorting on top
         // with an enforcer (cost 50 + 10 + 100).
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new PhysicalFilter(unsorted, new PhysicalSource(cluster, unsorted, "t"), "x > 5");
 
         planner.SetTopDownOpt(true);
@@ -127,7 +127,7 @@ public class CascadesTests
 
         var listener = new OpRecordingListener();
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new PhysicalFilter(unsorted, new PhysicalSource(cluster, unsorted, "t"), "x > 5");
 
         planner.SetTopDownOpt(true);
@@ -155,7 +155,7 @@ public class CascadesTests
     /// <summary>
     /// A transformation rule that records every op it is invoked on and transforms nothing.
     /// </summary>
-    sealed class SpyTransformationRule : Rule, ITransformationRule
+    sealed class SpyTransformationRule : OpRule, ITransformationRule
     {
 
         public SpyTransformationRule()
@@ -165,7 +165,7 @@ public class CascadesTests
 
         public List<IOpNode> Fired { get; } = new List<IOpNode>();
 
-        public override void OnMatch(RuleCall call) => Fired.Add(call.Op(0));
+        public override void OnMatch(OpRuleCall call) => Fired.Add(call.Op(0));
 
     }
 
@@ -173,7 +173,7 @@ public class CascadesTests
     /// Offers a sorted scan as an equivalent of a physical source (modelling an index). It is an
     /// implementation rule, not a transformation rule, so it applies to the physical source.
     /// </summary>
-    sealed class OfferSortedSource : Rule
+    sealed class OfferSortedSource : OpRule
     {
 
         public OfferSortedSource()
@@ -181,7 +181,7 @@ public class CascadesTests
         {
         }
 
-        public override void OnMatch(RuleCall call)
+        public override void OnMatch(OpRuleCall call)
         {
             var source = (PhysicalSource)call.Op(0);
             if (ReferenceEquals(source.Traits.Get(SortednessTraitDef.Instance), Sortedness.Sorted))

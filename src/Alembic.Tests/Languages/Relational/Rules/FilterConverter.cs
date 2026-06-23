@@ -13,9 +13,9 @@ namespace Alembic.Tests.Languages.Relational.Rules;
 sealed class FilterConverter : ConverterRule
 {
 
-    readonly TraitSet _physical;
+    readonly OpTraitSet _physical;
 
-    public FilterConverter(TraitSet physical)
+    public FilterConverter(OpTraitSet physical)
         : base(RelationalConventions.Logical, RelationalConventions.Physical)
     {
         _physical = physical;

@@ -20,19 +20,19 @@ namespace Alembic.Plan.Volcano;
 /// <see cref="TopDownRuleDriver"/> (Cascades), selected with <see cref="SetTopDownOpt"/>.
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner")]
-public sealed class VolcanoPlanner : AbstractPlanner
+public sealed class VolcanoPlanner : AbstractOpPlanner
 {
 
     readonly List<OpSet> _allSets = new List<OpSet>();
     readonly Dictionary<IOpDigest, IOpNode> _digestToOp = new Dictionary<IOpDigest, IOpNode>();
     readonly Dictionary<IOpNode, OpSubset> _opToSubset = new Dictionary<IOpNode, OpSubset>(ReferenceEqualityComparer.Instance);
-    readonly Dictionary<Type, List<RuleOperand>> _classOperands = new Dictionary<Type, List<RuleOperand>>();
+    readonly Dictionary<Type, List<OpRuleOperand>> _classOperands = new Dictionary<Type, List<OpRuleOperand>>();
     readonly HashSet<Type> _classes = new HashSet<Type>();
     readonly HashSet<IOpNode> _prunedOps = new HashSet<IOpNode>(ReferenceEqualityComparer.Instance);
 
     IRuleDriver _ruleDriver;
     OpSubset? _root;
-    Cluster? _cluster;
+    OpCluster? _cluster;
     bool _topDownOpt;
     bool _locked;
     int _nextSetId;
@@ -41,7 +41,7 @@ public sealed class VolcanoPlanner : AbstractPlanner
     /// Creates a planner with an optional cost factory (defaulting to <see cref="VolcanoCost"/>).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "VolcanoPlanner(RelOptCostFactory, Context)")]
-    public VolcanoPlanner(ICostFactory? costFactory = null)
+    public VolcanoPlanner(IOpCostFactory? costFactory = null)
         : base(costFactory ?? VolcanoCost.Factory)
     {
         _ruleDriver = new IterativeRuleDriver(this);
@@ -81,7 +81,7 @@ public sealed class VolcanoPlanner : AbstractPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "addRule(RelOptRule)")]
-    public override bool AddRule(Rule rule)
+    public override bool AddRule(OpRule rule)
     {
         if (_locked)
             return false;
@@ -117,7 +117,7 @@ public sealed class VolcanoPlanner : AbstractPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "removeRule(RelOptRule)")]
-    public override bool RemoveRule(Rule rule)
+    public override bool RemoveRule(OpRule rule)
     {
         if (!base.RemoveRule(rule))
             return false;
@@ -141,7 +141,7 @@ public sealed class VolcanoPlanner : AbstractPlanner
     {
         base.Clear();
 
-        foreach (var rule in new List<Rule>(Rules))
+        foreach (var rule in new List<OpRule>(Rules))
             RemoveRule(rule);
 
         _classOperands.Clear();
@@ -156,11 +156,11 @@ public sealed class VolcanoPlanner : AbstractPlanner
         _nextSetId = 0;
     }
 
-    List<RuleOperand> OperandsFor(Type clazz)
+    List<OpRuleOperand> OperandsFor(Type clazz)
     {
         if (!_classOperands.TryGetValue(clazz, out var operands))
         {
-            operands = new List<RuleOperand>();
+            operands = new List<OpRuleOperand>();
             _classOperands[clazz] = operands;
         }
 
@@ -212,7 +212,7 @@ public sealed class VolcanoPlanner : AbstractPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "changeTraits(RelNode, RelTraitSet)")]
-    public override IOpNode ChangeTraits(IOpNode op, TraitSet toTraits)
+    public override IOpNode ChangeTraits(IOpNode op, OpTraitSet toTraits)
     {
         var subset = EnsureRegistered(op, null);
         return EquivRoot(subset.Set).GetOrCreateSubset(toTraits, required: true);
@@ -388,8 +388,8 @@ public sealed class VolcanoPlanner : AbstractPlanner
     {
         // A best-first worklist: ops whose cost may have improved, processed cheapest-first. The cost
         // for each op lives in the map (read from there, not the heap); the heap only orders the work.
-        var propagateRels = new Dictionary<IOpNode, ICost>(ReferenceEqualityComparer.Instance);
-        var propagateHeap = new PriorityQueue<IOpNode, ICost>(Comparer<ICost>.Create(
+        var propagateRels = new Dictionary<IOpNode, IOpCost>(ReferenceEqualityComparer.Instance);
+        var propagateHeap = new PriorityQueue<IOpNode, IOpCost>(Comparer<IOpCost>.Create(
             (a, b) => a.IsLessThan(b) ? -1 : b.IsLessThan(a) ? 1 : 0));
 
         propagateRels[op] = GetCost(op);
@@ -432,10 +432,10 @@ public sealed class VolcanoPlanner : AbstractPlanner
         }
     }
 
-    static bool CostEquals(ICost a, ICost b) => !a.IsLessThan(b) && !b.IsLessThan(a);
+    static bool CostEquals(IOpCost a, IOpCost b) => !a.IsLessThan(b) && !b.IsLessThan(a);
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getCost(RelNode, RelMetadataQuery)")]
-    ICost GetCost(IOpNode op)
+    IOpCost GetCost(IOpNode op)
     {
         if (op is OpSubset subset)
             return subset.BestCost;
@@ -516,13 +516,13 @@ public sealed class VolcanoPlanner : AbstractPlanner
     /// A zero cost from the active factory.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "zeroCost")]
-    internal ICost ZeroCost => CostFactory.MakeZeroCost();
+    internal IOpCost ZeroCost => CostFactory.MakeZeroCost();
 
     /// <summary>
     /// An infinite cost from the active factory.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "infCost")]
-    internal ICost InfiniteCost => CostFactory.MakeInfiniteCost();
+    internal IOpCost InfiniteCost => CostFactory.MakeInfiniteCost();
 
     /// <summary>
     /// Whether an op is logical: not physical, and not already in the requested root convention.
@@ -562,14 +562,14 @@ public sealed class VolcanoPlanner : AbstractPlanner
     /// so the top-down search keeps its branch-and-bound structure but performs no lower-bound pruning.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getLowerBound(RelNode)")]
-    internal ICost GetLowerBound(IOpNode op) => ZeroCost;
+    internal IOpCost GetLowerBound(IOpNode op) => ZeroCost;
 
     /// <summary>
     /// The upper bound to allow an op's inputs, given the op's own upper bound: the bound minus the
     /// op's self cost.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "upperBoundForInputs(RelNode, RelOptCost)")]
-    internal ICost UpperBoundForInputs(IOpNode op, ICost upperBound)
+    internal IOpCost UpperBoundForInputs(IOpNode op, IOpCost upperBound)
     {
         if (!upperBound.IsInfinite)
         {
@@ -610,7 +610,7 @@ public sealed class VolcanoPlanner : AbstractPlanner
     /// member, or <c>null</c> if no chain reaches the traits.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "changeTraitsUsingConverters(RelNode, RelTraitSet)")]
-    internal IOpNode? ChangeTraitsUsingConverters(IOpNode op, TraitSet toTraits)
+    internal IOpNode? ChangeTraitsUsingConverters(IOpNode op, OpTraitSet toTraits)
     {
         var subset = (OpSubset)op;
         if (subset.Traits.Equals(toTraits))
@@ -643,11 +643,11 @@ public sealed class VolcanoPlanner : AbstractPlanner
         return current.Best is not null ? current : null;
     }
 
-    List<ConversionStep>? FindConversionPath(TraitSet from, TraitSet to)
+    List<ConversionStep>? FindConversionPath(OpTraitSet from, OpTraitSet to)
     {
-        var visited = new HashSet<TraitSet> { from };
-        var cameFrom = new Dictionary<TraitSet, (TraitSet Previous, ConversionStep Step)>();
-        var queue = new Queue<TraitSet>();
+        var visited = new HashSet<OpTraitSet> { from };
+        var cameFrom = new Dictionary<OpTraitSet, (OpTraitSet Previous, ConversionStep Step)>();
+        var queue = new Queue<OpTraitSet>();
         queue.Enqueue(from);
 
         while (queue.Count > 0)
@@ -669,7 +669,7 @@ public sealed class VolcanoPlanner : AbstractPlanner
         return null;
     }
 
-    IEnumerable<(TraitSet Next, ConversionStep Step)> ConversionEdges(TraitSet current, TraitSet to)
+    IEnumerable<(OpTraitSet Next, ConversionStep Step)> ConversionEdges(OpTraitSet current, OpTraitSet to)
     {
         // A registered converter rule converts the dimension named by its Source/Target.
         foreach (var rule in Rules)
@@ -700,7 +700,7 @@ public sealed class VolcanoPlanner : AbstractPlanner
         }
     }
 
-    static List<ConversionStep> Reconstruct(Dictionary<TraitSet, (TraitSet Previous, ConversionStep Step)> cameFrom, TraitSet from, TraitSet to)
+    static List<ConversionStep> Reconstruct(Dictionary<OpTraitSet, (OpTraitSet Previous, ConversionStep Step)> cameFrom, OpTraitSet from, OpTraitSet to)
     {
         var steps = new List<ConversionStep>();
         var trait = to;
@@ -718,13 +718,13 @@ public sealed class VolcanoPlanner : AbstractPlanner
     sealed class ConversionStep
     {
 
-        public ConversionStep(TraitSet result, Func<IOpNode, IOpNode?> convert)
+        public ConversionStep(OpTraitSet result, Func<IOpNode, IOpNode?> convert)
         {
             Result = result;
             Convert = convert;
         }
 
-        public TraitSet Result { get; }
+        public OpTraitSet Result { get; }
 
         public Func<IOpNode, IOpNode?> Convert { get; }
 

@@ -8,7 +8,7 @@ namespace Alembic.Plan.Rules;
 /// converted bottom-up, once its input has been converted.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.TraitMatchingRule")]
-public sealed class TraitMatchingRule : Rule
+public sealed class TraitMatchingRule : OpRule
 {
 
     readonly ConverterRule _converterRule;
@@ -26,7 +26,7 @@ public sealed class TraitMatchingRule : Rule
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.TraitMatchingRule", "onMatch(RelOptRuleCall)")]
-    public override void OnMatch(RuleCall call)
+    public override void OnMatch(OpRuleCall call)
     {
         var input = call.Op(1);
         if (input.Traits.Contains(_converterRule.Target))
@@ -36,10 +36,10 @@ public sealed class TraitMatchingRule : Rule
     // The converter matches any op carrying its source trait; here we additionally require a single
     // input and bind it, so the rule can inspect its traits.
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.TraitMatchingRule", "config(ConverterRule, RelBuilderFactory)")]
-    static RuleOperand BuildOperand(ConverterRule converterRule)
+    static OpRuleOperand BuildOperand(ConverterRule converterRule)
     {
         var converterOperand = converterRule.Operand;
-        return new RuleOperand(converterOperand.MatchedClass, converterOperand.Trait, converterOperand.Predicate, RuleOperandChildPolicy.Some, new RuleOperand(typeof(IOpNode), RuleOperandChildPolicy.Any));
+        return new OpRuleOperand(converterOperand.MatchedClass, converterOperand.Trait, converterOperand.Predicate, RuleOperandChildPolicy.Some, new OpRuleOperand(typeof(IOpNode), RuleOperandChildPolicy.Any));
     }
 
 }

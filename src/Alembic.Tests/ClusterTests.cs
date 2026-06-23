@@ -14,7 +14,7 @@ public class ClusterTests
     public void Exposes_the_planners_trait_set()
     {
         var planner = new HepPlanner(HepProgram.Builder().Build());
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
 
         Assert.Equal(planner.EmptyTraitSet, cluster.TraitSet);
     }
@@ -23,7 +23,7 @@ public class ClusterTests
     public void Builds_a_trait_set_from_the_default_plus_given_traits()
     {
         var planner = new HepPlanner(HepProgram.Builder().Build());
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
 
         var traits = cluster.TraitSetOf(RelationalConventions.Physical);
 

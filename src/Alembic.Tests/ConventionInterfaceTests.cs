@@ -23,10 +23,10 @@ public class ConventionInterfaceTests
         // A convention that requires its members to implement IMarked, registered on an op that
         // does not — the planner rejects it.
         var marked = new Convention("MARKED", typeof(IMarked));
-        var traits = TraitSet.CreateEmpty().Plus(marked);
+        var traits = OpTraitSet.CreateEmpty().Plus(marked);
 
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode bad = new PhysicalSource(cluster, traits, "t");
 
         Assert.Throws<InvalidOperationException>(() => planner.SetRoot(bad));
@@ -37,10 +37,10 @@ public class ConventionInterfaceTests
     {
         // The default interface is IOpNode, which every op implements, so registration succeeds.
         var plain = new Convention("PLAIN");
-        var traits = TraitSet.CreateEmpty().Plus(plain);
+        var traits = OpTraitSet.CreateEmpty().Plus(plain);
 
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode ok = new PhysicalSource(cluster, traits, "t");
 
         planner.SetRoot(ok);

@@ -63,7 +63,7 @@ public abstract class RuleQueue
     /// on different paths are fine — only a repeat along one path is a cycle.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue", "checkDuplicateSubsets(Deque<RelSubset>, RelOptRuleOperand, RelNode[])")]
-    bool HasDuplicateSubsetOnPath(Stack<OpSubset> subsets, RuleOperand operand, ImmutableArray<IOpNode> rels)
+    bool HasDuplicateSubsetOnPath(Stack<OpSubset> subsets, OpRuleOperand operand, ImmutableArray<IOpNode> rels)
     {
         var subset = Planner.GetSubsetNonNull(rels[operand.OrdinalInRule]);
         if (subsets.Contains(subset))

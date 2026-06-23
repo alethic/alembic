@@ -23,14 +23,14 @@ public class OperandMatchingTests
     [Fact]
     public void Operand_rule_matches_only_the_nested_pattern()
     {
-        var logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
+        var logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
 
         var program = HepProgram.Builder()
             .AddRuleInstance(new TagFilterOverSource())
             .Build();
 
         var planner = new HepPlanner(program);
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
 
         // An outer filter over an inner filter over a source. Only the inner filter sits directly
         // over a source, so only it should match the Filter(Source) operand.

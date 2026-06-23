@@ -5,7 +5,7 @@ namespace Alembic.Tests;
 /// <summary>
 /// The trait dimension for <see cref="SortKey"/>.
 /// </summary>
-sealed class SortKeyTraitDef : TraitDef<SortKey>
+sealed class SortKeyTraitDef : OpTraitDef<SortKey>
 {
 
     public static readonly SortKeyTraitDef Instance = new SortKeyTraitDef();

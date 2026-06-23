@@ -15,7 +15,7 @@ public sealed class OpSubset : AbstractOp
 {
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "RelSubset(RelOptCluster, RelSet, RelTraitSet)")]
-    internal OpSubset(OpSet set, TraitSet traits, ICost infiniteCost)
+    internal OpSubset(OpSet set, OpTraitSet traits, IOpCost infiniteCost)
         : base(set.Cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         Set = set;
@@ -60,7 +60,7 @@ public sealed class OpSubset : AbstractOp
     /// The cost of <see cref="Best"/> (infinite until a member is costed).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "bestCost")]
-    public ICost BestCost { get; internal set; }
+    public IOpCost BestCost { get; internal set; }
 
     /// <summary>
     /// Adds <paramref name="op"/> as an equivalent expression in this subset's set: notifies listeners
@@ -73,7 +73,7 @@ public sealed class OpSubset : AbstractOp
         if (Set.Ops.Contains(op))
             return;
 
-        ((AbstractPlanner)Set.Cluster.Planner).FireOpEquivalenceFound(op, Set.Id, !op.Convention.Equals(Convention.None));
+        ((AbstractOpPlanner)Set.Cluster.Planner).FireOpEquivalenceFound(op, Set.Id, !op.Convention.Equals(Convention.None));
         Set.AddInternal(op);
     }
 
@@ -89,7 +89,7 @@ public sealed class OpSubset : AbstractOp
     /// The upper bound from the last optimize call (a winner must cost no more than this).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "upperBound")]
-    internal ICost UpperBound { get; set; }
+    internal IOpCost UpperBound { get; set; }
 
     bool _delivered;
     bool _required;
@@ -140,7 +140,7 @@ public sealed class OpSubset : AbstractOp
     /// otherwise <c>null</c>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getWinnerCost()")]
-    internal ICost? GetWinnerCost()
+    internal IOpCost? GetWinnerCost()
     {
         if (TaskState == OptimizeState.Completed && BestCost.IsLessThanOrEqual(UpperBound))
             return BestCost;
@@ -149,7 +149,7 @@ public sealed class OpSubset : AbstractOp
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "startOptimize(RelOptCost)")]
-    internal void StartOptimize(ICost upperBound)
+    internal void StartOptimize(IOpCost upperBound)
     {
         if (UpperBound.IsLessThan(upperBound))
         {
@@ -432,7 +432,7 @@ public sealed class OpSubset : AbstractOp
     /// A subset has no cost of its own.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
-    public override ICost ComputeSelfCost(IPlanner planner) => planner.CostFactory.MakeZeroCost();
+    public override IOpCost ComputeSelfCost(IOpPlanner planner) => planner.CostFactory.MakeZeroCost();
 
     /// <summary>
     /// A subset's identity is its set; the trait set is compared by the base. (<see cref="Best"/> is
@@ -448,7 +448,7 @@ public sealed class OpSubset : AbstractOp
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "copy(RelTraitSet, List<RelNode>)")]
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return this;
     }

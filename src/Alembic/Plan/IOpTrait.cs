@@ -5,21 +5,21 @@ namespace Alembic.Plan;
 /// equal traits must be <c>Equals</c>-equal.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTrait")]
-public interface ITrait
+public interface IOpTrait
 {
 
     /// <summary>
     /// The dimension this trait belongs to.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTrait", "getTraitDef()")]
-    TraitDef TraitDef { get; }
+    OpTraitDef TraitDef { get; }
 
     /// <summary>
     /// Whether an op carrying this trait also satisfies a requirement for <paramref name="other"/>.
     /// Defaults to equality; traits with a partial order (orderings, distributions) override it.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTrait", "satisfies(RelTrait)")]
-    bool Satisfies(ITrait other)
+    bool Satisfies(IOpTrait other)
     {
         return this.Equals(other);
     }
@@ -29,7 +29,7 @@ public interface ITrait
     /// to it. Typical implementations do nothing.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTrait", "register(RelOptPlanner)")]
-    void Register(IPlanner planner)
+    void Register(IOpPlanner planner)
     {
 
     }

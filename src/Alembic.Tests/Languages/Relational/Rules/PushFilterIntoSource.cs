@@ -9,7 +9,7 @@ namespace Alembic.Tests.Languages.Relational.Rules;
 /// Push-down: a physical filter directly over a physical source collapses into a single
 /// <see cref="PhysicalFilteredSource"/> that applies the predicate itself.
 /// </summary>
-sealed class PushFilterIntoSource : Rule
+sealed class PushFilterIntoSource : OpRule
 {
 
     public PushFilterIntoSource()
@@ -17,7 +17,7 @@ sealed class PushFilterIntoSource : Rule
     {
     }
 
-    public override void OnMatch(RuleCall call)
+    public override void OnMatch(OpRuleCall call)
     {
         var filter = (PhysicalFilter)call.Op(0);
         var source = (PhysicalSource)call.Op(1);

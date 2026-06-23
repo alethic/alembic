@@ -10,7 +10,7 @@ namespace Alembic.Tests.Languages.Expression.Rules;
 /// into a single <see cref="PhysicalFma"/> that computes <c>a * b + c</c> directly. The right operand
 /// is matched by a predicate operand with no children, so it may be any sub-expression.
 /// </summary>
-sealed class FuseMultiplyAdd : Rule
+sealed class FuseMultiplyAdd : OpRule
 {
 
     public FuseMultiplyAdd()
@@ -18,7 +18,7 @@ sealed class FuseMultiplyAdd : Rule
     {
     }
 
-    public override void OnMatch(RuleCall call)
+    public override void OnMatch(OpRuleCall call)
     {
         var add = (PhysicalAdd)call.Op(0);
         var product = (PhysicalMultiply)call.Op(1);

@@ -10,14 +10,14 @@ namespace Alembic.Plan.Rules;
 /// decline (when it does not handle this op's kind).
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule")]
-public abstract class ConverterRule : Rule
+public abstract class ConverterRule : OpRule
 {
 
     /// <summary>
     /// Initializes the rule with the traits it converts between.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "ConverterRule(Class<? extends RelNode>, RelTrait, RelTrait, String)")]
-    protected ConverterRule(ITrait source, ITrait target)
+    protected ConverterRule(IOpTrait source, IOpTrait target)
         : base(ConvertOperand<IOpNode>(source))
     {
         Source = source;
@@ -28,20 +28,20 @@ public abstract class ConverterRule : Rule
     /// The trait this rule converts from.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "getInTrait()")]
-    public ITrait Source { get; }
+    public IOpTrait Source { get; }
 
     /// <summary>
     /// The trait this rule converts to.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "getOutTrait()")]
-    public ITrait Target { get; }
+    public IOpTrait Target { get; }
 
     /// <summary>
     /// The trait dimension this rule converts on (the dimension of <see cref="Source"/> and
     /// <see cref="Target"/>, which share it).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "getTraitDef()")]
-    public TraitDef TraitDef => Source.TraitDef;
+    public OpTraitDef TraitDef => Source.TraitDef;
 
     /// <summary>
     /// Whether this converter always produces its <see cref="Target"/>. A non-guaranteed converter (the
@@ -59,7 +59,7 @@ public abstract class ConverterRule : Rule
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "onMatch(RelOptRuleCall)")]
-    public override void OnMatch(RuleCall call)
+    public override void OnMatch(OpRuleCall call)
     {
         var converted = Convert(call.Op(0));
         if (converted is not null)

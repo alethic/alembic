@@ -10,15 +10,15 @@ namespace Alembic.Plan;
 /// <summary>
 /// A trait dimension — the set of mutually exclusive values an op may carry along one axis
 /// (e.g. convention). Defs are singletons and are registered with the planner
-/// (<see cref="IPlanner.AddTraitDef"/>), which builds the empty trait set from them. The strongly-typed
-/// <see cref="TraitDef{TTrait}"/> subclass yields its trait type from a <see cref="TraitSet"/>; this
+/// (<see cref="IOpPlanner.AddTraitDef"/>), which builds the empty trait set from them. The strongly-typed
+/// <see cref="OpTraitDef{TTrait}"/> subclass yields its trait type from a <see cref="OpTraitSet"/>; this
 /// non-generic base is the handle used wherever the trait type is not statically known.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef")]
-public abstract class TraitDef
+public abstract class OpTraitDef
 {
 
-    readonly WeakInterner<ITrait> _interned = new WeakInterner<ITrait>(EqualityComparer<ITrait>.Default);
+    readonly WeakInterner<IOpTrait> _interned = new WeakInterner<IOpTrait>(EqualityComparer<IOpTrait>.Default);
 
     /// <summary>
     /// A stable name for this dimension.
@@ -36,7 +36,7 @@ public abstract class TraitDef
     /// The value an op carries on this dimension when none is specified.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "getDefault()")]
-    public abstract ITrait Default { get; }
+    public abstract IOpTrait Default { get; }
 
     /// <summary>
     /// Whether an op may carry several values on this dimension at once (folded into a composite). The
@@ -50,7 +50,7 @@ public abstract class TraitDef
     /// one object and can be compared by reference.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "canonize(RelTrait)")]
-    public ITrait Canonize(ITrait trait)
+    public IOpTrait Canonize(IOpTrait trait)
     {
         return _interned.Intern(trait);
     }
@@ -60,7 +60,7 @@ public abstract class TraitDef
     /// itself (an alternative to a registered converter rule). The default is no.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "canConvert(RelOptPlanner, RelTrait, RelTrait)")]
-    public virtual bool CanConvert(IPlanner planner, ITrait fromTrait, ITrait toTrait)
+    public virtual bool CanConvert(IOpPlanner planner, IOpTrait fromTrait, IOpTrait toTrait)
     {
         return false;
     }
@@ -72,7 +72,7 @@ public abstract class TraitDef
     /// converter even when it would carry an infinite cost.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "convert(RelOptPlanner, RelNode, RelTrait, boolean)")]
-    public virtual IOpNode? Convert(IPlanner planner, IOpNode op, ITrait toTrait, bool allowInfiniteCostConverters)
+    public virtual IOpNode? Convert(IOpPlanner planner, IOpNode op, IOpTrait toTrait, bool allowInfiniteCostConverters)
     {
         return null;
     }
@@ -81,7 +81,7 @@ public abstract class TraitDef
     /// Registers a converter rule that operates on this dimension. The default does nothing.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "registerConverterRule(RelOptPlanner, ConverterRule)")]
-    public virtual void RegisterConverterRule(IPlanner planner, ConverterRule converterRule)
+    public virtual void RegisterConverterRule(IOpPlanner planner, ConverterRule converterRule)
     {
     }
 
@@ -89,7 +89,7 @@ public abstract class TraitDef
     /// Removes a previously registered converter rule. The default does nothing.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "deregisterConverterRule(RelOptPlanner, ConverterRule)")]
-    public virtual void DeregisterConverterRule(IPlanner planner, ConverterRule converterRule)
+    public virtual void DeregisterConverterRule(IOpPlanner planner, ConverterRule converterRule)
     {
     }
 
@@ -97,12 +97,12 @@ public abstract class TraitDef
 
 /// <summary>
 /// Strongly-typed base for a trait dimension. A def of <typeparamref name="TTrait"/> yields
-/// <typeparamref name="TTrait"/> values from a <see cref="TraitSet"/>.
+/// <typeparamref name="TTrait"/> values from a <see cref="OpTraitSet"/>.
 /// </summary>
 /// <typeparam name="TTrait">The trait type carried on this dimension.</typeparam>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef")]
-public abstract class TraitDef<TTrait> : TraitDef
-    where TTrait : class, ITrait
+public abstract class OpTraitDef<TTrait> : OpTraitDef
+    where TTrait : class, IOpTrait
 {
 
     /// <inheritdoc />

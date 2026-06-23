@@ -25,14 +25,14 @@ public class TraitPlannerTests
     {
         // Build trait sets carrying convention plus a second dimension (Sortedness), starting at
         // its default (Unsorted).
-        var logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical).Plus(Sortedness.Unsorted);
+        var logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical).Plus(Sortedness.Unsorted);
 
         var program = HepProgram.Builder()
             .AddRuleInstance(new MarkSorted())
             .Build();
 
         var planner = new HepPlanner(program);
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         planner.SetRoot(root);

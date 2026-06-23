@@ -25,10 +25,10 @@ public class VolcanoPlanningTests
     [Fact]
     public void Returns_the_only_plan_when_no_rule_applies()
     {
-        var physical = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
+        var physical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
 
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new PhysicalFilter(physical, new PhysicalSource(cluster, physical, "t"), "x > 5");
 
         planner.SetRoot(root);
@@ -43,12 +43,12 @@ public class VolcanoPlanningTests
     [Fact]
     public void Chooses_the_cheaper_equivalent()
     {
-        var physical = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
+        var physical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
 
         // The push-down rule offers a fused scan-and-filter (cost 100) as an equivalent of the
         // separate filter-over-scan (cost 10 + 100). The planner must pick the cheaper one.
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new PhysicalFilter(physical, new PhysicalSource(cluster, physical, "t"), "x > 5");
 
         planner.AddRule(new PushFilterIntoSource());
@@ -67,7 +67,7 @@ public class VolcanoPlanningTests
         var (logical, physical) = Setup();
 
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         RelationalConventions.Physical.Register(planner);
@@ -87,7 +87,7 @@ public class VolcanoPlanningTests
         var (logical, physical) = Setup();
 
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         RelationalConventions.Physical.Register(planner);
@@ -111,7 +111,7 @@ public class VolcanoPlanningTests
         // No source converter: the source can never reach the physical convention, so the requested
         // physical plan cannot be produced.
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         planner.AddRule(new FilterConverter(physical));
@@ -126,13 +126,13 @@ public class VolcanoPlanningTests
     [Fact]
     public void Enforces_a_non_convention_trait_by_inserting_an_enforcer()
     {
-        var unsorted = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical).Plus(Sortedness.Unsorted);
-        var sorted = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical).Plus(Sortedness.Sorted);
+        var unsorted = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical).Plus(Sortedness.Unsorted);
+        var sorted = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical).Plus(Sortedness.Sorted);
 
         // The planner is asked for the source sorted; it has no sorted form, so it must insert the
         // sort enforcer — a converter rule whose Source/Target are a trait other than convention.
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new PhysicalSource(cluster, unsorted, "t");
 
         planner.AddTraitDef(SortednessTraitDef.Instance);
@@ -153,7 +153,7 @@ public class VolcanoPlanningTests
 
         // The same lowering-and-cost-choice scenario as the bottom-up search, but driven top-down.
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         planner.SetTopDownOpt(true);
@@ -179,7 +179,7 @@ public class VolcanoPlanningTests
         // (a physical source under the physical filter), so a non-root op is chosen.
         var listener = new CountingListener();
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         RelationalConventions.Physical.Register(planner);
@@ -215,11 +215,11 @@ public class VolcanoPlanningTests
         }
     }
 
-    static (TraitSet Logical, TraitSet Physical) Setup()
+    static (OpTraitSet Logical, OpTraitSet Physical) Setup()
     {
         return (
-            TraitSet.CreateEmpty().Plus(RelationalConventions.Logical),
-            TraitSet.CreateEmpty().Plus(RelationalConventions.Physical));
+            OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical),
+            OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical));
     }
 
 }

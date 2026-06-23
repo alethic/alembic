@@ -3,8 +3,8 @@ using System;
 namespace Alembic.Plan;
 
 /// <summary>
-/// Thrown by <see cref="IPlanner.FindBestPlan"/> when the planner cannot produce a plan that satisfies
-/// the output traits requested through <see cref="IPlanner.ChangeTraits"/> — typically because no rule
+/// Thrown by <see cref="IOpPlanner.FindBestPlan"/> when the planner cannot produce a plan that satisfies
+/// the output traits requested through <see cref="IOpPlanner.ChangeTraits"/> — typically because no rule
 /// chain converts some op into the required form.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner.CannotPlanException")]

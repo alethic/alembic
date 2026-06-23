@@ -6,13 +6,13 @@ namespace Alembic.Plan;
 /// planner.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCluster")]
-public sealed class Cluster
+public sealed class OpCluster
 {
 
     /// <summary>
     /// Creates a cluster over the given planner.
     /// </summary>
-    public Cluster(IPlanner planner)
+    public OpCluster(IOpPlanner planner)
     {
         Planner = planner;
     }
@@ -21,7 +21,7 @@ public sealed class Cluster
     /// The planner for this session.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCluster", "getPlanner()")]
-    public IPlanner Planner { get; }
+    public IOpPlanner Planner { get; }
 
     /// <summary>
     /// The default trait set for this cluster. By default the planner's empty trait set (every
@@ -29,13 +29,13 @@ public sealed class Cluster
     /// override it.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCluster", "traitSet()")]
-    public TraitSet TraitSet => Planner.EmptyTraitSet;
+    public OpTraitSet TraitSet => Planner.EmptyTraitSet;
 
     /// <summary>
     /// The default trait set with the given traits applied.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCluster", "traitSetOf(RelTrait...)")]
-    public TraitSet TraitSetOf(params ITrait[] traits)
+    public OpTraitSet TraitSetOf(params IOpTrait[] traits)
     {
         var result = TraitSet;
         foreach (var trait in traits)

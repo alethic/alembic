@@ -17,7 +17,7 @@ sealed class PhysicalFilter : SingleOp, IPhysicalNode
 
     readonly string _predicate;
 
-    public PhysicalFilter(TraitSet traits, IOpNode input, string predicate)
+    public PhysicalFilter(OpTraitSet traits, IOpNode input, string predicate)
         : base(traits, input)
     {
         _predicate = predicate;
@@ -27,16 +27,16 @@ sealed class PhysicalFilter : SingleOp, IPhysicalNode
 
     public string Predicate => _predicate;
 
-    public override ICost ComputeSelfCost(IPlanner planner) => planner.CostFactory.MakeCost(10, 0);
+    public override IOpCost ComputeSelfCost(IOpPlanner planner) => planner.CostFactory.MakeCost(10, 0);
 
-    public Pair<TraitSet, IList<TraitSet>>? PassThroughTraits(TraitSet required)
+    public Pair<OpTraitSet, IList<OpTraitSet>>? PassThroughTraits(OpTraitSet required)
     {
-        return Pair.Of(required, (IList<TraitSet>)new[] { required });
+        return Pair.Of(required, (IList<OpTraitSet>)new[] { required });
     }
 
-    public Pair<TraitSet, IList<TraitSet>>? DeriveTraits(TraitSet childTraits, int childId)
+    public Pair<OpTraitSet, IList<OpTraitSet>>? DeriveTraits(OpTraitSet childTraits, int childId)
     {
-        return Pair.Of(childTraits, (IList<TraitSet>)new[] { childTraits });
+        return Pair.Of(childTraits, (IList<OpTraitSet>)new[] { childTraits });
     }
 
     public override IOpWriter ExplainTerms(IOpWriter writer)
@@ -46,7 +46,7 @@ sealed class PhysicalFilter : SingleOp, IPhysicalNode
         return writer;
     }
 
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new PhysicalFilter(traits, children[0], _predicate);
     }

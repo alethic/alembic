@@ -53,7 +53,7 @@ public interface IPlannerListener
         /// Initializes the event with its planner and the op it concerns (if any).
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RelEvent", "RelEvent(Object, RelNode)")]
-        protected PlannerEvent(IPlanner source, IOpNode? op)
+        protected PlannerEvent(IOpPlanner source, IOpNode? op)
         {
             Source = source;
             Op = op;
@@ -62,7 +62,7 @@ public interface IPlannerListener
         /// <summary>
         /// The planner that raised the event.
         /// </summary>
-        public IPlanner Source { get; }
+        public IOpPlanner Source { get; }
 
         /// <summary>
         /// The op the event concerns, or <c>null</c>.
@@ -83,7 +83,7 @@ public interface IPlannerListener
         /// Creates the event.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RelChosenEvent", "RelChosenEvent(Object, RelNode)")]
-        public OpChosenEvent(IPlanner source, IOpNode? op)
+        public OpChosenEvent(IOpPlanner source, IOpNode? op)
             : base(source, op)
         {
 
@@ -104,7 +104,7 @@ public interface IPlannerListener
         /// is whether the op carries a physical (non-logical) convention.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RelEquivalenceEvent", "RelEquivalenceEvent(Object, RelNode, Object, boolean)")]
-        public OpEquivalenceEvent(IPlanner source, IOpNode op, object? equivalenceClass = null, bool isPhysical = false)
+        public OpEquivalenceEvent(IOpPlanner source, IOpNode op, object? equivalenceClass = null, bool isPhysical = false)
             : base(source, op)
         {
             EquivalenceClass = equivalenceClass;
@@ -136,7 +136,7 @@ public interface IPlannerListener
         /// Creates the event.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RelDiscardedEvent", "RelDiscardedEvent(Object, RelNode)")]
-        public OpDiscardedEvent(IPlanner source, IOpNode op)
+        public OpDiscardedEvent(IOpPlanner source, IOpNode op)
             : base(source, op)
         {
 
@@ -155,7 +155,7 @@ public interface IPlannerListener
         /// Initializes the event with the rule call.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RuleEvent", "RuleEvent(Object, RelNode, RelOptRuleCall)")]
-        protected RuleEvent(IPlanner source, IOpNode? op, RuleCall ruleCall)
+        protected RuleEvent(IOpPlanner source, IOpNode? op, OpRuleCall ruleCall)
             : base(source, op)
         {
             RuleCall = ruleCall;
@@ -165,7 +165,7 @@ public interface IPlannerListener
         /// The call the rule is being applied through.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RuleEvent", "getRuleCall()")]
-        public RuleCall RuleCall { get; }
+        public OpRuleCall RuleCall { get; }
 
     }
 
@@ -180,7 +180,7 @@ public interface IPlannerListener
         /// Creates the event; <paramref name="before"/> is true on the pre-application notification.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RuleAttemptedEvent", "RuleAttemptedEvent(Object, RelNode, RelOptRuleCall, boolean)")]
-        public RuleAttemptedEvent(IPlanner source, IOpNode? op, RuleCall ruleCall, bool before)
+        public RuleAttemptedEvent(IOpPlanner source, IOpNode? op, OpRuleCall ruleCall, bool before)
             : base(source, op, ruleCall)
         {
             Before = before;
@@ -205,7 +205,7 @@ public interface IPlannerListener
         /// Creates the event.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RuleProductionEvent", "RuleProductionEvent(Object, RelNode, RelOptRuleCall, boolean)")]
-        public RuleProductionEvent(IPlanner source, IOpNode? op, RuleCall ruleCall, bool before)
+        public RuleProductionEvent(IOpPlanner source, IOpNode? op, OpRuleCall ruleCall, bool before)
             : base(source, op, ruleCall, before)
         {
 

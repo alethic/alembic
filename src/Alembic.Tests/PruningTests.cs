@@ -19,14 +19,14 @@ namespace Alembic.Tests;
 public class PruningTests
 {
 
-    static readonly TraitSet Logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
+    static readonly OpTraitSet Logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
 
     [Fact]
     public void A_pruned_op_is_not_expanded_by_rules()
     {
         var spy = new Spy();
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         var source = new LogicalSource(cluster, Logical, "t");
         IOpNode root = new LogicalFilter(Logical, source, "x > 5");
 
@@ -45,7 +45,7 @@ public class PruningTests
     /// <summary>
     /// A transformation rule that records every op it is invoked on and transforms nothing.
     /// </summary>
-    sealed class Spy : Rule, ITransformationRule
+    sealed class Spy : OpRule, ITransformationRule
     {
 
         public Spy()
@@ -55,7 +55,7 @@ public class PruningTests
 
         public List<IOpNode> Fired { get; } = new List<IOpNode>();
 
-        public override void OnMatch(RuleCall call) => Fired.Add(call.Op(0));
+        public override void OnMatch(OpRuleCall call) => Fired.Add(call.Op(0));
 
     }
 

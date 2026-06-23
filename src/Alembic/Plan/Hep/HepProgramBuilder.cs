@@ -21,11 +21,11 @@ public sealed class HepProgramBuilder
 
     /// <summary>
     /// Adds an instruction to attempt every rule of a given type. The rules themselves must also be
-    /// added to the planner via <see cref="AbstractPlanner.AddRule"/>.
+    /// added to the planner via <see cref="AbstractOpPlanner.AddRule"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder", "addRuleClass(Class<R>)")]
     public HepProgramBuilder AddRuleClass<TRule>()
-        where TRule : Rule
+        where TRule : OpRule
     {
         return AddInstruction(new HepInstruction.RuleClass(typeof(TRule)));
     }
@@ -34,7 +34,7 @@ public sealed class HepProgramBuilder
     /// Adds an instruction to attempt every rule in a collection. The collection is re-read on each run.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder", "addRuleCollection(Collection<RelOptRule>)")]
-    public HepProgramBuilder AddRuleCollection(IEnumerable<Rule> rules)
+    public HepProgramBuilder AddRuleCollection(IEnumerable<OpRule> rules)
     {
         return AddInstruction(new HepInstruction.RuleCollection(rules));
     }
@@ -43,7 +43,7 @@ public sealed class HepProgramBuilder
     /// Adds an instruction to attempt a specific rule.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder", "addRuleInstance(RelOptRule)")]
-    public HepProgramBuilder AddRuleInstance(Rule rule)
+    public HepProgramBuilder AddRuleInstance(OpRule rule)
     {
         return AddInstruction(new HepInstruction.RuleInstance(rule));
     }

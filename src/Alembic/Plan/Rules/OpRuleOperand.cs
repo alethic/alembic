@@ -44,7 +44,7 @@ public enum RuleOperandChildPolicy
 /// against an op's children is performed by the planner as it fires rules.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand")]
-public sealed class RuleOperand
+public sealed class OpRuleOperand
 {
 
     static readonly Func<IOpNode, bool> AlwaysMatches = static _ => true;
@@ -54,7 +54,7 @@ public sealed class RuleOperand
     /// (<see cref="RuleOperandChildPolicy.Some"/>); with none it matches only a leaf
     /// (<see cref="RuleOperandChildPolicy.Leaf"/>).
     /// </summary>
-    internal RuleOperand(Type matchedClass, params RuleOperand[] children)
+    internal OpRuleOperand(Type matchedClass, params OpRuleOperand[] children)
         : this(matchedClass, null, AlwaysMatches, children.Length == 0 ? RuleOperandChildPolicy.Leaf : RuleOperandChildPolicy.Some, children)
     {
 
@@ -63,7 +63,7 @@ public sealed class RuleOperand
     /// <summary>
     /// Matches ops of <paramref name="matchedClass"/> with an explicit child policy.
     /// </summary>
-    internal RuleOperand(Type matchedClass, RuleOperandChildPolicy childPolicy, params RuleOperand[] children)
+    internal OpRuleOperand(Type matchedClass, RuleOperandChildPolicy childPolicy, params OpRuleOperand[] children)
         : this(matchedClass, null, AlwaysMatches, childPolicy, children)
     {
 
@@ -72,7 +72,7 @@ public sealed class RuleOperand
     /// <summary>
     /// Matches ops of <paramref name="matchedClass"/> that also satisfy <paramref name="predicate"/>.
     /// </summary>
-    internal RuleOperand(Type matchedClass, Func<IOpNode, bool> predicate, RuleOperandChildPolicy childPolicy, params RuleOperand[] children)
+    internal OpRuleOperand(Type matchedClass, Func<IOpNode, bool> predicate, RuleOperandChildPolicy childPolicy, params OpRuleOperand[] children)
         : this(matchedClass, null, predicate, childPolicy, children)
     {
 
@@ -81,7 +81,7 @@ public sealed class RuleOperand
     /// <summary>
     /// Matches ops of <paramref name="matchedClass"/> that also carry <paramref name="trait"/>.
     /// </summary>
-    internal RuleOperand(Type matchedClass, ITrait trait, RuleOperandChildPolicy childPolicy, params RuleOperand[] children)
+    internal OpRuleOperand(Type matchedClass, IOpTrait trait, RuleOperandChildPolicy childPolicy, params OpRuleOperand[] children)
         : this(matchedClass, trait, AlwaysMatches, childPolicy, children)
     {
 
@@ -92,7 +92,7 @@ public sealed class RuleOperand
     /// and child operands.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "RelOptRuleOperand(Class, RelTrait, Predicate, RelOptRuleOperandChildPolicy, ImmutableList<RelOptRuleOperand>)")]
-    internal RuleOperand(Type matchedClass, ITrait? trait, Func<IOpNode, bool> predicate, RuleOperandChildPolicy childPolicy, params RuleOperand[] children)
+    internal OpRuleOperand(Type matchedClass, IOpTrait? trait, Func<IOpNode, bool> predicate, RuleOperandChildPolicy childPolicy, params OpRuleOperand[] children)
     {
         MatchedClass = matchedClass;
         Trait = trait;
@@ -105,14 +105,14 @@ public sealed class RuleOperand
     /// The rule this operand belongs to. Assigned when the rule flattens its operand tree.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "getRule()")]
-    public Rule Rule { get; internal set; } = null!;
+    public OpRule Rule { get; internal set; } = null!;
 
     /// <summary>
     /// The operand directly above this one, or <c>null</c> for the root operand. Assigned during
     /// flattening.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "getParent()")]
-    public RuleOperand? Parent { get; internal set; }
+    public OpRuleOperand? Parent { get; internal set; }
 
     /// <summary>
     /// This operand's position among its parent's child operands (0 for the root). Assigned during
@@ -144,7 +144,7 @@ public sealed class RuleOperand
     /// A trait the op must carry, or <c>null</c> if the operand does not test traits.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "trait")]
-    public ITrait? Trait { get; }
+    public IOpTrait? Trait { get; }
 
     /// <summary>
     /// An extra condition applied after the class (and trait) test; defaults to always true.
@@ -163,7 +163,7 @@ public sealed class RuleOperand
     /// <see cref="RuleOperandChildPolicy.Leaf"/>).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "getChildOperands()")]
-    public ImmutableArray<RuleOperand> Children { get; }
+    public ImmutableArray<OpRuleOperand> Children { get; }
 
     /// <summary>
     /// Whether <paramref name="op"/> matches this operand's class, trait, and predicate (the children
@@ -192,7 +192,7 @@ public sealed class RuleOperand
         if (ReferenceEquals(this, obj))
             return true;
 
-        return obj is RuleOperand that
+        return obj is OpRuleOperand that
             && MatchedClass == that.MatchedClass
             && Equals(Trait, that.Trait)
             && Children.SequenceEqual(that.Children);

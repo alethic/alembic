@@ -14,13 +14,13 @@ namespace Alembic.Plan.Volcano;
 public sealed class OpSet
 {
 
-    readonly ICostFactory _costFactory;
+    readonly IOpCostFactory _costFactory;
 
     // Trait-set pairs already wired with a converter, so each conversion is seeded at most once.
-    readonly HashSet<Pair<TraitSet, TraitSet>> _conversions = new HashSet<Pair<TraitSet, TraitSet>>();
+    readonly HashSet<Pair<OpTraitSet, OpTraitSet>> _conversions = new HashSet<Pair<OpTraitSet, OpTraitSet>>();
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "RelSet(int, Set<CorrelationId>, Set<CorrelationId>)")]
-    internal OpSet(int id, ICostFactory costFactory, Cluster cluster)
+    internal OpSet(int id, IOpCostFactory costFactory, OpCluster cluster)
     {
         Id = id;
         _costFactory = costFactory;
@@ -36,7 +36,7 @@ public sealed class OpSet
     /// <summary>
     /// The cluster the set's ops belong to.
     /// </summary>
-    public Cluster Cluster { get; }
+    public OpCluster Cluster { get; }
 
     /// <summary>
     /// Every op in the set (across all subsets).
@@ -100,7 +100,7 @@ public sealed class OpSet
     /// The subset with exactly the given traits, or <c>null</c>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "getSubset(RelTraitSet)")]
-    public OpSubset? GetSubset(TraitSet traits)
+    public OpSubset? GetSubset(OpTraitSet traits)
     {
         foreach (var subset in Subsets)
             if (subset.Traits.Equals(traits))
@@ -109,7 +109,7 @@ public sealed class OpSet
         return null;
     }
 
-    internal OpSubset GetOrCreateSubset(TraitSet traits)
+    internal OpSubset GetOrCreateSubset(OpTraitSet traits)
     {
         var subset = GetSubset(traits);
         if (subset is null)
@@ -128,7 +128,7 @@ public sealed class OpSet
     /// seeded between it and the complementary subsets so the planner can convert between them.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "getOrCreateSubset(RelOptCluster, RelTraitSet, boolean)")]
-    internal OpSubset GetOrCreateSubset(TraitSet traits, bool required)
+    internal OpSubset GetOrCreateSubset(OpTraitSet traits, bool required)
     {
         var needsConverter = false;
         var subset = GetSubset(traits);

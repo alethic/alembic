@@ -13,9 +13,9 @@ namespace Alembic.Tests.Languages.Expression.Rules;
 sealed class MultiplyConverter : ConverterRule
 {
 
-    readonly TraitSet _physical;
+    readonly OpTraitSet _physical;
 
-    public MultiplyConverter(TraitSet physical)
+    public MultiplyConverter(OpTraitSet physical)
         : base(ExpressionConventions.Logical, ExpressionConventions.Physical)
     {
         _physical = physical;

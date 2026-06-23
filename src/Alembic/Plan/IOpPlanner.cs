@@ -11,45 +11,45 @@ namespace Alembic.Plan;
 /// the rules, and returns the best equivalent plan it found.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner")]
-public interface IPlanner
+public interface IOpPlanner
 {
 
     /// <summary>
     /// Registers a trait dimension. Must be done before <see cref="EmptyTraitSet"/> is used.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "addRelTraitDef(RelTraitDef)")]
-    void AddTraitDef(TraitDef def);
+    void AddTraitDef(OpTraitDef def);
 
     /// <summary>
     /// The registered trait dimensions.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "getRelTraitDefs()")]
-    IReadOnlyList<TraitDef> TraitDefs { get; }
+    IReadOnlyList<OpTraitDef> TraitDefs { get; }
 
     /// <summary>
     /// The trait set in which every registered dimension carries its default.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "emptyTraitSet()")]
-    TraitSet EmptyTraitSet { get; }
+    OpTraitSet EmptyTraitSet { get; }
 
     /// <summary>
     /// The factory that creates this planner's costs.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "getCostFactory()")]
-    ICostFactory CostFactory { get; }
+    IOpCostFactory CostFactory { get; }
 
     /// <summary>
     /// Registers a rule with the planner. Returns whether the rule was added — <c>false</c> if a rule
     /// with the same description was already registered (a duplicate registration is a no-op).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "addRule(RelOptRule)")]
-    bool AddRule(Rule rule);
+    bool AddRule(OpRule rule);
 
     /// <summary>
     /// Removes a previously registered rule; returns whether it was registered.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "removeRule(RelOptRule)")]
-    bool RemoveRule(Rule rule);
+    bool RemoveRule(OpRule rule);
 
     /// <summary>
     /// Prunes an op so that the planner no longer expands it. The default planner ignores this.
@@ -81,7 +81,7 @@ public interface IPlanner
     /// Whether <paramref name="rule"/> is excluded from firing by the description exclusion filter.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "isRuleExcluded(RelOptRule)")]
-    bool IsRuleExcluded(Rule rule);
+    bool IsRuleExcluded(OpRule rule);
 
     /// <summary>
     /// Registers a listener for planning events.
@@ -107,7 +107,7 @@ public interface IPlanner
     /// planner's root; compose it with <see cref="SetRoot"/> to optimize toward those traits.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "changeTraits(RelNode, RelTraitSet)")]
-    IOpNode ChangeTraits(IOpNode op, TraitSet toTraits);
+    IOpNode ChangeTraits(IOpNode op, OpTraitSet toTraits);
 
     /// <summary>
     /// Runs the planner and returns the resulting plan.

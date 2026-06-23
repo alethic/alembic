@@ -13,7 +13,7 @@ sealed class PhysicalLiteral : AbstractOp
 
     readonly int _value;
 
-    public PhysicalLiteral(Cluster cluster, TraitSet traits, int value)
+    public PhysicalLiteral(OpCluster cluster, OpTraitSet traits, int value)
         : base(cluster, traits, ImmutableArray<IOpNode>.Empty)
     {
         _value = value;
@@ -28,7 +28,7 @@ sealed class PhysicalLiteral : AbstractOp
         return writer;
     }
 
-    public override IOpNode Copy(TraitSet traits, ImmutableArray<IOpNode> children)
+    public override IOpNode Copy(OpTraitSet traits, ImmutableArray<IOpNode> children)
     {
         return new PhysicalLiteral(Cluster, traits, _value);
     }

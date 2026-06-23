@@ -10,7 +10,7 @@ namespace Alembic.Tests;
 /// wrapping the op in a <see cref="PhysicalSort"/> — an alternative to registering a converter rule,
 /// exercising the trait-def conversion hooks.
 /// </summary>
-sealed class SortednessTraitDef : TraitDef<Sortedness>
+sealed class SortednessTraitDef : OpTraitDef<Sortedness>
 {
 
     public static readonly SortednessTraitDef Instance = new SortednessTraitDef();
@@ -24,12 +24,12 @@ sealed class SortednessTraitDef : TraitDef<Sortedness>
 
     public override Sortedness Default => Sortedness.Unsorted;
 
-    public override bool CanConvert(IPlanner planner, ITrait fromTrait, ITrait toTrait)
+    public override bool CanConvert(IOpPlanner planner, IOpTrait fromTrait, IOpTrait toTrait)
     {
         return toTrait.Equals(Sortedness.Sorted);
     }
 
-    public override IOpNode? Convert(IPlanner planner, IOpNode op, ITrait toTrait, bool allowInfiniteCostConverters)
+    public override IOpNode? Convert(IOpPlanner planner, IOpNode op, IOpTrait toTrait, bool allowInfiniteCostConverters)
     {
         if (!toTrait.Equals(Sortedness.Sorted) || ReferenceEquals(op.Traits.Get(Instance), Sortedness.Sorted))
             return null;

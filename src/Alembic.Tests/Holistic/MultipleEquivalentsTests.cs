@@ -28,11 +28,11 @@ public class MultipleEquivalentsTests
     [Fact]
     public void A_rule_registers_several_equivalents_and_the_cheapest_is_chosen()
     {
-        var logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
-        var physical = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
+        var logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
+        var physical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
 
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalSource(cluster, logical, "t");
 
         planner.AddRule(new OfferTwoScans(physical));
@@ -51,11 +51,11 @@ public class MultipleEquivalentsTests
     [Fact]
     public void A_rule_registers_a_secondary_equivalence_through_the_equiv_map()
     {
-        var logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
+        var logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
 
         var listener = new RecordingListener();
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalSource(cluster, logical, "t");
 
         // The rule registers a primary equivalent for the matched source, and — in the same call, via the
@@ -74,7 +74,7 @@ public class MultipleEquivalentsTests
     /// On the source "t", registers a primary equivalent plus a secondary equivalence passed through the
     /// equivalence map. Guarded to fire only on "t", so the equivalents it produces do not re-trigger it.
     /// </summary>
-    sealed class OfferPrimaryAndSecondary : Rule
+    sealed class OfferPrimaryAndSecondary : OpRule
     {
 
         public OfferPrimaryAndSecondary()
@@ -82,7 +82,7 @@ public class MultipleEquivalentsTests
         {
         }
 
-        public override void OnMatch(RuleCall call)
+        public override void OnMatch(OpRuleCall call)
         {
             var source = (LogicalSource)call.Op(0);
             if (source.Table != "t")

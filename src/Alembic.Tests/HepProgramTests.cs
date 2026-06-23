@@ -16,9 +16,9 @@ namespace Alembic.Tests;
 public class HepProgramTests
 {
 
-    static readonly TraitSet Logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical).Plus(Sortedness.Unsorted);
+    static readonly OpTraitSet Logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical).Plus(Sortedness.Unsorted);
 
-    static IOpNode Tree(Cluster cluster) => new LogicalFilter(Logical, new LogicalSource(cluster, Logical, "t"), "x > 5");
+    static IOpNode Tree(OpCluster cluster) => new LogicalFilter(Logical, new LogicalSource(cluster, Logical, "t"), "x > 5");
 
     static bool IsSorted(IOpNode op) => ReferenceEquals(op.Traits.Get(SortednessTraitDef.Instance), Sortedness.Sorted);
 
@@ -37,7 +37,7 @@ public class HepProgramTests
     static IOpNode Run(HepProgram program)
     {
         var planner = new HepPlanner(program);
-        planner.SetRoot(Tree(new Cluster(planner)));
+        planner.SetRoot(Tree(new OpCluster(planner)));
         return planner.FindBestPlan();
     }
 
@@ -94,7 +94,7 @@ public class HepProgramTests
         {
             LargePlanMode = true,
         };
-        planner.SetRoot(Tree(new Cluster(planner)));
+        planner.SetRoot(Tree(new OpCluster(planner)));
 
         Assert.True(AllSorted(planner.FindBestPlan()));
     }
@@ -105,7 +105,7 @@ public class HepProgramTests
         var program = HepProgram.Builder().AddRuleClass<MarkSorted>().Build();
         var planner = new HepPlanner(program);
         planner.AddRule(new MarkSorted());
-        planner.SetRoot(Tree(new Cluster(planner)));
+        planner.SetRoot(Tree(new OpCluster(planner)));
 
         Assert.True(AllSorted(planner.FindBestPlan()));
     }

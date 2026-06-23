@@ -4,7 +4,7 @@ namespace Alembic.Plan;
 /// The trait dimension for <see cref="IConvention"/>. Always registered first.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.ConventionTraitDef")]
-public sealed class ConventionTraitDef : TraitDef<IConvention>
+public sealed class ConventionTraitDef : OpTraitDef<IConvention>
 {
 
     /// <summary>

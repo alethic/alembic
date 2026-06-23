@@ -7,14 +7,14 @@ namespace Alembic.Plan.Volcano;
 /// combined by summing both dimensions; a cost is infinite when either dimension is.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost")]
-public sealed class VolcanoCost : ICost
+public sealed class VolcanoCost : IOpCost
 {
 
     /// <summary>
     /// A factory producing <see cref="VolcanoCost"/> values.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost", "FACTORY")]
-    public static readonly ICostFactory Factory = new VolcanoCostFactory();
+    public static readonly IOpCostFactory Factory = new VolcanoCostFactory();
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost", "INFINITY")]
     static readonly VolcanoCost InfinityCost = new VolcanoCost(double.PositiveInfinity, double.PositiveInfinity);
@@ -55,15 +55,15 @@ public sealed class VolcanoCost : ICost
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost", "isLe(RelOptCost)")]
-    public bool IsLessThanOrEqual(ICost other) => _cpu <= ((VolcanoCost)other)._cpu;
+    public bool IsLessThanOrEqual(IOpCost other) => _cpu <= ((VolcanoCost)other)._cpu;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost", "isLt(RelOptCost)")]
-    public bool IsLessThan(ICost other) => _cpu < ((VolcanoCost)other)._cpu;
+    public bool IsLessThan(IOpCost other) => _cpu < ((VolcanoCost)other)._cpu;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost", "plus(RelOptCost)")]
-    public ICost Plus(ICost other)
+    public IOpCost Plus(IOpCost other)
     {
         var that = (VolcanoCost)other;
         if (IsInfinite || that.IsInfinite)
@@ -74,7 +74,7 @@ public sealed class VolcanoCost : ICost
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost", "minus(RelOptCost)")]
-    public ICost Minus(ICost other)
+    public IOpCost Minus(IOpCost other)
     {
         if (IsInfinite)
             return this;
@@ -85,7 +85,7 @@ public sealed class VolcanoCost : ICost
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost", "multiplyBy(double)")]
-    public ICost MultiplyBy(double factor)
+    public IOpCost MultiplyBy(double factor)
     {
         if (this == InfinityCost)
             return this;
@@ -95,7 +95,7 @@ public sealed class VolcanoCost : ICost
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost", "divideBy(RelOptCost)")]
-    public double DivideBy(ICost other)
+    public double DivideBy(IOpCost other)
     {
         // The geometric mean of the per-component ratios over the components non-zero and finite in both.
         var that = (VolcanoCost)other;
@@ -119,7 +119,7 @@ public sealed class VolcanoCost : ICost
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost", "isEqWithEpsilon(RelOptCost)")]
-    public bool IsEqWithEpsilon(ICost other)
+    public bool IsEqWithEpsilon(IOpCost other)
     {
         return other is VolcanoCost that
             && (ReferenceEquals(this, that) || (Math.Abs(_cpu - that._cpu) < Epsilon && Math.Abs(_io - that._io) < Epsilon));
@@ -140,23 +140,23 @@ public sealed class VolcanoCost : ICost
     public override string ToString() => $"{{{_cpu} cpu, {_io} io}}";
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost.Factory")]
-    sealed class VolcanoCostFactory : ICostFactory
+    sealed class VolcanoCostFactory : IOpCostFactory
     {
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost.Factory", "makeCost(double, double, double)")]
-        public ICost MakeCost(double cpu, double io) => new VolcanoCost(cpu, io);
+        public IOpCost MakeCost(double cpu, double io) => new VolcanoCost(cpu, io);
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost.Factory", "makeZeroCost()")]
-        public ICost MakeZeroCost() => ZeroCost;
+        public IOpCost MakeZeroCost() => ZeroCost;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost.Factory", "makeInfiniteCost()")]
-        public ICost MakeInfiniteCost() => InfinityCost;
+        public IOpCost MakeInfiniteCost() => InfinityCost;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost.Factory", "makeHugeCost()")]
-        public ICost MakeHugeCost() => HugeCost;
+        public IOpCost MakeHugeCost() => HugeCost;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost.Factory", "makeTinyCost()")]
-        public ICost MakeTinyCost() => TinyCost;
+        public IOpCost MakeTinyCost() => TinyCost;
 
     }
 

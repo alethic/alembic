@@ -17,7 +17,7 @@ public sealed class DeferringRuleCall : VolcanoRuleCall
     readonly VolcanoPlanner _planner;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall.DeferringRuleCall", "DeferringRuleCall(VolcanoPlanner, RelOptRuleOperand)")]
-    internal DeferringRuleCall(VolcanoPlanner planner, RuleOperand operand0)
+    internal DeferringRuleCall(VolcanoPlanner planner, OpRuleOperand operand0)
         : base(planner, operand0)
     {
         _planner = planner;

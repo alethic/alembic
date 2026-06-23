@@ -29,7 +29,7 @@ public class RelationalLoweringTests
         var (logical, physical) = Setup();
 
         var planner = BuildPlanner(Converters(physical));
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         var result = Lower(planner, root, physical);
@@ -46,7 +46,7 @@ public class RelationalLoweringTests
 
         // Lower, then push the physical filter down into the source — a second physical realization.
         var planner = BuildPlanner(new SourceConverter(physical), new FilterConverter(physical), new PushFilterIntoSource());
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         var result = Lower(planner, root, physical);
@@ -62,7 +62,7 @@ public class RelationalLoweringTests
         var (logical, physical) = Setup();
 
         var planner = BuildPlanner(Converters(physical));
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(logical, new LogicalParameter(cluster, logical, "p"), "x > 5");
 
         var result = Lower(planner, root, physical);
@@ -77,7 +77,7 @@ public class RelationalLoweringTests
         var (logical, _) = Setup();
 
         var planner = BuildPlanner(new RemoveTrueFilter());
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "true");
 
         var result = Simplify(planner, root);
@@ -91,7 +91,7 @@ public class RelationalLoweringTests
         var (logical, _) = Setup();
 
         var planner = BuildPlanner(new MergeFilters());
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(logical, new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "b"), "a");
 
         var result = Simplify(planner, root);
@@ -107,7 +107,7 @@ public class RelationalLoweringTests
         var (logical, physical) = Setup();
 
         var planner = BuildPlanner(new RemoveTrueFilter());
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "true");
 
         // Phase 1: simplify away the redundant filter in the logical model.
@@ -125,12 +125,12 @@ public class RelationalLoweringTests
         // The program applies every converter rule; the physical convention contributes them to the
         // planner, rather than the caller listing them by hand.
         var planner = new HepPlanner(HepProgram.Builder().AddRuleClass<ConverterRule>().Build());
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
 
         RelationalConventions.Physical.Register(planner);
 
-        var logical = TraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
-        var physical = TraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
+        var logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
+        var physical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
         IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         planner.SetRoot(root);
@@ -148,25 +148,25 @@ public class RelationalLoweringTests
         // Omit the source converter: the source can never reach the physical convention, so the
         // planner cannot satisfy the requested output traits.
         var planner = BuildPlanner(new FilterConverter(physical));
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
         IOpNode root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
         Assert.Throws<CannotPlanException>(() => Lower(planner, root, physical));
     }
 
-    static (TraitSet Logical, TraitSet Physical) Setup()
+    static (OpTraitSet Logical, OpTraitSet Physical) Setup()
     {
         return (
-            TraitSet.CreateEmpty().Plus(RelationalConventions.Logical),
-            TraitSet.CreateEmpty().Plus(RelationalConventions.Physical));
+            OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical),
+            OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical));
     }
 
-    static Rule[] Converters(TraitSet physical)
+    static OpRule[] Converters(OpTraitSet physical)
     {
         return [new SourceConverter(physical), new FilterConverter(physical), new ParameterConverter(physical)];
     }
 
-    IOpNode Lower(HepPlanner planner, IOpNode root, TraitSet required)
+    IOpNode Lower(HepPlanner planner, IOpNode root, OpTraitSet required)
     {
         planner.SetRoot(root);
         planner.ChangeTraits(root, required);
@@ -185,7 +185,7 @@ public class RelationalLoweringTests
         return best;
     }
 
-    static HepPlanner BuildPlanner(params Rule[] rules)
+    static HepPlanner BuildPlanner(params OpRule[] rules)
     {
         // Fire all the rules together to a fixed point (a rule collection), so lowering can cascade
         // across them in one instruction.

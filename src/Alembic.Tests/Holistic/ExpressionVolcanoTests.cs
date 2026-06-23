@@ -24,11 +24,11 @@ public class ExpressionVolcanoTests
     [Fact]
     public void Lowers_a_binary_expression_tree_cost_based()
     {
-        var logical = TraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
-        var physical = TraitSet.CreateEmpty().Plus(ExpressionConventions.Physical);
+        var logical = OpTraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
+        var physical = OpTraitSet.CreateEmpty().Plus(ExpressionConventions.Physical);
 
         var planner = new VolcanoPlanner();
-        var cluster = new Cluster(planner);
+        var cluster = new OpCluster(planner);
 
         // (a * b) + c — exercises the two-child BiOp shape through the cost-based planner.
         IOpNode root = new Add(logical, new Multiply(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b")), new Variable(cluster, logical, "c"));

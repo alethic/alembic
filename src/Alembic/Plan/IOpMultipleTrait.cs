@@ -7,7 +7,7 @@ namespace Alembic.Plan;
 /// a table may be sorted by <c>[year, month, day]</c> and also by <c>[id]</c>.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelMultipleTrait")]
-public interface IMultipleTrait : ITrait, IComparable<IMultipleTrait>
+public interface IOpMultipleTrait : IOpTrait, IComparable<IOpMultipleTrait>
 {
 
     /// <summary>

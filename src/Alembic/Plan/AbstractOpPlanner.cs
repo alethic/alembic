@@ -13,44 +13,44 @@ namespace Alembic.Plan;
 /// (<see cref="SetRoot"/> / <see cref="FindBestPlan"/>).
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner")]
-public abstract class AbstractPlanner : IPlanner
+public abstract class AbstractOpPlanner : IOpPlanner
 {
 
-    readonly List<TraitDef> _traitDefs = new List<TraitDef>();
-    readonly List<Rule> _rules = new List<Rule>();
-    readonly Dictionary<string, Rule> _mapDescToRule = new Dictionary<string, Rule>();
+    readonly List<OpTraitDef> _traitDefs = new List<OpTraitDef>();
+    readonly List<OpRule> _rules = new List<OpRule>();
+    readonly Dictionary<string, OpRule> _mapDescToRule = new Dictionary<string, OpRule>();
     readonly List<IPlannerListener> _listeners = new List<IPlannerListener>();
-    readonly ICostFactory _costFactory;
-    TraitSet? _emptyTraitSet;
+    readonly IOpCostFactory _costFactory;
+    OpTraitSet? _emptyTraitSet;
     Regex? _ruleDescExclusionFilter;
 
     /// <summary>
     /// Initializes the planner with the convention dimension registered (every plan has a convention)
-    /// and a cost factory (defaulting to the scalar <see cref="Cost"/> factory).
+    /// and a cost factory (defaulting to the scalar <see cref="OpCost"/> factory).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "AbstractRelOptPlanner(RelOptCostFactory, Context)")]
-    protected AbstractPlanner(ICostFactory? costFactory = null)
+    protected AbstractOpPlanner(IOpCostFactory? costFactory = null)
     {
-        _costFactory = costFactory ?? Cost.Factory;
+        _costFactory = costFactory ?? OpCost.Factory;
         AddTraitDef(ConventionTraitDef.Instance);
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getRelTraitDefs()")]
-    public IReadOnlyList<TraitDef> TraitDefs => _traitDefs;
+    public IReadOnlyList<OpTraitDef> TraitDefs => _traitDefs;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getCostFactory()")]
-    public ICostFactory CostFactory => _costFactory;
+    public IOpCostFactory CostFactory => _costFactory;
 
     /// <summary>
     /// The rules registered with this planner.
     /// </summary>
-    protected IReadOnlyList<Rule> Rules => _rules;
+    protected IReadOnlyList<OpRule> Rules => _rules;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "addRelTraitDef(RelTraitDef)")]
-    public void AddTraitDef(TraitDef def)
+    public void AddTraitDef(OpTraitDef def)
     {
         if (_emptyTraitSet is not null)
             throw new InvalidOperationException("Trait dimensions must be registered before the empty trait set is used.");
@@ -61,13 +61,13 @@ public abstract class AbstractPlanner : IPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "emptyTraitSet()")]
-    public TraitSet EmptyTraitSet
+    public OpTraitSet EmptyTraitSet
     {
         get
         {
             if (_emptyTraitSet is null)
             {
-                var set = TraitSet.CreateEmpty();
+                var set = OpTraitSet.CreateEmpty();
                 foreach (var def in _traitDefs)
                     set = set.Plus(def.Default);
 
@@ -80,7 +80,7 @@ public abstract class AbstractPlanner : IPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "addRule(RelOptRule)")]
-    public virtual bool AddRule(Rule rule)
+    public virtual bool AddRule(OpRule rule)
     {
         // Rules are keyed by description, which must be unique. A duplicate registration of the same rule
         // is a no-op; two different rules that happen to share a description is a programming error.
@@ -102,7 +102,7 @@ public abstract class AbstractPlanner : IPlanner
     /// Removes a previously added rule; returns whether it was registered.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "removeRule(RelOptRule)")]
-    public virtual bool RemoveRule(Rule rule)
+    public virtual bool RemoveRule(OpRule rule)
     {
         if (!_mapDescToRule.Remove(rule.Description))
             return false;
@@ -115,7 +115,7 @@ public abstract class AbstractPlanner : IPlanner
     /// The rule registered under the given description, or <c>null</c> if none.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getRuleByDescription(String)")]
-    protected Rule? GetRuleByDescription(string description)
+    protected OpRule? GetRuleByDescription(string description)
     {
         return _mapDescToRule.GetValueOrDefault(description);
     }
@@ -151,7 +151,7 @@ public abstract class AbstractPlanner : IPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "isRuleExcluded(RelOptRule)")]
-    public bool IsRuleExcluded(Rule rule)
+    public bool IsRuleExcluded(OpRule rule)
     {
         return _ruleDescExclusionFilter is not null && _ruleDescExclusionFilter.IsMatch(rule.Description);
     }
@@ -183,7 +183,7 @@ public abstract class AbstractPlanner : IPlanner
     /// Notifies listeners that a rule is being attempted (before and after).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "fireRule(RelOptRuleCall)")]
-    protected internal void FireRuleAttempted(RuleCall call, bool before)
+    protected internal void FireRuleAttempted(OpRuleCall call, bool before)
     {
         foreach (var listener in _listeners)
             listener.RuleAttempted(new IPlannerListener.RuleAttemptedEvent(this, call.Op(0), call, before));
@@ -193,7 +193,7 @@ public abstract class AbstractPlanner : IPlanner
     /// Notifies listeners that a rule produced an equivalent.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "notifyTransformation(RelOptRuleCall, RelNode, boolean)")]
-    protected internal void FireRuleProductionSucceeded(RuleCall call, IOpNode produced)
+    protected internal void FireRuleProductionSucceeded(OpRuleCall call, IOpNode produced)
     {
         foreach (var listener in _listeners)
             listener.RuleProductionSucceeded(new IPlannerListener.RuleProductionEvent(this, produced, call, false));
@@ -230,7 +230,7 @@ public abstract class AbstractPlanner : IPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "changeTraits(RelNode, RelTraitSet)")]
-    public abstract IOpNode ChangeTraits(IOpNode op, TraitSet toTraits);
+    public abstract IOpNode ChangeTraits(IOpNode op, OpTraitSet toTraits);
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "findBestExp()")]

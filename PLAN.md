@@ -63,40 +63,40 @@ src/Alembic/
     SingleOp.cs       single-child AbstractOp (the SingleRel analog); lists its input as a term
     BiOp.cs           two-child AbstractOp with Left/Right (the BiRel analog); lists both inputs
     Convert/            (the rel.convert analog)
-      IConverter.cs     an op that converts one trait of its input (Converter analog): InputTraits/TraitDef/Input
+      IConverter.cs     an op that converts one trait of its input (Converter analog): InputTraits/OpTraitDef/Input
       ConverterImpl.cs  abstract single-input converter base (ConverterImpl analog)
   Plan/                 (traits live here, flat, mirroring Calcite's plan package)
-    IPlanner.cs         IPlanner: AddTraitDef / TraitDefs / EmptyTraitSet / CostFactory / AddRule /
+    IOpPlanner.cs         IOpPlanner: AddTraitDef / TraitDefs / EmptyTraitSet / CostFactory / AddRule /
                         SetRoot / ChangeTraits / FindBestPlan — the RelOptPlanner analog
     CannotPlanException.cs  thrown by FindBestPlan when the requested output traits can't be met
-    AbstractPlanner.cs  AbstractPlanner: shared trait-def registry + EmptyTraitSet + rules + cost factory
+    AbstractOpPlanner.cs  AbstractOpPlanner: shared trait-def registry + EmptyTraitSet + rules + cost factory
                         — the AbstractRelOptPlanner analog
-    Cluster.cs          Cluster: session environment (wraps the planner) — the RelOptCluster analog
-    ICost.cs            ICost: IsInfinite / IsLessThanOrEqual / IsLessThan / Plus (the RelOptCost analog)
-    ICostFactory.cs     ICostFactory: MakeCost(cpu,io) + zero/infinite/huge/tiny (RelOptCostFactory analog)
-    Cost.cs             concrete scalar cost + factory (the RelOptCostImpl analog)
-    ITrait.cs           Def; DIM Satisfies; DIM Register(planner) — the RelTrait.register analog
-    IMultipleTrait.cs   a trait an op can have several of at once (RelMultipleTrait analog)
-    CompositeTrait.cs   a trait that bundles several same-dimension traits (RelCompositeTrait analog):
-                        abstract CompositeTrait (non-generic base) + sealed CompositeTrait<T>
+    OpCluster.cs          OpCluster: session environment (wraps the planner) — the RelOptCluster analog
+    IOpCost.cs            IOpCost: IsInfinite / IsLessThanOrEqual / IsLessThan / Plus (the RelOptCost analog)
+    IOpCostFactory.cs     IOpCostFactory: MakeCost(cpu,io) + zero/infinite/huge/tiny (RelOptCostFactory analog)
+    OpCost.cs             concrete scalar cost + factory (the RelOptCostImpl analog)
+    IOpTrait.cs           Def; DIM Satisfies; DIM Register(planner) — the RelTrait.register analog
+    IOpMultipleTrait.cs   a trait an op can have several of at once (RelMultipleTrait analog)
+    OpCompositeTrait.cs   a trait that bundles several same-dimension traits (RelCompositeTrait analog):
+                        abstract OpCompositeTrait (non-generic base) + sealed OpCompositeTrait<T>
     IOpImplementor.cs marker for a convention's plan-implementation callback (RelImplementor analog)
-    TraitDef.cs         abstract TraitDef (non-generic base) + abstract TraitDef<TTrait> : TraitDef;
+    OpTraitDef.cs         abstract OpTraitDef (non-generic base) + abstract OpTraitDef<TTrait> : OpTraitDef;
                         Name, Default (registered on the planner) — the RelTraitDef analog
     IConvention.cs      the Convention interface: Name, Interface (getInterface), CanConvertConvention,
                         UseAbstractConvertersForConversion, Enforce — the Convention (interface) analog
     Convention.cs       the default IConvention impl (Convention.Impl analog): equal by name, unsealed,
-                        Convention.None sentinel, overrides ITrait.Register (Convention.register)
+                        Convention.None sentinel, overrides IOpTrait.Register (Convention.register)
     ConventionTraitDef.cs  singleton def; the always-present convention dimension
-    TraitSet.cs         interned, ordered ImmutableArray<ITrait>; CreateEmpty / Plus / Replace (single or
-                        a list → CompositeTrait) / Get / GetList / Convention / Satisfies; linear FindIndex;
+    OpTraitSet.cs         interned, ordered ImmutableArray<IOpTrait>; CreateEmpty / Plus / Replace (single or
+                        a list → OpCompositeTrait) / Get / GetList / Convention / Satisfies; linear FindIndex;
                         inner intern Cache (Calcite's RelTraitSet)
     IPlannerListener.cs planning-event listener + nested events (RelOptListener analog)
     Rules/
       IRule.cs          IRule: Operand + OnMatch — every rule has an operand (Calcite's RelOptRule)
-      RuleCall.cs       RuleCall: abstract base — operand-bound Ops + Op(i) (the rel(i) accessor), Transform
+      OpRuleCall.cs       OpRuleCall: abstract base — operand-bound Ops + Op(i) (the rel(i) accessor), Transform
       Operand.cs        Operand: predicate + child operands; Of<TOp>(...)
       OperandMatcher.cs static matcher; Match returns the operand-bound ops (or Matches: bool)
-      IConverterRule.cs mixin: Source/Target (any ITrait, not just a convention); Convert(op) returns
+      IConverterRule.cs mixin: Source/Target (any IOpTrait, not just a convention); Convert(op) returns
                         null to decline; operand matches the Source trait, OnMatch = Convert (DIMs)
       ConverterRule.cs  abstract base: holds Source/Target, leaves Convert abstract
     Hep/
@@ -108,14 +108,14 @@ src/Alembic/
                         AddRuleByDescription / AddConverters / AddCommonRelSubExprInstruction /
                         AddMatchOrder / AddMatchLimit / AddSubprogram / AddGroupBegin / AddGroupEnd
       HepOpVertex.cs  vertex wrapping a current op in the shared DAG (the HepRelVertex analog)
-      HepPlanner.cs     HepPlanner : AbstractPlanner — DirectedGraph DAG, GC, fired-rules cache (see note)
-      HepRuleCall.cs    HepRuleCall : RuleCall — the HEP rule-call
+      HepPlanner.cs     HepPlanner : AbstractOpPlanner — DirectedGraph DAG, GC, fired-rules cache (see note)
+      HepRuleCall.cs    HepRuleCall : OpRuleCall — the HEP rule-call
     Volcano/            the cost-based planner
       OpSet.cs        OpSet: an equivalence set, partitioned into subsets (the RelSet analog)
       OpSubset.cs     OpSubset: members sharing a trait set; tracks Best/BestCost (the RelSubset analog)
       VolcanoCost.cs    VolcanoCost: cpu/io cost (compare on cpu) + factory; the planner default
-      VolcanoPlanner.cs VolcanoPlanner : AbstractPlanner — register/fire/propagate/extract; SetTopDownOpt (see §4)
-      VolcanoRuleCall.cs  VolcanoRuleCall : RuleCall — Rule + OnMatch + Transform (registers an equivalent)
+      VolcanoPlanner.cs VolcanoPlanner : AbstractOpPlanner — register/fire/propagate/extract; SetTopDownOpt (see §4)
+      VolcanoRuleCall.cs  VolcanoRuleCall : OpRuleCall — OpRule + OnMatch + Transform (registers an equivalent)
       VolcanoRuleMatch.cs  a queued match (rule + bound ops), deduplicated (the VolcanoRuleMatch analog)
       DeferringRuleCall.cs  fires a rule by deferring each match to the queue (the DeferringRuleCall analog)
       RuleQueue.cs      RuleQueue: pending matches, duplicate-dropping
@@ -135,9 +135,9 @@ src/Alembic.Tests/                 (one top-level type per file)
     ExpressionVolcanoTests.cs   the binary-expression (BiOp) language lowered cost-based
     ImagePlanningTests.cs   the image-processor language: cost-based CPU/GPU selection, crossing and back
   (engine-feature / API tests, plain Alembic.Tests namespace:)
-  ClusterTests.cs   Cluster.TraitSet / TraitSetOf
+  ClusterTests.cs   OpCluster.TraitSet / TraitSetOf
   ConventionInterfaceTests.cs   getInterface enforcement (an op must implement its convention's interface)
-  CompositeTraitTests.cs + SortKey.cs + SortKeyTraitDef.cs   multi-valued dimensions via CompositeTrait
+  CompositeTraitTests.cs + SortKey.cs + SortKeyTraitDef.cs   multi-valued dimensions via OpCompositeTrait
   OperandMatchingTests.cs + TagFilterOverSource.cs   operand rule + nested operand matching
   TraitDimensionTests.cs + Sortedness.cs + SortednessTraitDef.cs   a second trait dimension with
                            a real Satisfies partial order
@@ -185,7 +185,7 @@ default 1024). When a child changes (detected by `ReferenceEquals`), the parent 
 **Required output traits.** `ChangeTraits(root, toTraits)` records the traits the final plan must
 carry (only the root's request is remembered, as in the heuristic planner it models). After the
 rewrite reaches a fixed point, `FindBestPlan` verifies that **every** op satisfies the request
-(`TraitSet.Satisfies`) and throws `CannotPlanException` otherwise. Because conversions rewrite ops
+(`OpTraitSet.Satisfies`) and throws `CannotPlanException` otherwise. Because conversions rewrite ops
 in place rather than wrapping them in converter ops, a complete plan is convention-uniform, so a
 single surviving op that falls short means no rule chain could finish the lowering. (This is the
 completeness guarantee the tests previously asserted by hand with an `AssertAllPhysical` walk.)
@@ -213,7 +213,7 @@ registered) turns it into real converters via `ChangeTraitsUsingConverters`.
 
 **Operand matching over subsets.** Because a registered op's children are subsets, the matcher
 descends into each subset's members (and binds a subset directly for an "any" operand), enumerating all
-bindings. Rules read the bound ops via `RuleCall.Op(i)`, never `op.Children` — which is why the
+bindings. Rules read the bound ops via `OpRuleCall.Op(i)`, never `op.Children` — which is why the
 same rule works under both planners.
 
 ---
@@ -237,10 +237,10 @@ same rule works under both planners.
    removed in favor of the Calcite mechanism.)
 4. **`Children` (not `Inputs`).** The engine needs to navigate and rebuild the tree generically;
    `Children` is the honest, non-dataflow name. This is engine navigation, not rule-driven creation.
-5. **Traits are interned and ordered (Calcite's `RelTraitSet`).** `TraitSet` is an
-   `ImmutableArray<ITrait>`; a dimension is located by a **linear `FindIndex`** (few dimensions, so no
+5. **Traits are interned and ordered (Calcite's `RelTraitSet`).** `OpTraitSet` is an
+   `ImmutableArray<IOpTrait>`; a dimension is located by a **linear `FindIndex`** (few dimensions, so no
    ordinals — matching Calcite, *not* the earlier ordinal design). The **intern cache lives inside
-   `TraitSet`** (an inner `Cache` shared by every set derived from one `CreateEmpty()`), so equal sets
+   `OpTraitSet`** (an inner `Cache` shared by every set derived from one `CreateEmpty()`), so equal sets
    are one shared instance and common sets are singletons. The **trait-def registry lives on the
    planner** (`AddTraitDef`/`TraitDefs`/`EmptyTraitSet`), exactly as Calcite's `RelOptPlanner`. There
    is **no `TraitContext`** — Calcite has none; it was an Alembic invention now removed.
@@ -251,7 +251,7 @@ same rule works under both planners.
    derived/optional behavior (`Satisfies`, `Matches`, `IsLeaf`, `WithChild`, converter `Matches`/`OnMatch`).
    Anything stateful (planner, caches, interning) is a concrete class. Abstract/base classes are used
    as opt-in convenience over the interfaces: `AbstractOp`, `SingleOp` (a single-child op base, the
-   `SingleRel` analog), `TraitDef<T>`, `AbstractPlanner`, and `ConverterRule` (holds `Source`/`Target`,
+   `SingleRel` analog), `OpTraitDef<T>`, `AbstractOpPlanner`, and `ConverterRule` (holds `Source`/`Target`,
    leaves `Convert` abstract). `Convention` is an unsealed class so it can serve as a base for custom
    conventions.
 8. **Op types are hand-written classes, not records.** Records were considered for ergonomics, but
@@ -279,25 +279,25 @@ planner, rules, operands, and `Convention.register` all take `IOpNode`. (The gen
 
 ### 4.1 Planner hierarchy (mirrors Calcite)
 
-- **`IPlanner`** = `RelOptPlanner`: `AddTraitDef` / `TraitDefs` / `EmptyTraitSet`, `AddRule`,
+- **`IOpPlanner`** = `RelOptPlanner`: `AddTraitDef` / `TraitDefs` / `EmptyTraitSet`, `AddRule`,
   `SetRoot(IOpNode)`, `FindBestPlan()`.
-- **`AbstractPlanner`** = `AbstractRelOptPlanner`: the shared trait-def registry (convention
+- **`AbstractOpPlanner`** = `AbstractRelOptPlanner`: the shared trait-def registry (convention
   auto-registered), `EmptyTraitSet` (built from registered defs, then sealed), and the rule registry.
-- **`HepPlanner : AbstractPlanner`** = `HepPlanner`: the heuristic rewrite loop — bottom-up (or
+- **`HepPlanner : AbstractOpPlanner`** = `HepPlanner`: the heuristic rewrite loop — bottom-up (or
   top-down) per pass, re-passing until `DeepEquals` reports a fixed point; rebuilds the spine with
   `op.Copy(op.Traits, children)`, sharing untouched subtrees by `ReferenceEquals`.
-- **`Cluster`** = `RelOptCluster`: a thin per-session environment wrapping the planner (relational
+- **`OpCluster`** = `RelOptCluster`: a thin per-session environment wrapping the planner (relational
   pieces — row-expression builder, metadata query — omitted).
 
 ### 4.2 Rules
 
-- **`IRule`** — `Operand Operand { get; }` + `OnMatch(RuleCall)`. Every rule has an operand (Calcite's
+- **`IRule`** — `Operand Operand { get; }` + `OnMatch(OpRuleCall)`. Every rule has an operand (Calcite's
   `RelOptRule`); the planner matches it and calls `OnMatch` on a hit.
-- **`RuleCall`** is an **abstract base** (`Op` + abstract `Transform`); **`HepRuleCall`** is the HEP
+- **`OpRuleCall`** is an **abstract base** (`Op` + abstract `Transform`); **`HepRuleCall`** is the HEP
   subclass that records the single replacement — the `RelOptRuleCall` + `HepRuleCall` split, extensible
   so a future planner (or a consumer) supplies its own.
 - **`IConverterRule`** — declares `Source`/`Target` **traits** (named `Source`/`Target`, a deliberate
-  divergence from Calcite's `In`/`Out`/`getInTrait`/`getOutTrait`). They are `ITrait`, not just a
+  divergence from Calcite's `In`/`Out`/`getInTrait`/`getOutTrait`). They are `IOpTrait`, not just a
   convention, so a rule can convert *any* dimension (sortedness, distribution, …); the operand matches
   ops carrying the `Source` trait on its dimension. `IOpNode? Convert(IOpNode)` returns the converted op
   or **null to decline** (possible now that ops are reference types). **`ConverterRule`** is the
@@ -345,12 +345,12 @@ planner, rules, operands, and `Convention.register` all take `IOpNode`. (The gen
 ## 6. Remaining work (roadmap, roughly prioritized)
 
 ### Near-term (engine correctness/usefulness)
-1. **✅ Done — planner hierarchy on `IOpNode` (§4).** `IPlanner` (`RelOptPlanner` analog) +
-   `AbstractPlanner` (`AbstractRelOptPlanner`) + `HepPlanner`; trait-def registry + `EmptyTraitSet` on
-   the planner; `Cluster` (`RelOptCluster`). All `IOpNode`-monomorphic.
+1. **✅ Done — planner hierarchy on `IOpNode` (§4).** `IOpPlanner` (`RelOptPlanner` analog) +
+   `AbstractOpPlanner` (`AbstractRelOptPlanner`) + `HepPlanner`; trait-def registry + `EmptyTraitSet` on
+   the planner; `OpCluster` (`RelOptCluster`). All `IOpNode`-monomorphic.
 2. **✅ Done — rule layering.** Every `IRule` has an `Operand` (Calcite-faithful); the planner matches
    via `OperandMatcher`. `IConverterRule` (Source/Target, `Convert` returns null to decline) +
-   `ConverterRule` base supply a convention-matching operand. `RuleCall` abstract + `HepRuleCall`.
+   `ConverterRule` base supply a convention-matching operand. `OpRuleCall` abstract + `HepRuleCall`.
 3. **✅ Done — shared-DAG HEP planner.** `HepPlanner` holds the plan as a graph of `HepOpVertex`
    (the `HepRelVertex` analog): equal subexpressions are interned to one vertex (keyed on the op
    digest), so a rule fires once per distinct subexpression and a rewrite is shared by every parent
@@ -368,10 +368,10 @@ planner, rules, operands, and `Convention.register` all take `IOpNode`. (The gen
 5. **✅ Done — general rewrite rules + matcher coverage.** `OperandMatchingTests` exercises nested
    operands + arity; the relational suite adds single-convention rewrites (true-filter removal, filter
    merging) and a push-down rule.
-6. **✅ Done — `Cluster` + convention rule-registration.** `register` is declared on `ITrait`
-   (`RelTrait.register` analog), takes the planner — `void Register(IPlanner planner)` — and
+6. **✅ Done — `OpCluster` + convention rule-registration.** `register` is declared on `IOpTrait`
+   (`RelTrait.register` analog), takes the planner — `void Register(IOpPlanner planner)` — and
    `Convention` overrides it to add rules via `planner.AddRule`, reading `planner.EmptyTraitSet`.
-7. **✅ Done — `RuleCall` multiple equivalents.** `Transform` appends to a list of results
+7. **✅ Done — `OpRuleCall` multiple equivalents.** `Transform` appends to a list of results
    (`HepRuleCall.Results`, the `getResults()` analog); a single match may register several equivalents.
    `MultipleEquivalentsTests` registers two physical scans of differing cost and the cost-based planner
    picks the cheaper.
@@ -380,7 +380,7 @@ planner, rules, operands, and `Convention.register` all take `IOpNode`. (The gen
 9. **✅ Done — two-child base + a second language.** `BiOp` (the `BiRel` analog) joins `SingleOp`;
    a binary arithmetic-expression language (`Languages/Expression`) proves two conventions, two models,
    converter-driven lowering, constant folding, and a fusion push-down on the same engine.
-10. **✅ Done — required output trait + completeness enforcement.** `IPlanner.ChangeTraits`
+10. **✅ Done — required output trait + completeness enforcement.** `IOpPlanner.ChangeTraits`
     (`RelOptPlanner.changeTraits` analog) records the target traits; HEP enforces them across the
     result and throws `CannotPlanException` when lowering is incomplete. Retired the tests'
     `AssertAllPhysical` crutch. (Automatic converter *insertion* to reach the target remains Volcano —
@@ -392,19 +392,19 @@ planner, rules, operands, and `Convention.register` all take `IOpNode`. (The gen
    `TraitDimensionTests` proves a second dimension (`Sortedness`) with a real `Satisfies` partial
    order and interning via `CreateEmpty`/`Plus`. Remaining: a built-in ordering/collation trait if
    one is wanted in the library itself (the test's is a fixture).
-9. **✅ Done — trait conversion hooks** on `TraitDef` (`CanConvert` / `Convert`, the
+9. **✅ Done — trait conversion hooks** on `OpTraitDef` (`CanConvert` / `Convert`, the
    `RelTraitDef.canConvert` / `convert` analogs — virtual, default decline). Volcano's
    `ChangeTraitsUsingConverters` consults them alongside converter rules, so a dimension can supply its
    own enforcement (e.g. wrapping an op in a sort) without a registered converter rule.
    `TraitConversionTests` enforces sortedness through the hook with no converter rule present.
 
 ### Larger (cost + Volcano)
-10. **✅ Done — cost model in core.** `ICost` (the `RelOptCost` analog: `IsInfinite` /
-    `IsLessThanOrEqual` / `IsLessThan` / `Plus`), `ICostFactory` (the `RelOptCostFactory` analog:
+10. **✅ Done — cost model in core.** `IOpCost` (the `RelOptCost` analog: `IsInfinite` /
+    `IsLessThanOrEqual` / `IsLessThan` / `Plus`), `IOpCostFactory` (the `RelOptCostFactory` analog:
     `MakeCost(cpu,io)` + zero/infinite/huge/tiny — no `rowCount`, since the engine is not relational),
-    and a concrete scalar `Cost` (the
+    and a concrete scalar `OpCost` (the
     `RelOptCostImpl` analog) all live in `src/Alembic`. The planner carries the factory
-    (`IPlanner.CostFactory`, the `getCostFactory` analog); `IOpNode.ComputeSelfCost(planner)` is the
+    (`IOpPlanner.CostFactory`, the `getCostFactory` analog); `IOpNode.ComputeSelfCost(planner)` is the
     `computeSelfCost` analog — a DIM on the op itself (with an `AbstractOp` virtual), **not** a separate
     capability interface (there is no `ICostedOp`; Calcite has no such interface).
 11. **✅ Done — Volcano (cost-based) planner** under `Alembic.Plan.Volcano`: `OpSet` / `OpSubset`
@@ -413,16 +413,16 @@ planner, rules, operands, and `Convention.register` all take `IOpNode`. (The gen
     convention — `AbstractConverter` + `ExpandConversionRule` (registered automatically) + `ChangeTraits`
     / `ChangeTraitsUsingConverters` + `EnsureRootConverters`. Matches are deferred (`DeferringRuleCall`)
     into a `RuleQueue` and applied by an `IRuleDriver` (`IterativeRuleDriver`). Rules are
-    planner-agnostic: they read operand-bound ops via `RuleCall.Op(i)` (the `RelOptRuleCall.rel`
+    planner-agnostic: they read operand-bound ops via `OpRuleCall.Op(i)` (the `RelOptRuleCall.rel`
     analog), so the same rule runs under HEP (concrete children) and Volcano (subset children).
     Deliberately omitted: importance-based queue ordering and the top-down (Cascades) driver
     (`SetTopDownOpt(true)` throws) — the search is exhaustive to a fixed point. `IConverterRule`'s
-    `Source`/`Target` are now `ITrait` (any dimension, not just convention). Still open: a
+    `Source`/`Target` are now `IOpTrait` (any dimension, not just convention). Still open: a
     hierarchy-aware rule-dispatch index, and a top-down driver that exploits non-convention trait
     enforcement.
-12. **✅ Done — multi-valued traits.** `IMultipleTrait` + `CompositeTrait<T>`, wired into `TraitSet`
+12. **✅ Done — multi-valued traits.** `IOpMultipleTrait` + `OpCompositeTrait<T>`, wired into `OpTraitSet`
     (`Replace(def, list)` folds to a composite; `GetList` reads the members; `Satisfies` honours them).
-13. **✅ Done — planner listener.** `IPlannerListener` (+ nested events) and `IPlanner.AddListener`;
+13. **✅ Done — planner listener.** `IPlannerListener` (+ nested events) and `IOpPlanner.AddListener`;
     the planners fire equivalence/rule/chosen events.
 
 ### Search & statistics (the big remaining subsystems)
@@ -463,7 +463,7 @@ planner, rules, operands, and `Convention.register` all take `IOpNode`. (The gen
     the surviving set (the `rename` analog), recomputing their digests and folding any that become
     newly equivalent. `SetMergeTests` triggers a real cross-set merge (a fold makes one subtree equal
     another) and the re-point path runs.
-24. **✅ Done — `RuleCall` multiple equivalents** (see near-term #7).
+24. **✅ Done — `OpRuleCall` multiple equivalents** (see near-term #7).
 
 ### Cross-cutting / polish
 14. **Complete XML docs** and remove the `CS1591` suppression in `Alembic.csproj`.
@@ -502,20 +502,20 @@ GitVersion + NuGet trusted publishing). GitVersion config is `GitVersion.yml`
 
 ### Calcite parallels — where things live (the guiding rule: match Calcite, strip relational only)
 
-- **`Convention.register`**: `register` is declared on `ITrait` (the `RelTrait` analog) and takes the
-  planner — `void Register(IPlanner planner)`, default no-op (a DIM). `Convention` overrides it; a
+- **`Convention.register`**: `register` is declared on `IOpTrait` (the `RelTrait` analog) and takes the
+  planner — `void Register(IOpPlanner planner)`, default no-op (a DIM). `Convention` overrides it; a
   convention bringing lowering rules adds them via `planner.AddRule` and reads `planner.EmptyTraitSet`.
   Non-generic, matching `RelTrait.register(RelOptPlanner)` exactly (the generic engine is gone, so no
   runtime cast).
-- **`AbstractRelOptPlanner`**: `AbstractPlanner` — the abstract base holding the shared rule registry,
+- **`AbstractRelOptPlanner`**: `AbstractOpPlanner` — the abstract base holding the shared rule registry,
   trait-def registry, and `EmptyTraitSet`; `HepPlanner` extends it (later `VolcanoPlanner` too).
-- **`RelOptCluster`**: `Cluster` — a thin per-session environment wrapping the planner (relational
+- **`RelOptCluster`**: `OpCluster` — a thin per-session environment wrapping the planner (relational
   pieces omitted). The trait registry/`EmptyTraitSet` live on the planner, as in Calcite.
 - **`TraitContext`**: removed. Calcite has none — the trait-def registry is on the planner
-  (`addRelTraitDef`/`emptyTraitSet`), the intern cache is inside `TraitSet`/`RelTraitSet`, and there are
+  (`addRelTraitDef`/`emptyTraitSet`), the intern cache is inside `OpTraitSet`/`RelTraitSet`, and there are
   no ordinals (linear `findIndex`). We match all three.
-- **Cost** (`RelNode.computeSelfCost` / `RelOptCost`): `ICost` is the cost value; `ICostFactory` is the
-  factory (`RelOptCostFactory`); `Cost` is the scalar default (`RelOptCostImpl`). Self-cost is
+- **OpCost** (`RelNode.computeSelfCost` / `RelOptCost`): `IOpCost` is the cost value; `IOpCostFactory` is the
+  factory (`RelOptCostFactory`); `OpCost` is the scalar default (`RelOptCostImpl`). Self-cost is
   `IOpNode.ComputeSelfCost(planner)` — a method on the op, as in Calcite — **not** a separate
   `ICostedOp` interface (Calcite has none). HEP ignores cost; Volcano consults it.
 - **`AbstractOp.Explain(IOpWriter)`**: the analog of Calcite's `explainTerms` (`RelWriter`); its
