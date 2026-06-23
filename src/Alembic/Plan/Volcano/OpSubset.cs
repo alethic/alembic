@@ -12,7 +12,7 @@ namespace Alembic.Plan.Volcano;
 /// registered op, and it remembers the cheapest member found so far.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset")]
-public sealed class OpSubset : AbstractOp
+public class OpSubset : AbstractOp
 {
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "RelSubset(RelOptCluster, RelSet, RelTraitSet)")]
@@ -49,7 +49,7 @@ public sealed class OpSubset : AbstractOp
     /// The equivalence set this subset belongs to.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getSet()")]
-    public OpSet Set { get; }
+    internal OpSet Set { get; }
 
     /// <summary>
     /// The cheapest member found so far, or <c>null</c> if none has a finite cost yet.

@@ -9,7 +9,7 @@ namespace Alembic.Plan.Volcano;
 /// exhaustive bottom-up search.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleDriver")]
-public sealed class IterativeRuleDriver : IRuleDriver
+internal class IterativeRuleDriver : IRuleDriver
 {
 
     readonly VolcanoPlanner _planner;

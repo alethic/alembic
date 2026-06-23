@@ -6,7 +6,7 @@ namespace Alembic.Plan.Volcano;
 /// Applies the rule matches a planner discovers, according to some search strategy.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleDriver")]
-public interface IRuleDriver
+internal interface IRuleDriver
 {
 
     /// <summary>

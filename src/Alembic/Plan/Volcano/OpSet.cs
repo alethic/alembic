@@ -11,7 +11,7 @@ namespace Alembic.Plan.Volcano;
 /// <see cref="OpSubset"/>s by trait set. The planner keeps the cheapest member of each subset.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet")]
-public sealed class OpSet
+internal class OpSet
 {
 
     // Trait-set pairs already wired with a converter, so each conversion is seeded at most once.

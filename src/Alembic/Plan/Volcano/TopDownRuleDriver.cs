@@ -17,7 +17,7 @@ namespace Alembic.Plan.Volcano;
 /// subsystem, <see cref="VolcanoPlanner.GetLowerBound"/> returns zero, so the bound checks never prune.
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver")]
-public sealed class TopDownRuleDriver : IRuleDriver
+internal class TopDownRuleDriver : IRuleDriver
 {
 
     readonly VolcanoPlanner _planner;
