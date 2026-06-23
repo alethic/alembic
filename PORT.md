@@ -546,7 +546,7 @@ Marker interface; fired by `HepProgramBuilder.AddCommonRelSubExprInstruction()` 
 | `getSubset(rel)` (nullable) | `GetSubset(op)` | nullable lookup (vs `GetSubsetNonNull`) |
 | `merge(set1, set2)` / `isSmaller` | `Merge` / `IsSmaller` | swap (older/larger survives) + root re-point |
 | `canonize(subset)` | `Canonize` | re-resolves a subset to its live set |
-| `propagateCostImprovements(rel)` | `PropagateCostImprovements` | `propagateRels` map + cost-ordered `PriorityQueue` worklist |
+| `propagateCostImprovements(rel)` | `PropagateCostImprovements` | `propagateOps` map + cost-ordered `PriorityQueue` worklist |
 | `rename` / `fixUpInputs` | `Rename` / `FixUpInputs` | re-points a renamed op's child subsets + parent back-links |
 | `RelSet`/`RelSubset` management | `OpSet`/`OpSubset` | |
 | `isLogical` / `isTransformationRule` / `isSubstituteRule` | `IsLogical` / `IsTransformationRule` / `IsSubstituteRule` | drive the top-down search; `IsSubstituteRule` is always false (no substitution rules) |
@@ -860,7 +860,7 @@ Three themes recur across the Volcano findings below and are worth fixing as uni
 
 | Calcite member | Verdict | Note |
 |---|---|---|
-| `propagateCostImprovements` | **RESOLVED (fixed)** | ported verbatim: a `Dictionary<IOp,IOpCost>` (`propagateRels`, identity-keyed) + a `PriorityQueue<IOp,IOpCost>` ordered by cost; reads the current cost from the map, walks `subset.GetParents()` (per-subset, not raw `set.Parents`), and the two `continue` guards match Calcite. No more recursion/stack-overflow. The one adaptation: .NET's `PriorityQueue` has no `remove`, so the decrease-key re-enqueues and the stale entry is harmlessly skipped on poll (the cost is read from the map, so a re-poll is a no-op) — Calcite's `remove`+`offer` and this produce identical processing. |
+| `propagateCostImprovements` | **RESOLVED (fixed)** | ported verbatim: a `Dictionary<IOp,IOpCost>` (`propagateOps`, identity-keyed) + a `PriorityQueue<IOp,IOpCost>` ordered by cost; reads the current cost from the map, walks `subset.GetParents()` (per-subset, not raw `set.Parents`), and the two `continue` guards match Calcite. No more recursion/stack-overflow. The one adaptation: .NET's `PriorityQueue` has no `remove`, so the decrease-key re-enqueues and the stale entry is harmlessly skipped on poll (the cost is read from the map, so a re-poll is a no-op) — Calcite's `remove`+`offer` and this produce identical processing. |
 | `merge` | **RESOLVED (fixed)** | ported the swap (`GetChildSets` + `IsSmaller` → always merge the newer/smaller into the older/larger, or a child into its parent) and the root re-point (re-point `_root` to the survivor's subset for the root traits + re-run `EnsureRootConverters` when the absorbed set held the root). `OnSetMerged` stays in `MergeWith` (the swap just changes which object is `this`). |
 | `ensureRegistered` | **RESOLVED (fixed)** | when the op is already registered and a known `equivalent` lives in a different set, the two sets are now merged; the result is `Canonize`d (re-resolved on the live set) — Calcite's `ensureRegistered` + `canonize`. |
 | `ensureRootConverters` | DIVERGENT-BUG (superseded) | omits the single-trait-difference guard and the AbstractConverter dedup set — seeds a converter for every differing subset. Now largely moot: the ported per-subset `OpSet.AddConverters` (theme C) carries those guards and seeds the root's converters correctly; `EnsureRootConverters` is redundant and slated for removal. |

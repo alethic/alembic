@@ -388,39 +388,39 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     {
         // A best-first worklist: ops whose cost may have improved, processed cheapest-first. The cost
         // for each op lives in the map (read from there, not the heap); the heap only orders the work.
-        var propagateRels = new Dictionary<IOp, IOpCost>(ReferenceEqualityComparer.Instance);
+        var propagateOps = new Dictionary<IOp, IOpCost>(ReferenceEqualityComparer.Instance);
         var propagateHeap = new PriorityQueue<IOp, IOpCost>(Comparer<IOpCost>.Create(
             (a, b) => a.IsLessThan(b) ? -1 : b.IsLessThan(a) ? 1 : 0));
 
-        propagateRels[op] = GetCost(op);
-        propagateHeap.Enqueue(op, propagateRels[op]);
+        propagateOps[op] = GetCost(op);
+        propagateHeap.Enqueue(op, propagateOps[op]);
 
-        while (propagateHeap.TryDequeue(out var relNode, out _))
+        while (propagateHeap.TryDequeue(out var current, out _))
         {
-            var cost = propagateRels[relNode];
+            var cost = propagateOps[current];
 
-            foreach (var subset in GetSubsetNonNull(relNode).Set.Subsets)
+            foreach (var subset in GetSubsetNonNull(current).Set.Subsets)
             {
-                if (!relNode.Traits.Satisfies(subset.Traits))
+                if (!current.Traits.Satisfies(subset.Traits))
                     continue;
 
                 // Not the current best and not cheaper than it → no change.
-                if (!ReferenceEquals(relNode, subset.Best) && !cost.IsLessThan(subset.BestCost))
+                if (!ReferenceEquals(current, subset.Best) && !cost.IsLessThan(subset.BestCost))
                     continue;
 
                 // Already the best at the same cost → nothing to do.
-                if (ReferenceEquals(relNode, subset.Best) && CostEquals(cost, subset.BestCost))
+                if (ReferenceEquals(current, subset.Best) && CostEquals(cost, subset.BestCost))
                     continue;
 
                 subset.BestCost = cost;
-                subset.Best = relNode;
+                subset.Best = current;
 
                 foreach (var parent in subset.GetParents())
                 {
                     var newCost = GetCost(parent);
-                    if (!propagateRels.TryGetValue(parent, out var existingCost) || newCost.IsLessThan(existingCost))
+                    if (!propagateOps.TryGetValue(parent, out var existingCost) || newCost.IsLessThan(existingCost))
                     {
-                        propagateRels[parent] = newCost;
+                        propagateOps[parent] = newCost;
 
                         // The reference removes the stale heap entry before re-offering; .NET's PriorityQueue
                         // has no remove, so the stale (higher-cost) entry stays and is harmlessly skipped when
