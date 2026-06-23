@@ -214,13 +214,13 @@ public abstract class AbstractOp : IOp
     {
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "attrs")]
-        public List<(string Name, object? Value)> Items { get; } = new List<(string, object?)>();
+        internal readonly List<(string Name, object? Value)> Items = new List<(string, object?)>();
 
         /// <summary>
         /// The rendered digest string, available after <see cref="Done"/>.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "digest")]
-        public string Digest { get; private set; } = "";
+        internal string Digest = "";
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "item(String, Object)")]
         public IOpWriter Item(string name, object? value)

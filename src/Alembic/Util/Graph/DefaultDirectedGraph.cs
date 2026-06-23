@@ -174,10 +174,10 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     {
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultDirectedGraph.VertexInfo", "inEdges")]
-        public List<E> InEdges { get; } = new List<E>();
+        internal readonly List<E> InEdges = new List<E>();
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultDirectedGraph.VertexInfo", "outEdges")]
-        public List<E> OutEdges { get; } = new List<E>();
+        internal readonly List<E> OutEdges = new List<E>();
 
     }
 
