@@ -31,6 +31,10 @@ sealed class SortKey : IOpMultipleTrait
         return other is SortKey key && (key._key.Length == 0 || string.Equals(key._key, _key, StringComparison.Ordinal));
     }
 
+    public void Register(IOpPlanner planner)
+    {
+    }
+
     public int CompareTo(IOpMultipleTrait? other)
     {
         return string.CompareOrdinal(_key, (other as SortKey)?._key ?? string.Empty);

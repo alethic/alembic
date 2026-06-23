@@ -95,7 +95,7 @@ public class OpSubset : AbstractOp
         if (Set.Ops.Contains(op))
             return;
 
-        ((AbstractOpPlanner)op.Cluster.Planner).FireOpEquivalenceFound(op, Set.Id, !op.Convention.Equals(Convention.None));
+        ((AbstractOpPlanner)op.Cluster.Planner).FireOpEquivalenceFound(op, Set.Id, !op.Convention!.Equals(IConvention.None));
         Set.AddInternal(op);
     }
 

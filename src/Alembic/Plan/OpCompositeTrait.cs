@@ -33,6 +33,12 @@ internal abstract class OpCompositeTrait : IOpTrait
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "satisfies(RelTrait)")]
     public abstract bool Satisfies(IOpTrait other);
 
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "register(RelOptPlanner)")]
+    public void Register(IOpPlanner planner)
+    {
+    }
+
 }
 
 /// <summary>

@@ -92,10 +92,7 @@ public interface IOp
     /// an op's digest depends on has changed underneath it (e.g. a shared child's content).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "recomputeDigest()")]
-    void RecomputeDigest()
-    {
-        GetDigest().Clear();
-    }
+    void RecomputeDigest();
 
     /// <summary>
     /// Registers this op's inputs with <paramref name="planner"/> and returns the op to register in its
@@ -107,13 +104,12 @@ public interface IOp
     IOp OnRegister(IOpPlanner planner);
 
     /// <summary>
-    /// This op's convention.
+    /// This op's convention, or <c>null</c> if it carries no convention dimension. (Calcite's
+    /// <c>getConvention()</c> is abstract and <c>@Nullable</c>; the abstract base derives it from the
+    /// trait set.)
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getConvention()")]
-    IConvention Convention
-    {
-        get { return Traits.Convention; }
-    }
+    IConvention? Convention { get; }
 
     /// <summary>
     /// Whether this op only enforces a physical property on its input (e.g. a converter) rather than
@@ -131,13 +127,10 @@ public interface IOp
 
     /// <summary>
     /// This op's own cost, not counting its inputs. A cost-based planner consults it; a heuristic
-    /// planner ignores it. The default is a small positive cost, so an op opts into a real cost model
-    /// only by overriding this.
+    /// planner ignores it. (Calcite leaves this abstract on the interface; the abstract base supplies the
+    /// default.)
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
-    IOpCost ComputeSelfCost(IOpPlanner planner)
-    {
-        return planner.CostFactory.MakeTinyCost();
-    }
+    IOpCost ComputeSelfCost(IOpPlanner planner);
 
 }

@@ -28,4 +28,8 @@ sealed class Sortedness : IOpTrait
         return ReferenceEquals(this, Sorted) && ReferenceEquals(other, Unsorted);
     }
 
+    public void Register(IOpPlanner planner)
+    {
+    }
+
 }

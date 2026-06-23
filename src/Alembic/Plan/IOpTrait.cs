@@ -16,23 +16,18 @@ public interface IOpTrait
 
     /// <summary>
     /// Whether an op carrying this trait also satisfies a requirement for <paramref name="other"/>.
-    /// Defaults to equality; traits with a partial order (orderings, distributions) override it.
+    /// A trait that satisfies only itself implements this as equality; traits with a partial order
+    /// (orderings, distributions) compare more loosely. (Abstract on the interface, as in Calcite.)
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTrait", "satisfies(RelTrait)")]
-    bool Satisfies(IOpTrait other)
-    {
-        return this.Equals(other);
-    }
+    bool Satisfies(IOpTrait other);
 
     /// <summary>
     /// Registers this trait instance with the planner — an opportunity to add the rules that relate
-    /// to it. Typical implementations do nothing.
+    /// to it. Typical implementations do nothing. (Abstract on the interface, as in Calcite.)
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTrait", "register(RelOptPlanner)")]
-    void Register(IOpPlanner planner)
-    {
-
-    }
+    void Register(IOpPlanner planner);
 
     /// <summary>
     /// Whether this trait is its dimension's default value.

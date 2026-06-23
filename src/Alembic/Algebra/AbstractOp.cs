@@ -51,6 +51,10 @@ public abstract class AbstractOp : IOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getInputs()")]
     public virtual ImmutableArray<IOp> Children => ImmutableArray<IOp>.Empty;
 
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getConvention()")]
+    public virtual IConvention? Convention => Traits.Convention;
+
     /// <summary>
     /// Lists this op's identity-bearing terms. A subclass calls <c>base.ExplainTerms</c>, then adds its
     /// own attributes (<see cref="IOpWriter.Item"/>) and its inputs (<see cref="IOpWriter.Input"/>).
