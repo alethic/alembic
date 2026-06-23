@@ -69,6 +69,9 @@ public class VolcanoPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "setTopDownOpt(boolean)")]
     public void SetTopDownOpt(bool value)
     {
+        if (_topDownOpt == value)
+            return;
+
         _topDownOpt = value;
         _ruleDriver = value ? new TopDownRuleDriver(this) : new IterativeRuleDriver(this);
     }

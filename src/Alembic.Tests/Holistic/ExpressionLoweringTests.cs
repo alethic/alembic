@@ -142,17 +142,22 @@ public class ExpressionLoweringTests
     }
 
     [Fact]
-    public void Incomplete_lowering_throws()
+    public void Incomplete_lowering_returns_a_best_effort_partial_plan()
     {
         var (logical, physical) = Setup();
 
-        // Omit the variable converter: the variables can never reach the physical convention, so the
-        // planner cannot satisfy the requested output traits.
+        // Omit the variable converter: the variables can never reach the physical convention. Like
+        // Calcite's findBestExp, HEP returns the best plan it could reach rather than throwing — the Add
+        // is lowered to physical, but its Variable children remain in the logical convention.
         var planner = BuildPlanner(new LiteralConverter(physical), new AddConverter(physical), new MultiplyConverter(physical));
         var cluster = new OpCluster(planner);
         IOp root = new Add(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b"));
 
-        Assert.Throws<CannotPlanException>(() => Lower(planner, root, physical));
+        var best = Lower(planner, root, physical);
+
+        var add = Assert.IsType<PhysicalAdd>(best);
+        Assert.Equal(ExpressionConventions.Logical, add.Children[0].Convention);
+        Assert.Equal(ExpressionConventions.Logical, add.Children[1].Convention);
     }
 
     static (OpTraitSet Logical, OpTraitSet Physical) Setup()

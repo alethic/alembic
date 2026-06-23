@@ -77,7 +77,7 @@ sealed class HepOpVertex : AbstractOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "deepHashCode()")]
     public override int DeepHashCode()
     {
-        return _currentOp.GetHashCode();
+        return _currentOp.Id;
     }
 
 }

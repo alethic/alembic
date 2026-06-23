@@ -96,9 +96,6 @@ internal class OpCompositeTrait<T> : OpCompositeTrait
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "satisfies(RelTrait)")]
     public override bool Satisfies(IOpTrait other)
     {
-        if (other is OpCompositeTrait<T> composite)
-            return composite._traits.All(required => _traits.Any(t => t.Satisfies(required)));
-
         return _traits.Any(t => t.Satisfies(other));
     }
 

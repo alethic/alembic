@@ -141,17 +141,21 @@ public class RelationalLoweringTests
     }
 
     [Fact]
-    public void Incomplete_lowering_throws()
+    public void Incomplete_lowering_returns_a_best_effort_partial_plan()
     {
         var (logical, physical) = Setup();
 
-        // Omit the source converter: the source can never reach the physical convention, so the
-        // planner cannot satisfy the requested output traits.
+        // Omit the source converter: the source can never reach the physical convention. Like Calcite's
+        // findBestExp, HEP returns the best plan it could reach rather than throwing — the Filter is
+        // lowered to physical, but its Source child remains in the logical convention.
         var planner = BuildPlanner(new FilterConverter(physical));
         var cluster = new OpCluster(planner);
         IOp root = new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "x > 5");
 
-        Assert.Throws<CannotPlanException>(() => Lower(planner, root, physical));
+        var best = Lower(planner, root, physical);
+
+        var filter = Assert.IsType<PhysicalFilter>(best);
+        Assert.Equal(RelationalConventions.Logical, filter.Children[0].Convention);
     }
 
     static (OpTraitSet Logical, OpTraitSet Physical) Setup()

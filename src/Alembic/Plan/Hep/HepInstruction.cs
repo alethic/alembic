@@ -52,7 +52,9 @@ public abstract class HepInstruction
             internal readonly RuleClass Instruction;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleClass.State.ruleSet")]
-            internal HashSet<OpRule>? RuleSet;
+            // Insertion-ordered (Calcite's ruleSet is a LinkedHashSet) so rule application order is
+            // deterministic; the source `Rules` is already ordered and duplicate-free.
+            internal List<OpRule>? RuleSet;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleClass.State", "State(PrepareContext)")]
             internal State(PrepareContext px, RuleClass instruction) : base(px) => Instruction = instruction;
@@ -121,7 +123,9 @@ public abstract class HepInstruction
             internal readonly ConverterRules Instruction;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.ConverterRules.State.ruleSet")]
-            internal HashSet<OpRule>? RuleSet;
+            // Insertion-ordered (Calcite's ruleSet is a LinkedHashSet) so rule application order is
+            // deterministic; the source `Rules` is already ordered and duplicate-free.
+            internal List<OpRule>? RuleSet;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.ConverterRules.State", "State(PrepareContext)")]
             internal State(PrepareContext px, ConverterRules instruction) : base(px) => Instruction = instruction;
@@ -149,7 +153,9 @@ public abstract class HepInstruction
             internal readonly CommonRelSubExprRules Instruction;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules.State.ruleSet")]
-            internal HashSet<OpRule>? RuleSet;
+            // Insertion-ordered (Calcite's ruleSet is a LinkedHashSet) so rule application order is
+            // deterministic; the source `Rules` is already ordered and duplicate-free.
+            internal List<OpRule>? RuleSet;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules.State", "State(PrepareContext)")]
             internal State(PrepareContext px, CommonRelSubExprRules instruction) : base(px) => Instruction = instruction;

@@ -67,7 +67,16 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     /// The trait carried at the given dimension index.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "getTrait(int)")]
-    public IOpTrait Get(int index) => _traits[index];
+    public IOpTrait Get(int index)
+    {
+        var trait = _traits[index];
+        if (trait is OpCompositeTrait)
+            throw new InvalidOperationException(
+                "Trait index " + index + " has multiple values in this trait set; "
+                + "use GetList(OpTraitDef) instead of Get(int)");
+
+        return trait;
+    }
 
     /// <summary>
     /// The number of dimensions in this set.
@@ -121,10 +130,8 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     public OpTraitSet Replace<TTrait>(OpTraitDef<TTrait> def, IReadOnlyList<TTrait> values)
         where TTrait : class, IOpMultipleTrait
     {
-        var trait = OpCompositeTrait<TTrait>.Of(def, values);
-        var index = FindIndex(def);
-        var next = index >= 0 ? _traits.SetItem(index, trait) : _traits.Add(trait);
-        return _cache.GetOrAdd(new OpTraitSet(_cache, next));
+        // Calcite delegates to replace(RelTrait): an absent dimension is ignored (returns this).
+        return Replace(OpCompositeTrait<TTrait>.Of(def, values));
     }
 
     /// <summary>

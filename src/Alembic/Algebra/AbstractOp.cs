@@ -154,17 +154,19 @@ public abstract class AbstractOp : IOp
 
         for (int i = 0; i < a.Count; i++)
         {
-            if (!string.Equals(a[i].Name, b[i].Name, StringComparison.Ordinal)) return false;
-
             var v1 = a[i].Value;
             var v2 = b[i].Value;
             if (v1 is IOp n1)
             {
+                // Calcite compares op-valued items by value only (deepEquals) — the term name is not part
+                // of the comparison for inputs.
                 if (v2 is not IOp n2 || !n1.DeepEquals(n2)) return false;
             }
-            else if (!Equals(v1, v2))
+            else
             {
-                return false;
+                // Non-op items compare as a whole (name, value) entry, per Calcite's Map.Entry.equals.
+                if (!string.Equals(a[i].Name, b[i].Name, StringComparison.Ordinal)) return false;
+                if (!Equals(v1, v2)) return false;
             }
         }
 
@@ -175,16 +177,16 @@ public abstract class AbstractOp : IOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "deepHashCode()")]
     public virtual int DeepHashCode()
     {
-        var h = new HashCode();
-        h.Add(GetType());
-        h.Add(Traits);
-        foreach (var (name, value) in DigestItems())
+        // Calcite folds the trait set and the term *values* only — not the op type, not the term names —
+        // with a fixed 31-based accumulation: 31 + traitSet.hashCode(), then result*31 + valueHash.
+        int result = 31 + Traits.GetHashCode();
+        foreach (var (_, value) in DigestItems())
         {
-            h.Add(name);
-            h.Add(value is IOp op ? op.DeepHashCode() : value);
+            int h = value is null ? 0 : value is IOp op ? op.DeepHashCode() : value.GetHashCode();
+            result = result * 31 + h;
         }
 
-        return h.ToHashCode();
+        return result;
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getDigestItems()")]

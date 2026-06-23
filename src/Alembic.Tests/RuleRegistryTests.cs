@@ -2,12 +2,12 @@ using System.Text.RegularExpressions;
 
 using Alembic.Algebra;
 using Alembic.Plan;
-using Alembic.Plan.Hep;
 using Alembic.Plan.Rules;
 using Alembic.Plan.Volcano;
 
 using Alembic.Tests.Languages.Relational;
 using Alembic.Tests.Languages.Relational.Logical;
+using Alembic.Tests.Languages.Relational.Physical;
 
 using Xunit;
 
@@ -20,7 +20,7 @@ namespace Alembic.Tests;
 public class RuleRegistryTests
 {
 
-    static readonly OpTraitSet Logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical).Plus(Sortedness.Unsorted);
+    static readonly OpTraitSet Physical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Physical);
 
     [Fact]
     public void Adding_a_duplicate_rule_is_a_no_op()
@@ -37,32 +37,37 @@ public class RuleRegistryTests
         Assert.True(planner.AddRule(new NoOp()));
     }
 
+    // The rule-exclusion filter is a Volcano feature (Calcite's HEP does not consult it); it is wired
+    // into VolcanoRuleCall.OnMatch, so an excluded rule's match is skipped before it can fire.
     [Fact]
     public void An_excluded_rule_does_not_fire()
     {
-        var planner = new HepPlanner(HepProgram.Builder().AddRuleInstance(new MarkSorted()).Build());
-        planner.SetRuleDescExclusionFilter(new Regex("MarkSorted"));
+        var spy = new SpyRule();
+        var planner = new VolcanoPlanner();
+        planner.AddRule(spy);
+        planner.SetRuleDescExclusionFilter(new Regex("SpyRule"));
 
         var cluster = new OpCluster(planner);
-        planner.SetRoot(new LogicalSource(cluster, Logical, "t"));
-        var best = planner.FindBestPlan();
+        planner.SetRoot(new PhysicalSource(cluster, Physical, "t"));
+        planner.FindBestPlan();
 
-        // MarkSorted would tag the op sorted, but the exclusion filter keeps it from firing.
-        Assert.Same(Sortedness.Unsorted, best.Traits.Get(SortednessTraitDef.Instance));
+        Assert.False(spy.Fired);
     }
 
     [Fact]
     public void Clearing_the_exclusion_filter_lets_the_rule_fire_again()
     {
-        var planner = new HepPlanner(HepProgram.Builder().AddRuleInstance(new MarkSorted()).Build());
-        planner.SetRuleDescExclusionFilter(new Regex("MarkSorted"));
+        var spy = new SpyRule();
+        var planner = new VolcanoPlanner();
+        planner.AddRule(spy);
+        planner.SetRuleDescExclusionFilter(new Regex("SpyRule"));
         planner.SetRuleDescExclusionFilter(null);
 
         var cluster = new OpCluster(planner);
-        planner.SetRoot(new LogicalSource(cluster, Logical, "t"));
-        var best = planner.FindBestPlan();
+        planner.SetRoot(new PhysicalSource(cluster, Physical, "t"));
+        planner.FindBestPlan();
 
-        Assert.Same(Sortedness.Sorted, best.Traits.Get(SortednessTraitDef.Instance));
+        Assert.True(spy.Fired);
     }
 
     [Fact]
@@ -98,6 +103,24 @@ public class RuleRegistryTests
 
         public override void OnMatch(OpRuleCall call)
         {
+        }
+
+    }
+
+    // Matches any op and records whether it was ever given the chance to fire.
+    sealed class SpyRule : OpRule
+    {
+
+        public bool Fired;
+
+        public SpyRule()
+            : base(Any<IOp>())
+        {
+        }
+
+        public override void OnMatch(OpRuleCall call)
+        {
+            Fired = true;
         }
 
     }

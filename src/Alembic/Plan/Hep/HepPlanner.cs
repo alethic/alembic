@@ -134,8 +134,9 @@ public class HepPlanner : AbstractOpPlanner
     }
 
     /// <summary>
-    /// Ignores traits except for the root, where it remembers what the final conversion should be; the
-    /// request is enforced when <see cref="FindBestPlan"/> finishes.
+    /// Ignores traits except for the root, where it remembers what the final conversion should be. The
+    /// remembered request is consulted by <see cref="DoesConverterApply"/> so a converter may fire at the
+    /// root to produce the requested traits (as Calcite does); HEP does not otherwise enforce them.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "changeTraits(RelNode, RelTraitSet)")]
     public override IOp ChangeTraits(IOp op, OpTraitSet toTraits)
@@ -162,26 +163,7 @@ public class HepPlanner : AbstractOpPlanner
         // Get rid of everything except what's in the final plan.
         CollectGarbage();
 
-        var plan = BuildFinalPlan(_root, new Dictionary<HepOpVertex, IOp>());
-
-        if (_requestedRootTraits is not null)
-            EnsureSatisfies(plan, _requestedRootTraits);
-
-        return plan;
-    }
-
-    /// <summary>
-    /// Verifies that every op in the plan carries the requested traits. Because conversions rewrite
-    /// ops in place rather than wrapping them, a complete plan is uniform throughout, so a single
-    /// surviving op that falls short means no rule chain could finish the job.
-    /// </summary>
-    static void EnsureSatisfies(IOp op, OpTraitSet required)
-    {
-        if (!op.Traits.Satisfies(required))
-            throw new CannotPlanException($"No plan satisfies the requested traits; '{op.GetType().Name}' remained in convention '{op.Convention}'.");
-
-        foreach (var child in op.Children)
-            EnsureSatisfies(child, required);
+        return BuildFinalPlan(_root, new Dictionary<HepOpVertex, IOp>());
     }
 
     // ~ Program execution ----------------------------------------------------
@@ -255,7 +237,7 @@ public class HepPlanner : AbstractOpPlanner
 
         if (state.RuleSet is null)
         {
-            state.RuleSet = new HashSet<OpRule>();
+            state.RuleSet = new List<OpRule>();
             foreach (var rule in Rules)
                 if (instruction.RuleType.IsInstanceOfType(rule))
                     state.RuleSet.Add(rule);
@@ -278,7 +260,7 @@ public class HepPlanner : AbstractOpPlanner
     {
         if (state.RuleSet is null)
         {
-            state.RuleSet = new HashSet<OpRule>();
+            state.RuleSet = new List<OpRule>();
             foreach (var rule in Rules)
             {
                 if (rule is not ConverterRule converter || converter.IsGuaranteed != instruction.Guaranteed)
@@ -301,7 +283,7 @@ public class HepPlanner : AbstractOpPlanner
     {
         if (state.RuleSet is null)
         {
-            state.RuleSet = new HashSet<OpRule>();
+            state.RuleSet = new List<OpRule>();
             foreach (var rule in Rules)
                 if (rule is ICommonSubExprRule)
                     state.RuleSet.Add(rule);
@@ -459,9 +441,6 @@ public class HepPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "applyRule(RelOptRule, HepRelVertex, boolean)")]
     HepOpVertex? ApplyRule(OpRule rule, HepOpVertex vertex, bool forceConversions)
     {
-        if (IsRuleExcluded(rule))
-            return null;
-
         if (!_graph.VertexSet.Contains(vertex))
             return null;
 

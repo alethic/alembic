@@ -13,7 +13,7 @@ public class CompositeTraitTests
         var a = new SortKey("a");
         var b = new SortKey("b");
 
-        var set = OpTraitSet.CreateEmpty().Replace(SortKeyTraitDef.Instance, new[] { a, b });
+        var set = OpTraitSet.CreateEmpty().Plus(SortKeyTraitDef.Instance.Default).Replace(SortKeyTraitDef.Instance, new[] { a, b });
 
         Assert.Equal(new[] { a, b }, set.GetList(SortKeyTraitDef.Instance));
     }
@@ -23,7 +23,7 @@ public class CompositeTraitTests
     {
         var a = new SortKey("a");
 
-        var set = OpTraitSet.CreateEmpty().Replace(SortKeyTraitDef.Instance, new[] { a });
+        var set = OpTraitSet.CreateEmpty().Plus(SortKeyTraitDef.Instance.Default).Replace(SortKeyTraitDef.Instance, new[] { a });
 
         Assert.Equal(new[] { a }, set.GetList(SortKeyTraitDef.Instance));
         Assert.Equal(a, set.Get(SortKeyTraitDef.Instance));
@@ -35,7 +35,7 @@ public class CompositeTraitTests
         var a = new SortKey("a");
         var b = new SortKey("b");
 
-        var have = OpTraitSet.CreateEmpty().Replace(SortKeyTraitDef.Instance, new[] { a, b });
+        var have = OpTraitSet.CreateEmpty().Plus(SortKeyTraitDef.Instance.Default).Replace(SortKeyTraitDef.Instance, new[] { a, b });
         var need = OpTraitSet.CreateEmpty().Plus(a);
 
         Assert.True(have.Satisfies(need));
@@ -47,7 +47,7 @@ public class CompositeTraitTests
         var a = new SortKey("a");
         var b = new SortKey("b");
 
-        var multi = OpTraitSet.CreateEmpty().Replace(SortKeyTraitDef.Instance, new[] { a, b });
+        var multi = OpTraitSet.CreateEmpty().Plus(SortKeyTraitDef.Instance.Default).Replace(SortKeyTraitDef.Instance, new[] { a, b });
         Assert.False(multi.AllSimple());
 
         // A many-member composite collapses to the dimension's default; the set is then all-simple.
@@ -56,7 +56,7 @@ public class CompositeTraitTests
         Assert.Equal(SortKeyTraitDef.Instance.Default, simplified.Get(SortKeyTraitDef.Instance));
 
         // A single-member composite is stored as a plain trait, so it is simple already.
-        var single = OpTraitSet.CreateEmpty().Replace(SortKeyTraitDef.Instance, new[] { a });
+        var single = OpTraitSet.CreateEmpty().Plus(SortKeyTraitDef.Instance.Default).Replace(SortKeyTraitDef.Instance, new[] { a });
         Assert.True(single.AllSimple());
     }
 
