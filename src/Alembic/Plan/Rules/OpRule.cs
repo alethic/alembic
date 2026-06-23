@@ -161,6 +161,30 @@ public abstract class OpRule
         return new OpRuleOperand(typeof(TOp), trait, RuleOperandChildPolicy.Any);
     }
 
+    /// <summary>
+    /// Converts <paramref name="rel"/> so it carries <paramref name="toTrait"/> (e.g. a target
+    /// convention), returning <paramref name="rel"/> unchanged when it already matches. This is how a rule
+    /// asks the planner for an input in a particular trait before building an op over it.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "convert(RelNode, RelTrait)")]
+    public static IOp Convert(IOp rel, IOpTrait? toTrait)
+    {
+        return Convert(rel.Cluster.Planner, rel, toTrait);
+    }
+
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "convert(RelOptPlanner, RelNode, RelTrait)")]
+    public static IOp Convert(IOpPlanner planner, IOp rel, IOpTrait? toTrait)
+    {
+        var outTraits = rel.Traits;
+        if (toTrait is not null)
+            outTraits = outTraits.Replace(toTrait);
+
+        if (rel.Traits.Matches(outTraits))
+            return rel;
+
+        return planner.ChangeTraits(rel, outTraits.Simplify());
+    }
+
     // ~ Operand flattening -----------------------------------------------------
 
     /// <summary>

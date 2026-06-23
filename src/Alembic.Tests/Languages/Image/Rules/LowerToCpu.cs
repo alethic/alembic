@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 using Alembic.Algebra;
 using Alembic.Plan;
 using Alembic.Plan.Rules;
@@ -20,7 +22,12 @@ sealed class LowerToCpu : ConverterRule
 
     public override IOp? Convert(IOp op)
     {
-        return op.Copy(op.Traits.Replace(ConventionTraitDef.Instance, ImageConventions.Cpu), op.Children);
+        // Each input must also be in (lowered to) the CPU convention before this op can consume it.
+        var lowered = ImmutableArray.CreateBuilder<IOp>(op.Children.Length);
+        foreach (var child in op.Children)
+            lowered.Add(Convert(child, ImageConventions.Cpu));
+
+        return op.Copy(op.Traits.Replace(ConventionTraitDef.Instance, ImageConventions.Cpu), lowered.MoveToImmutable());
     }
 
 }

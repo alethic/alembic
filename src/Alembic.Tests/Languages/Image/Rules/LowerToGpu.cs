@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 using Alembic.Algebra;
 using Alembic.Plan;
 using Alembic.Plan.Rules;
@@ -24,7 +26,12 @@ sealed class LowerToGpu : ConverterRule
         if (op is IImageOperation image && !image.SupportsGpu)
             return null;
 
-        return op.Copy(op.Traits.Replace(ConventionTraitDef.Instance, ImageConventions.Gpu), op.Children);
+        // Each input must also be in (lowered to) the GPU convention before this op can consume it.
+        var lowered = ImmutableArray.CreateBuilder<IOp>(op.Children.Length);
+        foreach (var child in op.Children)
+            lowered.Add(Convert(child, ImageConventions.Gpu));
+
+        return op.Copy(op.Traits.Replace(ConventionTraitDef.Instance, ImageConventions.Gpu), lowered.MoveToImmutable());
     }
 
 }

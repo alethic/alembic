@@ -26,7 +26,7 @@ sealed class FilterConverter : ConverterRule
     public override IOp? Convert(IOp op)
     {
         if (op is LogicalFilter filter)
-            return new PhysicalFilter(_physical, filter.Input, filter.Predicate);
+            return new PhysicalFilter(_physical, Convert(filter.Input, Target), filter.Predicate);
 
         return null;
     }

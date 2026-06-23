@@ -26,7 +26,7 @@ sealed class MultiplyConverter : ConverterRule
     public override IOp? Convert(IOp op)
     {
         if (op is Multiply multiply)
-            return new PhysicalMultiply(_physical, multiply.Left, multiply.Right);
+            return new PhysicalMultiply(_physical, Convert(multiply.Left, Target), Convert(multiply.Right, Target));
 
         return null;
     }

@@ -312,10 +312,8 @@ public class VolcanoPlanner : AbstractOpPlanner
         if (op is not IConverter && !op.Convention.Interface.IsInstanceOfType(op))
             throw new InvalidOperationException($"Op '{op.GetType().Name}' is not an instance of the '{op.Convention.Interface.Name}' interface required by convention '{op.Convention}'.");
 
-        // Make sure the children are registered first, replacing each with its subset (onRegister), then
-        // lower each input into this op's convention (Alembic-original; Calcite does this per-rule).
+        // Make sure the children are registered first, replacing each with its subset.
         op = op.OnRegister(this);
-        op = CoerceInputConventions(op);
 
         // If an equivalent expression already exists, join its set (and carry over its pruned state).
         if (_digestToOp.TryGetValue(op.GetDigest(), out var equiv))
@@ -391,41 +389,6 @@ public class VolcanoPlanner : AbstractOpPlanner
             Merge(set, subset.Set);
 
         return Canonize(subset);
-    }
-
-    // Alembic-original: an op requires its inputs in its own convention, so re-point each (already
-    // registered) input subset to a subset of its set that carries this op's convention. Calcite instead
-    // has each physical rule call convert() on its inputs before constructing the op, so its onRegister
-    // needs no coercion; Alembic centralizes that lowering here. The re-pointed (required) subset is what
-    // drives OpSet.AddConverters to seed the converters/enforcers that bridge the conventions; the
-    // lowering propagates down the tree. The root, having no consumer, is handled separately by the
-    // abstract converters in EnsureRootConverters; a converter is exempt, as it exists to bridge.
-    IOp CoerceInputConventions(IOp op)
-    {
-        if (op is IConverter || op.Children.IsEmpty)
-            return op;
-
-        var convention = op.Traits.Convention;
-        var children = ImmutableArray.CreateBuilder<IOp>(op.Children.Length);
-        var changed = false;
-        foreach (var child in op.Children)
-        {
-            var childSubset = (OpSubset)child;
-            if (!childSubset.Traits.Convention.Equals(convention))
-            {
-                childSubset = childSubset.Set.GetOrCreateSubset(childSubset.Cluster, childSubset.Traits.Replace(ConventionTraitDef.Instance, convention));
-                changed = true;
-            }
-
-            children.Add(childSubset);
-        }
-
-        if (!changed)
-            return op;
-
-        var coerced = op.Copy(op.Traits, children.MoveToImmutable());
-        coerced.RecomputeDigest();
-        return coerced;
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "addRelToSet(RelNode, RelSet)")]
@@ -646,8 +609,8 @@ public class VolcanoPlanner : AbstractOpPlanner
     /// <summary>
     /// Puts an <see cref="AbstractConverter"/> into the root's set for each subset that differs from the
     /// requested root traits by exactly one trait and does not already have a converter. The root is the
-    /// only place explicit converters are needed — everywhere else a parent has already asked for its
-    /// inputs' convention (see <see cref="CoerceInputConventions"/>). <see cref="ExpandConversionRule"/>
+    /// only place explicit converters are needed — everywhere else a parent (rule) has already asked for
+    /// its inputs' convention via <see cref="OpRule.Convert(IOp, IOpTrait)"/>. <see cref="ExpandConversionRule"/>
     /// then turns each one into a real conversion.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "ensureRootConverters()")]

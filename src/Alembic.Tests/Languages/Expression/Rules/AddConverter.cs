@@ -26,7 +26,7 @@ sealed class AddConverter : ConverterRule
     public override IOp? Convert(IOp op)
     {
         if (op is Add add)
-            return new PhysicalAdd(_physical, add.Left, add.Right);
+            return new PhysicalAdd(_physical, Convert(add.Left, Target), Convert(add.Right, Target));
 
         return null;
     }
