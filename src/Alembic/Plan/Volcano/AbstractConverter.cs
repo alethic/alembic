@@ -12,7 +12,7 @@ namespace Alembic.Plan.Volcano;
 /// planner reaches a required output convention.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter")]
-public sealed class AbstractConverter : ConverterImpl
+public class AbstractConverter : ConverterImpl
 {
 
     /// <summary>

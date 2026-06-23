@@ -20,7 +20,7 @@ namespace Alembic.Plan.Volcano;
 /// <see cref="TopDownRuleDriver"/> (Cascades), selected with <see cref="SetTopDownOpt"/>.
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner")]
-public sealed class VolcanoPlanner : AbstractOpPlanner
+public class VolcanoPlanner : AbstractOpPlanner
 {
 
     readonly List<OpSet> _allSets = new List<OpSet>();
