@@ -8,7 +8,7 @@ Alembic descends from the query-optimizer lineage (Volcano → Cascades, and Apa
 but it is **medium-agnostic**: it keeps the optimizer *ideas* and throws away everything specific to
 relational algebra and SQL. Wherever this document says "plan," "op," or "operation," it means *your*
 domain — image pipelines, tensor graphs, build steps, query trees, anything that can be expressed as a
-tree of immutable operations.
+tree of operations.
 
 ---
 
@@ -41,16 +41,18 @@ The canonical end-to-end shape:
 A plan is a tree (more precisely, a DAG during planning) of **ops**. The op contract is `IOp`:
 
 - `Traits` — the op's physical properties (see §4).
-- `Children` — its inputs, in order (an immutable array).
-- `Copy(traits, children)` — produce a new op like this one but with different traits/children. This
-  is how the engine rebuilds the tree; **ops are immutable**, so rewriting never mutates in place.
+- `Children` — its inputs, in order.
+- `Copy(traits, children)` — produce a new op like this one but with different traits/children; how a
+  rule rewrites a subtree.
+- `ReplaceInput(ordinal, op)` — replace one input in place; the planner uses this during registration
+  as a child's equivalence set merges, mirroring Calcite's `RelNode`.
 - `DeepEquals` / `DeepHashCode` — **structural identity** (see §3).
-- DIMs (default interface methods) for convenience: `Convention`, `IsLeaf`, `WithChild`,
-  `ComputeSelfCost`, `GetDigest`.
+- DIMs (default interface methods) for convenience: `Convention`, `ComputeSelfCost`, `GetDigest`.
 
-**Why immutable?** Immutability is what makes structural sharing, interning, and copy-on-write sound.
-When the planner rewrites one part of a tree, every untouched subtree is shared by reference, and the
-same subexpression appearing in many places is one object. Mutation would make all of that unsafe.
+**Mutability.** Ops follow Calcite's `RelNode`. A rule rewrites by producing new ops via `Copy`, so an
+untouched subtree is shared by reference and a subexpression appearing in many places stays one object;
+but the planner itself re-points an op's inputs in place via `ReplaceInput` as equivalence sets merge.
+(Whether to restore full immutability is an open question, revisited once the Calcite port is complete.)
 
 `AbstractOp` is an optional convenience base (most op types use it). It derives `DeepEquals` /
 `DeepHashCode` from an op's **explain terms** (§3) and keeps a cached digest. `SingleOp` (one child)

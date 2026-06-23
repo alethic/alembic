@@ -10,13 +10,13 @@ operations. It is not a query engine and assumes no query language; it is the pl
 own.
 
 The design distills ideas from the planner of [Apache Calcite](https://calcite.apache.org/) —
-immutable ops, physical *traits*, *conventions*, pattern-matching *rules*, and a *planner* — but
+ops, physical *traits*, *conventions*, pattern-matching *rules*, and a *planner* — but
 strips away the relational algebra so the same machinery can be applied to any domain.
 
 ## What it gives you
 
-- **An op model.** Immutable ops with a small, generic contract. The planner rewrites by
-  producing new trees and sharing the subtrees it does not touch.
+- **An op model.** Ops with a small, generic contract. The planner rewrites by producing new ops
+  and reusing the subtrees it does not touch.
 - **Traits and conventions.** Interned, low-overhead physical properties carried by each op. A
   *convention* marks the family an op belongs to — for example a logical form versus a particular
   execution backend.
