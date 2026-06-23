@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 using Alembic.Algebra;
@@ -55,7 +54,7 @@ public class ConventionTraitDef : OpTraitDef<IConvention>
         conversionData.ConversionGraph.AddVertex(inConvention);
         conversionData.ConversionGraph.AddVertex(outConvention);
         conversionData.ConversionGraph.AddEdge(inConvention, outConvention);
-        conversionData.AddArc(inConvention, outConvention, converterRule);
+        conversionData.MapArcToConverterRule.Put(Pair.Of(inConvention, outConvention), converterRule);
     }
 
     /// <inheritdoc />
@@ -69,7 +68,7 @@ public class ConventionTraitDef : OpTraitDef<IConvention>
         var inConvention = (IConvention)converterRule.Source;
         var outConvention = (IConvention)converterRule.Target;
         conversionData.ConversionGraph.RemoveEdge(inConvention, outConvention);
-        conversionData.RemoveArc(inConvention, outConvention, converterRule);
+        conversionData.MapArcToConverterRule.Remove(Pair.Of(inConvention, outConvention), converterRule);
     }
 
     /// <inheritdoc />
@@ -122,7 +121,7 @@ public class ConventionTraitDef : OpTraitDef<IConvention>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.ConventionTraitDef", "changeConvention(RelNode, Convention, Convention, Multimap)")]
     static IOp? ChangeConvention(IOp rel, IConvention source, IConvention target, ConversionData conversionData)
     {
-        foreach (var rule in conversionData.GetArcRules(source, target))
+        foreach (var rule in conversionData.MapArcToConverterRule.Get(Pair.Of(source, target)))
         {
             var converted = rule.Convert(rel);
             if (converted is not null)
@@ -157,27 +156,9 @@ public class ConventionTraitDef : OpTraitDef<IConvention>
         internal readonly DefaultDirectedGraph<IConvention, DefaultEdge> ConversionGraph = DefaultDirectedGraph<IConvention, DefaultEdge>.Create();
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.ConventionTraitDef.ConversionData", "mapArcToConverterRule")]
-        readonly Dictionary<Pair<IConvention, IConvention>, List<ConverterRule>> _mapArcToConverterRule = new Dictionary<Pair<IConvention, IConvention>, List<ConverterRule>>();
+        internal readonly Multimap<Pair<IConvention, IConvention>, ConverterRule> MapArcToConverterRule = new Multimap<Pair<IConvention, IConvention>, ConverterRule>();
 
         Graphs.FrozenGraph<IConvention, DefaultEdge>? _pathMap;
-
-        public void AddArc(IConvention from, IConvention to, ConverterRule rule)
-        {
-            var key = Pair.Of(from, to);
-            if (!_mapArcToConverterRule.TryGetValue(key, out var rules))
-                _mapArcToConverterRule[key] = rules = new List<ConverterRule>();
-
-            rules.Add(rule);
-        }
-
-        public void RemoveArc(IConvention from, IConvention to, ConverterRule rule)
-        {
-            if (_mapArcToConverterRule.TryGetValue(Pair.Of(from, to), out var rules))
-                rules.Remove(rule);
-        }
-
-        public IEnumerable<ConverterRule> GetArcRules(IConvention from, IConvention to)
-            => _mapArcToConverterRule.TryGetValue(Pair.Of(from, to), out var rules) ? rules : Enumerable.Empty<ConverterRule>();
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.ConventionTraitDef.ConversionData", "getPaths(Convention, Convention)")]
         public List<List<IConvention>> GetPaths(IConvention from, IConvention to) => GetPathMap().GetPaths(from, to);
