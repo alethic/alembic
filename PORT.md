@@ -254,7 +254,7 @@ Three themes recur across the Volcano findings below and are worth fixing as uni
 | Member | Verdict | Note |
 |---|---|---|
 | `onRegister` | **RESOLVED (ported)** | extracted onto `IOp.OnRegister` / `AbstractOp.OnRegister` as a faithful port of `AbstractRelNode.onRegister`: register each input via `planner.EnsureRegistered` (promoted to the `IOpPlanner` interface, as Calcite's `RelOptPlanner.ensureRegistered`; `HepPlanner.EnsureRegistered` returns the op unchanged, as Calcite's does), copy if any input changed, recompute the digest — and **no** convention coercion, exactly as Calcite. The earlier fused central coercion was removed; instead each rule lowers its own inputs via `OpRule.Convert` (the port of `RelOptRule.convert`) before building an op over them, as a Calcite rule author does. |
-| `DigestWriter.Done` input rendering | DIVERGENT-OK (cosmetic) | Calcite renders inputs as `typeName#id`; Alembic renders `typeName` only (no id). Affects the *display* digest string for same-type siblings, but dedup uses `DeepEquals` (recurses actual ops), so correctness is unaffected. |
+| `DigestWriter.Done` input rendering | **RESOLVED (ported)** | now renders inputs as `typeName#id` (using the ported `IOp.Id`) and joins terms with `,` — matching Calcite's `done()` exactly. |
 | `deepHashCode` seed | DIVERGENT-OK | Alembic folds type + term names too (Calcite folds values only) — stronger, consistent with its `DeepEquals`. |
 | `computeSelfCost` default | DIVERGENT-OK | tiny constant vs Calcite's row-count-based default (METADATA). |
 

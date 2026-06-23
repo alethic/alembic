@@ -268,9 +268,12 @@ public abstract class AbstractOp : IOp
             sb.Append(op.GetType().Name).Append('.').Append(op.Traits).Append('(');
             for (int i = 0; i < Items.Count; i++)
             {
-                if (i > 0) sb.Append(", ");
+                if (i > 0) sb.Append(',');
                 sb.Append(Items[i].Name).Append('=');
-                sb.Append(Items[i].Value is IOp input ? input.GetType().Name : Items[i].Value);
+                if (Items[i].Value is IOp input)
+                    sb.Append(input.GetType().Name).Append('#').Append(input.Id);
+                else
+                    sb.Append(Items[i].Value);
             }
 
             sb.Append(')');
