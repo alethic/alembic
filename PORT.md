@@ -21,7 +21,7 @@ Whole subsystems Alembic does not implement, by design or as future work:
 
 | Calcite | Status |
 |---|---|
-| `IterativeRuleQueue` importance ranking (`IterativeRuleQueue` is FIFO) | **future** |
+| ~~`IterativeRuleQueue` importance ranking~~ | **n/a (stale)** — modern Calcite's `IterativeRuleQueue` is FIFO (the importance/phase ranking was removed from Calcite long ago); Alembic matches it. See §2. |
 | `RelMetadataQuery` / metadata providers / `VolcanoRelMetadataProvider` / `HepRelMetadataProvider` | **future** — costs come only from `ComputeSelfCost`; in particular the top-down driver's lower-bound pruning is disabled (`GetLowerBound` returns zero) pending `getLowerBoundCost` |
 | `RelSubset` `passThrough`/`derive` *trait-derivation logic* | **done** — covered by `CascadesTests`: `PassThrough`/`Derive` composition unit tests, an end-to-end top-down pass-through (a filter pushes a sortedness requirement down to its source), and an end-to-end bottom-up derive (a filter derives a sorted equivalent from a source that independently offers a sorted scan) |
 | `RelBuilder` and the relational operator library | **out of scope** — medium-agnostic engine |
@@ -131,7 +131,7 @@ Three themes recur across the Volcano findings below and are worth fixing as uni
 | Class · member | Verdict | Note |
 |---|---|---|
 | `RuleQueue.skipMatch` (+ iterative `popMatch`) | **RESOLVED (ported)** | `SkipMatch` now skips a match when any bound op is pruned, or when the same subset repeats along a root-to-leaf operand path (a cycle — an op consuming its own output, via `HasDuplicateSubsetOnPath`). `IterativeRuleQueue.PopMatch` now loops, dropping skipped matches (`TopDownRuleQueue` already called it). |
-| `IterativeRuleQueue` phase/importance ranking, `MatchList` | DIVERGENT-OK | FIFO + `_seen` replaces the phase/substitution-priority queue — intentional simplification. |
+| `IterativeRuleQueue` `MatchList` | **RESOLVED (ported)** | modern Calcite's `IterativeRuleQueue` is plain FIFO (no importance/phase ranking — that was removed from Calcite). `MatchList` is now ported faithfully: the FIFO `Queue`, the `PreQueue` that gives substitution rules priority (routed by `IsSubstituteRule`, currently always false — Alembic ships no substitution rules), and the dedup set. Two deliberate adaptations: dedup is by match identity rather than a `match.toString()` name string (Alembic doesn't port `RelNode.getId()` to build the string), and the `matchMap` is omitted (it is put/removed but never read in Calcite — vestigial). |
 | `RuleQueue.clear()` `boolean`→`void` | DIVERGENT-OK | the "was non-empty" signal is dropped consistently; verify no caller needed it. |
 | `IterativeRuleDriver.drive` post-match `canonize()` | **RESOLVED (ported)** | added the no-arg `VolcanoPlanner.Canonize()` (`_root = Canonize(_root)`, Calcite's `canonize()`); `Drive` reshaped to Calcite's `while(true)` loop and calls `_planner.Canonize()` after each `OnMatch()`, re-finding the root subset when a merge moves it. |
 
