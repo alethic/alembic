@@ -65,8 +65,13 @@ internal class IterativeRuleQueue : RuleQueue
     }
 
     /// <inheritdoc />
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue", "clear()")]
-    public override void Clear() => _matchList.Clear();
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue", "clear()")]
+    public override bool Clear()
+    {
+        bool empty = _matchList.Queue.Count == 0 && _matchList.PreQueue.Count == 0;
+        _matchList.Clear();
+        return !empty;
+    }
 
     /// <summary>
     /// A set of waiting rule-matches: the main FIFO <see cref="Queue"/>, the <see cref="PreQueue"/> that

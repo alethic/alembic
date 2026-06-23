@@ -100,7 +100,7 @@ public abstract class OpRule
     /// <summary>
     /// An operand matching an op of type <typeparamref name="TOp"/> regardless of its children.
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "any()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "operand(Class, RelOptRuleOperandChildren)")]
     protected static OpRuleOperand Any<TOp>()
         where TOp : IOp
     {
@@ -111,7 +111,7 @@ public abstract class OpRule
     /// An operand matching an op of type <typeparamref name="TOp"/> that also satisfies a predicate,
     /// regardless of its children.
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "any()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "operandJ(Class, RelTrait, Predicate, RelOptRuleOperandChildren)")]
     protected static OpRuleOperand Any<TOp>(Func<IOp, bool> predicate)
         where TOp : IOp
     {
@@ -121,7 +121,7 @@ public abstract class OpRule
     /// <summary>
     /// An operand matching a leaf op of type <typeparamref name="TOp"/> (one with no children).
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "none()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "operand(Class, RelOptRuleOperandChildren)")]
     protected static OpRuleOperand Leaf<TOp>()
         where TOp : IOp
     {
@@ -158,7 +158,7 @@ public abstract class OpRule
     protected static OpRuleOperand ConvertOperand<TOp>(IOpTrait trait)
         where TOp : IOp
     {
-        return new OpRuleOperand(typeof(TOp), trait, RuleOperandChildPolicy.Any);
+        return new OpRuleOperand(typeof(TOp), trait, RuleOperandChildPolicy.Any) { IsConverterOperand = true };
     }
 
     /// <summary>

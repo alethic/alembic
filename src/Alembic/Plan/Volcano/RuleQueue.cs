@@ -37,10 +37,10 @@ public abstract class RuleQueue
     internal abstract void AddMatch(VolcanoRuleMatch match);
 
     /// <summary>
-    /// Empties the queue.
+    /// Empties the queue, returning whether it held any matches beforehand.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue", "clear()")]
-    public abstract void Clear();
+    public abstract bool Clear();
 
     /// <summary>
     /// Whether a queued match should be skipped: when any of its bound ops has been pruned, or when the

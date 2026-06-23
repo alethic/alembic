@@ -84,10 +84,12 @@ internal class TopDownRuleQueue : RuleQueue
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue", "clear()")]
-    public override void Clear()
+    public override bool Clear()
     {
+        bool empty = _matches.Count == 0;
         _matches.Clear();
         _names.Clear();
+        return !empty;
     }
 
 }

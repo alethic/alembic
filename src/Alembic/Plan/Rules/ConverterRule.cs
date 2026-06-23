@@ -61,9 +61,13 @@ public abstract class ConverterRule : OpRule
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "onMatch(RelOptRuleCall)")]
     public override void OnMatch(OpRuleCall call)
     {
-        var converted = Convert(call.Op(0));
-        if (converted is not null)
-            call.TransformTo(converted);
+        var op = call.Op(0);
+        if (op.Traits.Contains(Source))
+        {
+            var converted = Convert(op);
+            if (converted is not null)
+                call.TransformTo(converted);
+        }
     }
 
 }

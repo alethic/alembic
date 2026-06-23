@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Linq;
 
 using Alembic.Algebra;
+using Alembic.Algebra.Convert;
 
 namespace Alembic.Plan.Rules;
 
@@ -152,6 +153,10 @@ public sealed class OpRuleOperand
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "predicate")]
     internal readonly Func<IOp, bool> Predicate;
 
+    // Set by ConvertOperand: this operand carries the converter-on-converter guard that
+    // Calcite's ConverterRelOptRuleOperand.matches applies (so we don't get an n^2 effect).
+    internal bool IsConverterOperand { get; init; }
+
     /// <summary>
     /// How this operand treats the op's children.
     /// </summary>
@@ -172,6 +177,12 @@ public sealed class OpRuleOperand
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "matches(RelNode)")]
     public bool Matches(IOp op)
     {
+        // Don't apply a converter rule to a converter that operates on the same trait dimension —
+        // otherwise we get an n^2 effect (Calcite's ConverterRelOptRuleOperand.matches).
+        if (IsConverterOperand && op is IConverter converter && Rule is ConverterRule rule
+            && ReferenceEquals(rule.TraitDef, converter.TraitDef))
+            return false;
+
         if (!MatchedClass.IsInstanceOfType(op))
             return false;
 
