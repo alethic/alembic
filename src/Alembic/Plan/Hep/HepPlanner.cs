@@ -87,6 +87,7 @@ public sealed class HepPlanner : AbstractOpPlanner
     public bool LargePlanMode
     {
         get => _largePlanMode;
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "setLargePlanMode(boolean)")]
         set => _largePlanMode = value;
     }
 

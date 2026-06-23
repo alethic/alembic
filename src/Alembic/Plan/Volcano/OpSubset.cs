@@ -61,7 +61,7 @@ public sealed class OpSubset : AbstractOp
     /// The cost of <see cref="Best"/> (infinite until a member is costed).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "bestCost")]
-    public IOpCost BestCost { get; internal set; }
+    internal IOpCost BestCost;
 
     /// <summary>
     /// Adds <paramref name="op"/> as an equivalent expression in this subset's set: notifies listeners
@@ -84,13 +84,13 @@ public sealed class OpSubset : AbstractOp
     /// This subset's optimization task state, or <c>null</c> if it has not been optimized.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "taskState")]
-    internal OptimizeState? TaskState { get; private set; }
+    internal OptimizeState? TaskState;
 
     /// <summary>
     /// The upper bound from the last optimize call (a winner must cost no more than this).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "upperBound")]
-    internal IOpCost UpperBound { get; set; }
+    internal IOpCost UpperBound = null!;
 
     bool _delivered;
     bool _required;
@@ -100,7 +100,7 @@ public sealed class OpSubset : AbstractOp
     /// Whether this subset should trigger rules now that it has become delivered.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "triggerRule")]
-    internal bool TriggerRule { get; set; }
+    internal bool TriggerRule;
 
     HashSet<IOp>? _passThroughCache;
 

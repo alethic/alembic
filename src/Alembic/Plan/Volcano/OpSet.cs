@@ -31,7 +31,7 @@ public sealed class OpSet
     /// This set's stable identity.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "id")]
-    public int Id { get; }
+    internal readonly int Id;
 
     /// <summary>
     /// The cluster the set's ops belong to.
@@ -42,25 +42,25 @@ public sealed class OpSet
     /// Every op in the set (across all subsets).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "rels")]
-    public List<IOp> Ops { get; } = new List<IOp>();
+    internal readonly List<IOp> Ops = new List<IOp>();
 
     /// <summary>
     /// The subsets of this set, one per distinct trait set.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "subsets")]
-    public List<OpSubset> Subsets { get; } = new List<OpSubset>();
+    internal readonly List<OpSubset> Subsets = new List<OpSubset>();
 
     /// <summary>
     /// Ops (in other sets) that reference a subset of this set as a child.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "parents")]
-    public List<IOp> Parents { get; } = new List<IOp>();
+    internal readonly List<IOp> Parents = new List<IOp>();
 
     /// <summary>
     /// Set when this set is merged into another; the live set is reached by following the chain.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "equivalentSet")]
-    public OpSet? EquivalentSet { get; internal set; }
+    internal OpSet? EquivalentSet;
 
     /// <summary>
     /// How far the top-down search has explored this set (applied transformation rules to its members).
@@ -87,14 +87,14 @@ public sealed class OpSet
     /// This set's exploration state, or <c>null</c> if exploration has not started.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "exploringState")]
-    internal ExploringState? Exploring { get; set; }
+    internal ExploringState? Exploring;
 
     /// <summary>
     /// The first op registered in this set — its representative expression, used as a fallback when a
     /// subset has no best member yet.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "rel")]
-    public IOp? Rel { get; private set; }
+    internal IOp? Rel;
 
     /// <summary>
     /// The subset with exactly the given traits, or <c>null</c>.
