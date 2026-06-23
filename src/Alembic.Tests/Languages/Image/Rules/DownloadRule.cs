@@ -17,6 +17,8 @@ sealed class DownloadRule : ConverterRule
 
     }
 
+    public override bool IsGuaranteed => true;
+
     public override INode? Convert(INode node)
     {
         if (node is Upload)

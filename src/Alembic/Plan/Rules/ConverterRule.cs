@@ -9,12 +9,14 @@ namespace Alembic.Plan.Rules;
 /// the match action are provided here. <see cref="Convert"/> returns the converted node, or null to
 /// decline (when it does not handle this node's kind).
 /// </summary>
+[Provenance("org.apache.calcite.rel.convert.ConverterRule")]
 public abstract class ConverterRule : Rule
 {
 
     /// <summary>
     /// Initializes the rule with the traits it converts between.
     /// </summary>
+    [Provenance("org.apache.calcite.rel.convert.ConverterRule", "ConverterRule(Class<? extends RelNode>, RelTrait, RelTrait, String)")]
     protected ConverterRule(ITrait source, ITrait target)
         : base(ConvertOperand<INode>(source))
     {
@@ -25,26 +27,38 @@ public abstract class ConverterRule : Rule
     /// <summary>
     /// The trait this rule converts from.
     /// </summary>
+    [Provenance("org.apache.calcite.rel.convert.ConverterRule", "getInTrait()")]
     public ITrait Source { get; }
 
     /// <summary>
     /// The trait this rule converts to.
     /// </summary>
+    [Provenance("org.apache.calcite.rel.convert.ConverterRule", "getOutTrait()")]
     public ITrait Target { get; }
 
     /// <summary>
-    /// Whether this converter always produces its <see cref="Target"/> (most do). A non-guaranteed
-    /// converter is applied bottom-up, via a <see cref="TraitMatchingRule"/>, only where its input is
-    /// already in the target form.
+    /// The trait dimension this rule converts on (the dimension of <see cref="Source"/> and
+    /// <see cref="Target"/>, which share it).
     /// </summary>
-    public virtual bool IsGuaranteed => true;
+    [Provenance("org.apache.calcite.rel.convert.ConverterRule", "getTraitDef()")]
+    public TraitDef TraitDef => Source.TraitDef;
+
+    /// <summary>
+    /// Whether this converter always produces its <see cref="Target"/>. A non-guaranteed converter (the
+    /// default) is applied bottom-up, via a <see cref="TraitMatchingRule"/>, only where its input is
+    /// already in the target form; a converter that always succeeds overrides this to <c>true</c>.
+    /// </summary>
+    [Provenance("org.apache.calcite.rel.convert.ConverterRule", "isGuaranteed()")]
+    public virtual bool IsGuaranteed => false;
 
     /// <summary>
     /// Converts the node from <see cref="Source"/> to <see cref="Target"/>, or returns null to decline.
     /// </summary>
+    [Provenance("org.apache.calcite.rel.convert.ConverterRule", "convert(RelNode)")]
     public abstract INode? Convert(INode node);
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.rel.convert.ConverterRule", "onMatch(RelOptRuleCall)")]
     public override void OnMatch(RuleCall call)
     {
         var converted = Convert(call.Node(0));

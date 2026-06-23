@@ -5,6 +5,7 @@ namespace Alembic.Algebra;
 /// and hashing to the node's <see cref="INode.DeepEquals"/> / <see cref="INode.DeepHashCode"/>, caching
 /// the hash. <see cref="AbstractNode"/> keeps a richer one that can render the digest string.
 /// </summary>
+[Provenance("org.apache.calcite.plan.RelDigest")]
 public sealed class NodeDigest : INodeDigest
 {
 
@@ -19,18 +20,22 @@ public sealed class NodeDigest : INodeDigest
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelDigest", "getRel()")]
     public INode Node { get; }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelDigest", "clear()")]
     public void Clear() => _hash = 0;
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelDigest", "equals(Object)")]
     public override bool Equals(object? obj)
     {
         return obj is INodeDigest other && Node.DeepEquals(other.Node);
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelDigest", "hashCode()")]
     public override int GetHashCode()
     {
         if (_hash == 0)

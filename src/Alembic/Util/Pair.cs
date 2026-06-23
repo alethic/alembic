@@ -9,12 +9,14 @@ namespace Alembic.Util;
 /// </summary>
 /// <typeparam name="T1">The left value's type.</typeparam>
 /// <typeparam name="T2">The right value's type.</typeparam>
+[Provenance("org.apache.calcite.util.Pair")]
 public class Pair<T1, T2> : IEquatable<Pair<T1, T2>>
 {
 
     /// <summary>
     /// Creates a pair.
     /// </summary>
+    [Provenance("org.apache.calcite.util.Pair", "Pair(T1, T2)")]
     public Pair(T1 left, T2 right)
     {
         Left = left;
@@ -24,14 +26,17 @@ public class Pair<T1, T2> : IEquatable<Pair<T1, T2>>
     /// <summary>
     /// The left value.
     /// </summary>
+    [Provenance("org.apache.calcite.util.Pair", "left")]
     public T1 Left { get; }
 
     /// <summary>
     /// The right value.
     /// </summary>
+    [Provenance("org.apache.calcite.util.Pair", "right")]
     public T2 Right { get; }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.util.Pair", "equals(Object)")]
     public bool Equals(Pair<T1, T2>? other)
     {
         return other is not null
@@ -40,9 +45,11 @@ public class Pair<T1, T2> : IEquatable<Pair<T1, T2>>
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.util.Pair", "equals(Object)")]
     public override bool Equals(object? obj) => Equals(obj as Pair<T1, T2>);
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.util.Pair", "hashCode()")]
     public override int GetHashCode()
     {
         int leftHash = Left is null ? 0 : Left.GetHashCode();
@@ -51,6 +58,7 @@ public class Pair<T1, T2> : IEquatable<Pair<T1, T2>>
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.util.Pair", "toString()")]
     public override string ToString() => "<" + Left + ", " + Right + ">";
 
 }
@@ -65,6 +73,7 @@ public static class Pair
     /// <summary>
     /// Creates a pair, inferring the member types.
     /// </summary>
+    [Provenance("org.apache.calcite.util.Pair", "of(T1, T2)")]
     public static Pair<T1, T2> Of<T1, T2>(T1 left, T2 right) => new Pair<T1, T2>(left, right);
 
 }

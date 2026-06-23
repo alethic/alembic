@@ -77,10 +77,11 @@ src/Alembic/
     Cost.cs             concrete scalar cost + factory (the RelOptCostImpl analog)
     ITrait.cs           Def; DIM Satisfies; DIM Register(planner) — the RelTrait.register analog
     IMultipleTrait.cs   a trait a node can have several of at once (RelMultipleTrait analog)
-    CompositeTrait.cs   a trait that bundles several same-dimension traits (RelCompositeTrait analog)
+    CompositeTrait.cs   a trait that bundles several same-dimension traits (RelCompositeTrait analog):
+                        abstract CompositeTrait (non-generic base) + sealed CompositeTrait<T>
     INodeImplementor.cs marker for a convention's plan-implementation callback (RelImplementor analog)
-    ITraitDef.cs        Name, Default (registered on the planner)
-    TraitDef.cs         abstract TraitDef<TTrait> : ITraitDef
+    TraitDef.cs         abstract TraitDef (non-generic base) + abstract TraitDef<TTrait> : TraitDef;
+                        Name, Default (registered on the planner) — the RelTraitDef analog
     IConvention.cs      the Convention interface: Name, Interface (getInterface), CanConvertConvention,
                         UseAbstractConvertersForConversion, Enforce — the Convention (interface) analog
     Convention.cs       the default IConvention impl (Convention.Impl analog): equal by name, unsealed,

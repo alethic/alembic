@@ -7,6 +7,7 @@ namespace Alembic.Plan.Volcano;
 /// Replaces an <see cref="AbstractConverter"/> with a real conversion built from the registered
 /// converter rules. A <see cref="VolcanoPlanner"/> registers one of these automatically.
 /// </summary>
+[Provenance("org.apache.calcite.plan.volcano.AbstractConverter.ExpandConversionRule")]
 public sealed class ExpandConversionRule : Rule
 {
 
@@ -17,6 +18,7 @@ public sealed class ExpandConversionRule : Rule
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.volcano.AbstractConverter.ExpandConversionRule", "onMatch(RelOptRuleCall)")]
     public override void OnMatch(RuleCall call)
     {
         var converter = (AbstractConverter)call.Node(0);

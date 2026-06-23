@@ -6,9 +6,9 @@ namespace Alembic.Algebra;
 /// <summary>
 /// The default <see cref="INodeWriter"/>: renders a node and its inputs as an indented plan tree. Each
 /// node contributes its terms (via <see cref="INode.Explain"/>); <see cref="Done"/> emits the node's line
-/// — its type, traits, and attributes — and then recurses into its inputs, one indent level deeper. The
-/// analog of Calcite's <c>RelWriterImpl</c>.
+/// — its type, traits, and attributes — and then recurses into its inputs, one indent level deeper.
 /// </summary>
+[Provenance("org.apache.calcite.rel.externalize.RelWriterImpl")]
 public sealed class NodeWriterImpl : INodeWriter
 {
 
@@ -19,12 +19,14 @@ public sealed class NodeWriterImpl : INodeWriter
     /// <summary>
     /// Creates a writer that appends to <paramref name="builder"/>.
     /// </summary>
+    [Provenance("org.apache.calcite.rel.externalize.RelWriterImpl", "RelWriterImpl(PrintWriter)")]
     public NodeWriterImpl(StringBuilder builder)
     {
         _builder = builder;
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.rel.externalize.RelWriterImpl", "item(String, Object)")]
     public INodeWriter Item(string name, object? value)
     {
         _values.Add((name, value));
@@ -32,6 +34,7 @@ public sealed class NodeWriterImpl : INodeWriter
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.rel.externalize.RelWriterImpl", "done(RelNode)")]
     public INodeWriter Done(INode node)
     {
         var values = _values.ToArray();
@@ -40,6 +43,7 @@ public sealed class NodeWriterImpl : INodeWriter
         return this;
     }
 
+    [Provenance("org.apache.calcite.rel.externalize.RelWriterImpl", "explain_(RelNode, List<Pair<String, Object>>)")]
     void Explain(INode node, (string Name, object? Value)[] values)
     {
         _builder.Append(' ', _spaces);

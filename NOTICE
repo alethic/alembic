@@ -1,0 +1,20 @@
+Alembic
+Copyright © 2026 Jerome Haltom
+
+This product contains source code derived from Apache Calcite, which has been
+ported from Java to C#. The relevant classes and the members they correspond to
+are documented in PORT.md. Portions of this product are therefore:
+
+    Apache Calcite
+    Copyright 2012-2026 The Apache Software Foundation
+
+    This product includes software developed at
+    The Apache Software Foundation (http://www.apache.org/).
+
+    This product is based on source code originally developed
+    by DynamoBI Corporation, LucidEra Inc., SQLstream Inc. and others
+    under the auspices of the Eigenbase Foundation
+    and released as the LucidDB project.
+
+Apache Calcite is licensed under the Apache License, Version 2.0; see the
+LICENSE file in this directory for the full license text.

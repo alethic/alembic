@@ -13,11 +13,13 @@ namespace Alembic.Plan.Hep;
 /// <see cref="CurrentNode"/>'s children. The heuristic planner's matching sees through a vertex to its
 /// current node.
 /// </remarks>
+[Provenance("org.apache.calcite.plan.hep.HepRelVertex")]
 sealed class HepNodeVertex : AbstractNode
 {
 
     INode _currentNode;
 
+    [Provenance("org.apache.calcite.plan.hep.HepRelVertex", "HepRelVertex(RelNode)")]
     public HepNodeVertex(INode currentNode)
         : base(currentNode.Cluster, currentNode.Traits, ImmutableArray<INode>.Empty)
     {
@@ -27,22 +29,26 @@ sealed class HepNodeVertex : AbstractNode
     /// <summary>
     /// The node currently chosen as the implementation of this vertex.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepRelVertex", "getCurrentRel()")]
     public INode CurrentNode => _currentNode;
 
     /// <summary>
     /// This vertex with its wrapping stripped away — its current node.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepRelVertex", "stripped()")]
     public INode Stripped => _currentNode;
 
     /// <summary>
     /// Replaces the implementation for this vertex with a new node.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepRelVertex", "replaceRel(RelNode)")]
     public void ReplaceNode(INode newNode)
     {
         _currentNode = newNode;
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.hep.HepRelVertex", "copy(RelTraitSet, List<RelNode>)")]
     public override INode Copy(TraitSet traits, ImmutableArray<INode> children)
     {
         return this;
@@ -51,6 +57,7 @@ sealed class HepNodeVertex : AbstractNode
     /// <summary>
     /// A vertex explains itself in terms of the node it currently stands in for.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepRelVertex", "explain(RelWriter)")]
     public override INodeWriter ExplainTerms(INodeWriter writer)
     {
         base.ExplainTerms(writer);
@@ -59,6 +66,7 @@ sealed class HepNodeVertex : AbstractNode
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.hep.HepRelVertex", "deepEquals(Object)")]
     public override bool DeepEquals(INode? other)
     {
         return ReferenceEquals(this, other)
@@ -66,6 +74,7 @@ sealed class HepNodeVertex : AbstractNode
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.hep.HepRelVertex", "deepHashCode()")]
     public override int DeepHashCode()
     {
         return _currentNode.GetHashCode();

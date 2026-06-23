@@ -5,6 +5,7 @@ namespace Alembic.Plan;
 /// (row-expression builder, metadata query). The trait registry and empty trait set live on the
 /// planner.
 /// </summary>
+[Provenance("org.apache.calcite.plan.RelOptCluster")]
 public sealed class Cluster
 {
 
@@ -19,6 +20,7 @@ public sealed class Cluster
     /// <summary>
     /// The planner for this session.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.RelOptCluster", "getPlanner()")]
     public IPlanner Planner { get; }
 
     /// <summary>
@@ -26,11 +28,13 @@ public sealed class Cluster
     /// registered dimension at its default); the name is generic — not "empty" — because a cluster may
     /// override it.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.RelOptCluster", "traitSet()")]
     public TraitSet TraitSet => Planner.EmptyTraitSet;
 
     /// <summary>
     /// The default trait set with the given traits applied.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.RelOptCluster", "traitSetOf(RelTrait...)")]
     public TraitSet TraitSetOf(params ITrait[] traits)
     {
         var result = TraitSet;

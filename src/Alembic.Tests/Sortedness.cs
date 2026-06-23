@@ -18,7 +18,7 @@ sealed class Sortedness : ITrait
 
     }
 
-    ITraitDef ITrait.TraitDef => SortednessTraitDef.Instance;
+    TraitDef ITrait.TraitDef => SortednessTraitDef.Instance;
 
     public bool Satisfies(ITrait other)
     {

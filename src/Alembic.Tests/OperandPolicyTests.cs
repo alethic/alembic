@@ -53,28 +53,30 @@ public class OperandPolicyTests
     }
 
     [Fact]
-    public void Unordered_matches_children_in_any_order()
+    public void Unordered_matches_a_child_in_any_position()
     {
-        INode Add1(Cluster c) => new Add(Expr, new Variable(c, Expr, "a"), new Literal(c, Expr, 5));
-        INode Flipped(Cluster c) => new Add(Expr, new Literal(c, Expr, 5), new Variable(c, Expr, "a"));
+        INode VarThenLit(Cluster c) => new Add(Expr, new Variable(c, Expr, "a"), new Literal(c, Expr, 5));
+        INode LitThenVar(Cluster c) => new Add(Expr, new Literal(c, Expr, 5), new Variable(c, Expr, "a"));
 
-        Assert.True(Run(SpyRule.UnorderedOf<Add>(SpyRule.LeafOf<Literal>(), SpyRule.LeafOf<Variable>()), Add1).Fired);
-        Assert.True(Run(SpyRule.UnorderedOf<Add>(SpyRule.LeafOf<Literal>(), SpyRule.LeafOf<Variable>()), Flipped).Fired);
+        // A single unordered child operand matches whichever child satisfies it, regardless of position.
+        Assert.True(Run(SpyRule.UnorderedOf<Add>(SpyRule.LeafOf<Literal>()), VarThenLit).Fired);
+        Assert.True(Run(SpyRule.UnorderedOf<Add>(SpyRule.LeafOf<Literal>()), LitThenVar).Fired);
+
+        // No child satisfies the operand → no match.
+        Assert.False(Run(SpyRule.UnorderedOf<Add>(SpyRule.LeafOf<Multiply>()), VarThenLit).Fired);
     }
 
     [Fact]
-    public void Unordered_binds_in_operand_order()
+    public void Unordered_binds_the_parent_and_the_matched_child()
     {
-        INode Add1(Cluster c) => new Add(Expr, new Variable(c, Expr, "a"), new Literal(c, Expr, 5));
+        INode VarThenLit(Cluster c) => new Add(Expr, new Variable(c, Expr, "a"), new Literal(c, Expr, 5));
 
-        // The operand lists the literal first, the variable second; the binding follows operand order even
-        // though the variable is the node's left child.
-        var spy = Run(SpyRule.UnorderedOf<Add>(SpyRule.LeafOf<Literal>(), SpyRule.LeafOf<Variable>()), Add1);
+        // The literal is the right child, but the unordered operand finds it and binds it after the parent.
+        var spy = Run(SpyRule.UnorderedOf<Add>(SpyRule.LeafOf<Literal>()), VarThenLit);
 
         Assert.True(spy.Fired);
         Assert.IsType<Add>(spy.Binding[0]);
         Assert.IsType<Literal>(spy.Binding[1]);
-        Assert.IsType<Variable>(spy.Binding[2]);
     }
 
     static SpyRule Run(RuleOperand operand, Func<Cluster, INode> build)

@@ -19,6 +19,7 @@ namespace Alembic.Plan.Hep;
 /// A rewrite replaces a vertex's content and re-points its parents; discarded vertices are reclaimed by
 /// mark-and-sweep garbage collection.
 /// </remarks>
+[Provenance("org.apache.calcite.plan.hep.HepPlanner")]
 public sealed class HepPlanner : AbstractPlanner
 {
 
@@ -42,6 +43,7 @@ public sealed class HepPlanner : AbstractPlanner
     /// Creates a planner driven by the given program. More rules can be added with
     /// <see cref="AbstractPlanner.AddRule"/> (e.g. by a convention's <see cref="ITrait.Register"/>).
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "HepPlanner(HepProgram)")]
     public HepPlanner(HepProgram program)
     {
         _mainProgram = program;
@@ -50,6 +52,7 @@ public sealed class HepPlanner : AbstractPlanner
     /// <summary>
     /// Creates a planner driven by the given program, costing nodes with <paramref name="costFactory"/>.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "HepPlanner(HepProgram, Context, boolean, Function2<RelNode, RelNode, Void>, RelOptCostFactory)")]
     public HepPlanner(HepProgram program, ICostFactory costFactory)
         : base(costFactory)
     {
@@ -60,6 +63,7 @@ public sealed class HepPlanner : AbstractPlanner
     /// Creates a planner with an empty program, in large-plan mode with the fired-rules cache on, for
     /// running several programs in succession over a preserved graph (multi-phase optimization).
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "HepPlanner()")]
     public HepPlanner()
         : this(HepProgram.Builder().Build())
     {
@@ -79,6 +83,7 @@ public sealed class HepPlanner : AbstractPlanner
     /// <summary>
     /// Whether large-plan mode is on (favours fine-grained garbage collection over periodic sweeps).
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "isLargePlanMode()")]
     public bool LargePlanMode
     {
         get => _largePlanMode;
@@ -88,12 +93,14 @@ public sealed class HepPlanner : AbstractPlanner
     /// <summary>
     /// Enables the fired-rules cache: a rule will not fire twice on the same match.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "setEnableFiredRulesCache(boolean)")]
     public void SetEnableFiredRulesCache(bool enable)
     {
         _enableFiredRulesCache = enable;
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "setRoot(RelNode)")]
     public override void SetRoot(INode node)
     {
         _rootNode = node;
@@ -101,9 +108,11 @@ public sealed class HepPlanner : AbstractPlanner
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "getRoot()")]
     public override INode? Root => _root;
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "clear()")]
     public override void Clear()
     {
         base.Clear();
@@ -113,6 +122,7 @@ public sealed class HepPlanner : AbstractPlanner
     /// <summary>
     /// Removes all rules and the fired-rules caches, keeping the graph for reuse across programs.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "clearRules()")]
     public void ClearRules()
     {
         foreach (var rule in new List<Rule>(Rules))
@@ -126,6 +136,7 @@ public sealed class HepPlanner : AbstractPlanner
     /// Ignores traits except for the root, where it remembers what the final conversion should be; the
     /// request is enforced when <see cref="FindBestPlan"/> finishes.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "changeTraits(RelNode, RelTraitSet)")]
     public override INode ChangeTraits(INode node, TraitSet toTraits)
     {
         if (ReferenceEquals(node, _rootNode) || (_root is not null && ReferenceEquals(node, _root.CurrentNode)))
@@ -142,6 +153,7 @@ public sealed class HepPlanner : AbstractPlanner
     public override INode Convert(INode node, TraitSet toTraits) => node;
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "findBestExp()")]
     public override INode FindBestPlan()
     {
         if (_root is null)
@@ -179,6 +191,7 @@ public sealed class HepPlanner : AbstractPlanner
     /// <summary>
     /// Top-level entry point for a program: prepares its state and runs it.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "executeProgram(HepProgram)")]
     internal void ExecuteProgram(HepProgram program)
     {
         var px = HepInstruction.PrepareContext.Create(this);
@@ -186,6 +199,7 @@ public sealed class HepPlanner : AbstractPlanner
         state.Execute();
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "executeProgram(HepProgram, HepProgram.State)")]
     internal void ExecuteProgram(HepProgram program, HepProgram.State state)
     {
         state.Init();
@@ -203,16 +217,19 @@ public sealed class HepPlanner : AbstractPlanner
         }
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "executeMatchLimit(HepInstruction.MatchLimit, HepInstruction.MatchLimit.State)")]
     internal void ExecuteMatchLimit(HepInstruction.MatchLimit instruction, HepInstruction.MatchLimit.State state)
     {
         state.ProgramState!.MatchLimit = instruction.Limit;
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "executeMatchOrder(HepInstruction.MatchOrder, HepInstruction.MatchOrder.State)")]
     internal void ExecuteMatchOrder(HepInstruction.MatchOrder instruction, HepInstruction.MatchOrder.State state)
     {
         state.ProgramState!.MatchOrder = instruction.Order;
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "executeRuleInstance(HepInstruction.RuleInstance, HepInstruction.RuleInstance.State)")]
     internal void ExecuteRuleInstance(HepInstruction.RuleInstance instruction, HepInstruction.RuleInstance.State state)
     {
         if (state.ProgramState!.SkippingGroup())
@@ -221,6 +238,7 @@ public sealed class HepPlanner : AbstractPlanner
         ApplyRules(state.ProgramState, new[] { instruction.Rule }, true);
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "executeRuleLookup(HepInstruction.RuleLookup, HepInstruction.RuleLookup.State)")]
     internal void ExecuteRuleLookup(HepInstruction.RuleLookup instruction, HepInstruction.RuleLookup.State state)
     {
         if (state.ProgramState!.SkippingGroup())
@@ -231,6 +249,7 @@ public sealed class HepPlanner : AbstractPlanner
             ApplyRules(state.ProgramState, new[] { state.Rule }, true);
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "executeRuleClass(HepInstruction.RuleClass, HepInstruction.RuleClass.State)")]
     internal void ExecuteRuleClass(HepInstruction.RuleClass instruction, HepInstruction.RuleClass.State state)
     {
         if (state.ProgramState!.SkippingGroup())
@@ -247,6 +266,7 @@ public sealed class HepPlanner : AbstractPlanner
         ApplyRules(state.ProgramState, state.RuleSet, true);
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "executeRuleCollection(HepInstruction.RuleCollection, HepInstruction.RuleCollection.State)")]
     internal void ExecuteRuleCollection(HepInstruction.RuleCollection instruction, HepInstruction.RuleCollection.State state)
     {
         if (state.ProgramState!.SkippingGroup())
@@ -255,6 +275,7 @@ public sealed class HepPlanner : AbstractPlanner
         ApplyRules(state.ProgramState, instruction.Rules, true);
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "executeConverterRules(HepInstruction.ConverterRules, HepInstruction.ConverterRules.State)")]
     internal void ExecuteConverterRules(HepInstruction.ConverterRules instruction, HepInstruction.ConverterRules.State state)
     {
         if (state.RuleSet is null)
@@ -277,6 +298,7 @@ public sealed class HepPlanner : AbstractPlanner
         ApplyRules(state.ProgramState!, state.RuleSet, instruction.Guaranteed);
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "executeCommonRelSubExprRules(HepInstruction.CommonRelSubExprRules, HepInstruction.CommonRelSubExprRules.State)")]
     internal void ExecuteCommonRelSubExprRules(HepInstruction.CommonRelSubExprRules instruction, HepInstruction.CommonRelSubExprRules.State state)
     {
         if (state.RuleSet is null)
@@ -290,6 +312,7 @@ public sealed class HepPlanner : AbstractPlanner
         ApplyRules(state.ProgramState!, state.RuleSet, true);
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "executeSubProgram(HepInstruction.SubProgram, HepInstruction.SubProgram.State)")]
     internal void ExecuteSubProgram(HepInstruction.SubProgram instruction, HepInstruction.SubProgram.State state)
     {
         for (; ; )
@@ -301,11 +324,13 @@ public sealed class HepPlanner : AbstractPlanner
         }
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "executeBeginGroup(HepInstruction.BeginGroup, HepInstruction.BeginGroup.State)")]
     internal void ExecuteBeginGroup(HepInstruction.BeginGroup instruction, HepInstruction.BeginGroup.State state)
     {
         state.ProgramState!.Group = state.EndGroup;
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "executeEndGroup(HepInstruction.EndGroup, HepInstruction.EndGroup.State)")]
     internal void ExecuteEndGroup(HepInstruction.EndGroup instruction, HepInstruction.EndGroup.State state)
     {
         state.ProgramState!.Group = null;
@@ -315,6 +340,7 @@ public sealed class HepPlanner : AbstractPlanner
 
     // ~ Rule application -----------------------------------------------------
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "depthFirstApply(HepProgram.State, Iterator<HepRelVertex>, Collection<RelOptRule>, boolean, int)")]
     int DepthFirstApply(HepProgram.State programState, IEnumerator<HepNodeVertex> iter, IReadOnlyList<Rule> rules, bool forceConversions, int nMatches)
     {
         while (iter.MoveNext())
@@ -340,6 +366,7 @@ public sealed class HepPlanner : AbstractPlanner
         return nMatches;
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "applyRules(HepProgram.State, Collection<RelOptRule>, boolean)")]
     void ApplyRules(HepProgram.State programState, IEnumerable<Rule> rules, bool forceConversions)
     {
         var group = programState.Group;
@@ -407,6 +434,7 @@ public sealed class HepPlanner : AbstractPlanner
         while (!fixedPoint);
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "getGraphIterator(HepProgram.State, HepRelVertex)")]
     IEnumerator<HepNodeVertex> GetGraphIterator(HepProgram.State programState, HepNodeVertex start)
     {
         switch (programState.MatchOrder)
@@ -430,6 +458,7 @@ public sealed class HepPlanner : AbstractPlanner
         }
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "applyRule(RelOptRule, HepRelVertex, boolean)")]
     HepNodeVertex? ApplyRule(Rule rule, HepNodeVertex vertex, bool forceConversions)
     {
         if (IsRuleExcluded(rule))
@@ -496,6 +525,7 @@ public sealed class HepPlanner : AbstractPlanner
         return null;
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "doesConverterApply(ConverterRule, HepRelVertex)")]
     bool DoesConverterApply(ConverterRule converter, HepNodeVertex vertex)
     {
         var outTrait = converter.Target;
@@ -517,6 +547,7 @@ public sealed class HepPlanner : AbstractPlanner
     /// <summary>
     /// The parent vertices of a vertex, counted once per input reference.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "getVertexParents(HepRelVertex)")]
     List<HepNodeVertex> GetVertexParents(HepNodeVertex vertex)
     {
         var parents = new List<HepNodeVertex>();
@@ -531,6 +562,7 @@ public sealed class HepPlanner : AbstractPlanner
         return parents;
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "applyTransformationResults(HepRelVertex, HepRuleCall, RelTrait)")]
     HepNodeVertex ApplyTransformationResults(HepNodeVertex vertex, HepRuleCall call, ITrait? parentTrait)
     {
         INode? bestRel;
@@ -606,6 +638,7 @@ public sealed class HepPlanner : AbstractPlanner
         return true;
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "addRelToGraph(RelNode, IdentityHashMap<RelNode, HepRelVertex>)")]
     HepNodeVertex AddNodeToGraph(INode rel)
     {
         if (rel is HepNodeVertex existing && _graph.VertexSet.Contains(existing))
@@ -633,6 +666,7 @@ public sealed class HepPlanner : AbstractPlanner
         return newVertex;
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "contractVertices(HepRelVertex, HepRelVertex, List<HepRelVertex>, Set<HepRelVertex>)")]
     void ContractVertices(HepNodeVertex preservedVertex, HepNodeVertex discardedVertex, List<HepNodeVertex> parents, HashSet<HepNodeVertex> garbage)
     {
         if (ReferenceEquals(preservedVertex, discardedVertex))
@@ -676,6 +710,7 @@ public sealed class HepPlanner : AbstractPlanner
     /// Clears the cached digest of a vertex and its ancestors, so they are recomputed after a child's
     /// content changed.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "clearCache(HepRelVertex)")]
     void ClearCache(HepNodeVertex vertex)
     {
         vertex.CurrentNode.RecomputeDigest();
@@ -696,6 +731,7 @@ public sealed class HepPlanner : AbstractPlanner
         }
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "updateVertex(HepRelVertex, RelNode)")]
     void UpdateVertex(HepNodeVertex vertex, INode rel)
     {
         if (!ReferenceEquals(rel, vertex.CurrentNode))
@@ -712,6 +748,7 @@ public sealed class HepPlanner : AbstractPlanner
         FireNodeEquivalenceFound(rel);
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "buildFinalPlan(HepRelVertex)")]
     INode BuildFinalPlan(HepNodeVertex vertex, Dictionary<HepNodeVertex, INode> memo)
     {
         if (memo.TryGetValue(vertex, out var done))
@@ -738,6 +775,7 @@ public sealed class HepPlanner : AbstractPlanner
 
     // ~ Garbage collection ---------------------------------------------------
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "tryCleanVertices(HepRelVertex)")]
     void TryCleanVertices(HepNodeVertex vertex)
     {
         if (ReferenceEquals(vertex, _root) || !_graph.VertexSet.Contains(vertex) || _graph.GetInwardEdges(vertex).Count != 0)
@@ -763,12 +801,14 @@ public sealed class HepPlanner : AbstractPlanner
             RemoveFiredRules(rel);
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "collectGarbage(Set<HepRelVertex>)")]
     void CollectGarbage(HashSet<HepNodeVertex> garbage)
     {
         foreach (var vertex in garbage)
             TryCleanVertices(vertex);
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "collectGarbage()")]
     void CollectGarbage()
     {
         if (_nTransformations == _nTransformationsLastGC)
@@ -821,6 +861,7 @@ public sealed class HepPlanner : AbstractPlanner
         _firedRulesCacheIndex.Remove(rel);
     }
 
+    [Provenance("org.apache.calcite.plan.AbstractRelOptPlanner", "getCost(RelNode, RelMetadataQuery)")]
     ICost GetCost(INode node)
     {
         var current = node is HepNodeVertex vertex ? vertex.CurrentNode : node;
@@ -839,6 +880,7 @@ public sealed class HepPlanner : AbstractPlanner
         return MatchOperand(operand, node, bound) ? bound.ToImmutableArray() : null;
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepPlanner", "matchOperands(RelOptRuleOperand, RelNode, List<RelNode>, Map<RelNode, List<RelNode>>)")]
     static bool MatchOperand(RuleOperand operand, INode node, List<INode> bound)
     {
         while (node is HepNodeVertex vertex)
@@ -860,7 +902,9 @@ public sealed class HepPlanner : AbstractPlanner
                 return true;
 
             case RuleOperandChildPolicy.Some:
-                if (node.Children.Length != operand.Children.Length)
+                // The node must have at least as many children as the operand; the operand binds the
+                // first n positionally (a node may have more children than the pattern names).
+                if (node.Children.Length < operand.Children.Length)
                     return false;
                 bound.Add(node);
                 for (int i = 0; i < operand.Children.Length; i++)
@@ -869,39 +913,33 @@ public sealed class HepPlanner : AbstractPlanner
                 return true;
 
             case RuleOperandChildPolicy.Unordered:
-                if (node.Children.Length != operand.Children.Length)
-                    return false;
+                // Each child operand matches any one of the node's children; the node's child count is
+                // unconstrained (a parent may have more children than the pattern names).
                 bound.Add(node);
-                return MatchUnordered(operand.Children, node.Children, new bool[node.Children.Length], 0, bound);
+                foreach (var childOperand in operand.Children)
+                {
+                    var matched = false;
+                    foreach (var child in node.Children)
+                    {
+                        var mark = bound.Count;
+                        if (MatchOperand(childOperand, child, bound))
+                        {
+                            matched = true;
+                            break;
+                        }
+
+                        bound.RemoveRange(mark, bound.Count - mark);
+                    }
+
+                    if (!matched)
+                        return false;
+                }
+
+                return true;
 
             default:
                 return false;
         }
-    }
-
-    static bool MatchUnordered(ImmutableArray<RuleOperand> operands, ImmutableArray<INode> children, bool[] used, int index, List<INode> bound)
-    {
-        if (index == operands.Length)
-            return true;
-
-        for (int c = 0; c < children.Length; c++)
-        {
-            if (used[c])
-                continue;
-
-            var mark = bound.Count;
-            if (MatchOperand(operands[index], children[c], bound))
-            {
-                used[c] = true;
-                if (MatchUnordered(operands, children, used, index + 1, bound))
-                    return true;
-                used[c] = false;
-            }
-
-            bound.RemoveRange(mark, bound.Count - mark);
-        }
-
-        return false;
     }
 
     /// <summary>

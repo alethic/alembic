@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 
 using Alembic.Algebra;
+using Alembic.Algebra.Convert;
 using Alembic.Util;
 
 namespace Alembic.Plan.Volcano;
@@ -9,14 +10,17 @@ namespace Alembic.Plan.Volcano;
 /// An equivalence set: a group of nodes that all produce the same result, partitioned into
 /// <see cref="NodeSubset"/>s by trait set. The planner keeps the cheapest member of each subset.
 /// </summary>
+[Provenance("org.apache.calcite.plan.volcano.RelSet")]
 public sealed class NodeSet
 {
 
     readonly ICostFactory _costFactory;
 
     // Trait-set pairs already wired with a converter, so each conversion is seeded at most once.
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "conversions")]
     readonly HashSet<Pair<TraitSet, TraitSet>> _conversions = new HashSet<Pair<TraitSet, TraitSet>>();
 
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "RelSet(int, Set<CorrelationId>, Set<CorrelationId>)")]
     internal NodeSet(int id, ICostFactory costFactory, Cluster cluster)
     {
         Id = id;
@@ -27,6 +31,7 @@ public sealed class NodeSet
     /// <summary>
     /// This set's stable identity.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "id")]
     public int Id { get; }
 
     /// <summary>
@@ -37,37 +42,44 @@ public sealed class NodeSet
     /// <summary>
     /// Every node in the set (across all subsets).
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "rels")]
     public List<INode> Nodes { get; } = new List<INode>();
 
     /// <summary>
     /// The subsets of this set, one per distinct trait set.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "subsets")]
     public List<NodeSubset> Subsets { get; } = new List<NodeSubset>();
 
     /// <summary>
     /// Nodes (in other sets) that reference a subset of this set as a child.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "parents")]
     public List<INode> Parents { get; } = new List<INode>();
 
     /// <summary>
     /// Set when this set is merged into another; the live set is reached by following the chain.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "equivalentSet")]
     public NodeSet? EquivalentSet { get; internal set; }
 
     /// <summary>
     /// How far the top-down search has explored this set (applied transformation rules to its members).
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet.ExploringState")]
     public enum ExploringState
     {
 
         /// <summary>
         /// Exploration is underway.
         /// </summary>
+        [Provenance("org.apache.calcite.plan.volcano.RelSet.ExploringState", "EXPLORING")]
         Exploring,
 
         /// <summary>
         /// The set is fully explored.
         /// </summary>
+        [Provenance("org.apache.calcite.plan.volcano.RelSet.ExploringState", "EXPLORED")]
         Explored
 
     }
@@ -75,17 +87,20 @@ public sealed class NodeSet
     /// <summary>
     /// This set's exploration state, or <c>null</c> if exploration has not started.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "exploringState")]
     internal ExploringState? Exploring { get; set; }
 
     /// <summary>
     /// The first node registered in this set — its representative expression, used as a fallback when a
     /// subset has no best member yet.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "rel")]
     public INode? Rel { get; private set; }
 
     /// <summary>
     /// The subset with exactly the given traits, or <c>null</c>.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "getSubset(RelTraitSet)")]
     public NodeSubset? GetSubset(TraitSet traits)
     {
         foreach (var subset in Subsets)
@@ -113,6 +128,7 @@ public sealed class NodeSet
     /// When a subset is freshly created — or first becomes required/delivered — converters/enforcers are
     /// seeded between it and the complementary subsets so the planner can convert between them.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "getOrCreateSubset(RelOptCluster, RelTraitSet, boolean)")]
     internal NodeSubset GetOrCreateSubset(TraitSet traits, bool required)
     {
         var needsConverter = false;
@@ -147,6 +163,7 @@ public sealed class NodeSet
     /// when delivered, from it to each required subset. A conversion is seeded only once per trait-set
     /// pair, and only when the dimensions actually differ and the trait dimension can convert.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "addConverters(RelSubset, boolean, boolean)")]
     void AddConverters(NodeSubset subset, bool required, bool useAbstractConverter)
     {
         var planner = (VolcanoPlanner)Cluster.Planner;
@@ -209,6 +226,7 @@ public sealed class NodeSet
     /// Adds <paramref name="node"/> to the set, placing it in the subset for its traits (creating that
     /// subset if needed) and returning the subset.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "add(RelNode)")]
     internal NodeSubset Add(INode node)
     {
         var subset = GetOrCreateSubset(node.Traits, node.IsEnforcer);
@@ -221,6 +239,7 @@ public sealed class NodeSet
     /// the set's representative when the set has none yet. The equivalence-found notification is fired by
     /// the caller, <see cref="NodeSubset.Add"/>.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "addInternal(RelNode)")]
     internal void AddInternal(INode node)
     {
         if (!Nodes.Contains(node))
@@ -230,11 +249,43 @@ public sealed class NodeSet
     }
 
     /// <summary>
+    /// Drops <paramref name="node"/> from this set's parent list (called when the node is being removed
+    /// from the planner).
+    /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "obliterateRelNode(RelNode)")]
+    internal void ObliterateNode(INode node) => Parents.Remove(node);
+
+    /// <summary>
+    /// The live sets this set's (non-converter) members consume as inputs — its child sets in the
+    /// equivalence-set graph. Used by the merge to decide the swap direction.
+    /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "getChildSets(VolcanoPlanner)")]
+    internal HashSet<NodeSet> GetChildSets()
+    {
+        var childSets = new HashSet<NodeSet>();
+        foreach (var node in Nodes)
+        {
+            if (node is IConverter)
+                continue;
+
+            foreach (var child in node.Children)
+            {
+                var childSet = VolcanoPlanner.EquivRoot(((NodeSubset)child).Set);
+                if (!ReferenceEquals(childSet, this))
+                    childSets.Add(childSet);
+            }
+        }
+
+        return childSets;
+    }
+
+    /// <summary>
     /// Absorbs <paramref name="other"/> into this set: <paramref name="other"/> becomes equivalent to
     /// this set, its nodes and parents move here, and the parents are re-registered to point at the
     /// surviving set. The caller (<see cref="VolcanoPlanner.Merge"/>) has already resolved both sets to
     /// their equivalence roots.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.RelSet", "mergeWith(VolcanoPlanner, RelSet)")]
     internal void MergeWith(VolcanoPlanner planner, NodeSet other)
     {
         other.EquivalentSet = this;

@@ -16,6 +16,8 @@ sealed class LowerToGpu : ConverterRule
 
     }
 
+    public override bool IsGuaranteed => true;
+
     public override INode? Convert(INode node)
     {
         // A CPU-only operation has no GPU form; the planner reaches its result on the GPU by uploading.

@@ -13,6 +13,7 @@ namespace Alembic.Algebra;
 /// <see cref="DeepEquals"/> / <see cref="DeepHashCode"/> from them. Each node keeps one
 /// <see cref="INodeDigest"/> that caches its hash.
 /// </summary>
+[Provenance("org.apache.calcite.rel.AbstractRelNode")]
 public abstract class AbstractNode : INode
 {
 
@@ -21,6 +22,7 @@ public abstract class AbstractNode : INode
     /// <summary>
     /// Initializes the node with its cluster, traits, and children.
     /// </summary>
+    [Provenance("org.apache.calcite.rel.AbstractRelNode", "AbstractRelNode(RelOptCluster, RelTraitSet)")]
     protected AbstractNode(Cluster cluster, TraitSet traits, ImmutableArray<INode> children)
     {
         Cluster = cluster;
@@ -30,12 +32,15 @@ public abstract class AbstractNode : INode
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.rel.AbstractRelNode", "getCluster()")]
     public Cluster Cluster { get; }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.rel.AbstractRelNode", "getTraitSet()")]
     public TraitSet Traits { get; }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.rel.AbstractRelNode", "getInputs()")]
     public ImmutableArray<INode> Children { get; }
 
     /// <summary>
@@ -44,21 +49,25 @@ public abstract class AbstractNode : INode
     /// Two nodes of the same type with equal traits and equal terms are structurally equivalent; a node
     /// that omits a term excludes it from that comparison, so inputs must be listed here.
     /// </summary>
+    [Provenance("org.apache.calcite.rel.AbstractRelNode", "explainTerms(RelWriter)")]
     public virtual INodeWriter ExplainTerms(INodeWriter writer)
     {
         return writer;
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.rel.AbstractRelNode", "explain(RelWriter)")]
     public void Explain(INodeWriter writer)
     {
         ExplainTerms(writer).Done(this);
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.rel.AbstractRelNode", "copy(RelTraitSet, List<RelNode>)")]
     public abstract INode Copy(TraitSet traits, ImmutableArray<INode> children);
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.rel.AbstractRelNode", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
     public virtual ICost ComputeSelfCost(IPlanner planner)
     {
         return planner.CostFactory.MakeTinyCost();
@@ -67,6 +76,7 @@ public abstract class AbstractNode : INode
     /// <summary>
     /// This node's kept digest. Returning the same instance lets the planner reuse its cached hash.
     /// </summary>
+    [Provenance("org.apache.calcite.rel.AbstractRelNode", "getRelDigest()")]
     public INodeDigest GetDigest()
     {
         return _digest;
@@ -75,12 +85,14 @@ public abstract class AbstractNode : INode
     /// <summary>
     /// Discards this node's cached digest, so it is recomputed on next use.
     /// </summary>
+    [Provenance("org.apache.calcite.rel.AbstractRelNode", "recomputeDigest()")]
     public void RecomputeDigest()
     {
         _digest.Clear();
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.rel.AbstractRelNode", "deepEquals(Object)")]
     public virtual bool DeepEquals(INode? other)
     {
         if (ReferenceEquals(this, other)) return true;
@@ -113,6 +125,7 @@ public abstract class AbstractNode : INode
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.rel.AbstractRelNode", "deepHashCode()")]
     public virtual int DeepHashCode()
     {
         var h = new HashCode();
@@ -139,6 +152,7 @@ public abstract class AbstractNode : INode
     /// <see cref="DeepEquals"/>. Because it is nested it can reach the node's <see cref="ExplainTerms"/> to
     /// render the digest string.
     /// </summary>
+    [Provenance("org.apache.calcite.rel.AbstractRelNode.InnerRelDigest")]
     sealed class InnerNodeDigest : INodeDigest
     {
 
@@ -150,15 +164,19 @@ public abstract class AbstractNode : INode
             _node = node;
         }
 
+        [Provenance("org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "getRel()")]
         public INode Node => _node;
 
+        [Provenance("org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "clear()")]
         public void Clear() => _hash = 0;
 
+        [Provenance("org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "equals(Object)")]
         public override bool Equals(object? obj)
         {
             return obj is INodeDigest other && _node.DeepEquals(other.Node);
         }
 
+        [Provenance("org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "hashCode()")]
         public override int GetHashCode()
         {
             if (_hash == 0)
@@ -180,9 +198,9 @@ public abstract class AbstractNode : INode
     }
 
     /// <summary>
-    /// Collects a node's explain terms and, on <see cref="Done"/>, renders them into the digest string.
-    /// The digest analog of Calcite's per-node digest writer (inputs are referenced by type, not
-    /// recursed). <see cref="Items"/> also backs the term-by-term <see cref="DeepEquals"/> comparison.
+    /// Collects a node's explain terms and, on <see cref="Done"/>, renders them into the digest string
+    /// (inputs are referenced by type, not recursed). <see cref="Items"/> also backs the term-by-term
+    /// <see cref="DeepEquals"/> comparison.
     /// </summary>
     sealed class DigestWriter : INodeWriter
     {

@@ -9,6 +9,7 @@ namespace Alembic.Util.Graph;
 /// </summary>
 /// <typeparam name="V">The vertex type.</typeparam>
 /// <typeparam name="E">The edge type.</typeparam>
+[Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph")]
 public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     where V : notnull
     where E : DefaultEdge
@@ -20,6 +21,7 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     readonly DirectedGraph<V, E>.EdgeFactory _edgeFactory;
     readonly VertexSetView _vertexSet;
 
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph", "DefaultDirectedGraph(EdgeFactory)")]
     public DefaultDirectedGraph(DirectedGraph<V, E>.EdgeFactory edgeFactory)
     {
         _edgeFactory = edgeFactory;
@@ -29,6 +31,7 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     /// <summary>
     /// Creates a graph of plain <see cref="DefaultEdge"/>s.
     /// </summary>
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph", "create()")]
     public static DefaultDirectedGraph<V, DefaultEdge> Create()
     {
         return new DefaultDirectedGraph<V, DefaultEdge>(DefaultEdge.Factory<V>());
@@ -37,12 +40,14 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     /// <summary>
     /// Creates a graph with the given edge factory.
     /// </summary>
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph", "create(EdgeFactory)")]
     public static DefaultDirectedGraph<V, E> Create(DirectedGraph<V, E>.EdgeFactory edgeFactory)
     {
         return new DefaultDirectedGraph<V, E>(edgeFactory);
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph", "addVertex(V)")]
     public bool AddVertex(V vertex)
     {
         if (_vertexMap.ContainsKey(vertex))
@@ -54,6 +59,7 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph", "addEdge(V, V)")]
     public E? AddEdge(V vertex, V targetVertex)
     {
         var info = GetVertex(vertex);
@@ -70,6 +76,7 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph", "getEdge(V, V)")]
     public E? GetEdge(V source, V target)
     {
         foreach (var outEdge in GetVertex(source).OutEdges)
@@ -80,6 +87,7 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph", "removeEdge(V, V)")]
     public bool RemoveEdge(V source, V target)
     {
         var outEdges = GetVertex(source).OutEdges;
@@ -109,9 +117,11 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph", "vertexSet()")]
     public IReadOnlySet<V> VertexSet => _vertexSet;
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph", "removeAllVertices(Collection<V>)")]
     public void RemoveAllVertices(IEnumerable<V> collection)
     {
         var set = collection as HashSet<V> ?? new HashSet<V>(collection);
@@ -130,20 +140,24 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph", "getOutwardEdges(V)")]
     public IReadOnlyList<E> GetOutwardEdges(V source)
     {
         return GetVertex(source).OutEdges;
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph", "getInwardEdges(V)")]
     public IReadOnlyList<E> GetInwardEdges(V vertex)
     {
         return GetVertex(vertex).InEdges;
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph", "edgeSet()")]
     public IReadOnlySet<E> EdgeSet => _edges;
 
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph", "getVertex(V)")]
     protected VertexInfo GetVertex(V vertex)
     {
         if (!_vertexMap.TryGetValue(vertex, out var info))
@@ -155,11 +169,14 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     /// <summary>
     /// The in- and out-edges recorded for a vertex.
     /// </summary>
+    [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph.VertexInfo")]
     protected sealed class VertexInfo
     {
 
+        [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph.VertexInfo", "inEdges")]
         public List<E> InEdges { get; } = new List<E>();
 
+        [Provenance("org.apache.calcite.util.graph.DefaultDirectedGraph.VertexInfo", "outEdges")]
         public List<E> OutEdges { get; } = new List<E>();
 
     }

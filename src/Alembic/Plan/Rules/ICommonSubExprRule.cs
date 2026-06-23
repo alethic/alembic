@@ -6,6 +6,7 @@ namespace Alembic.Plan.Rules;
 /// <see cref="Alembic.Plan.Hep.HepProgramBuilder.AddCommonRelSubExprInstruction"/> instruction fires
 /// such rules, skipping nodes with a single parent.
 /// </summary>
+[Provenance("org.apache.calcite.plan.CommonRelSubExprRule")]
 public interface ICommonSubExprRule
 {
 

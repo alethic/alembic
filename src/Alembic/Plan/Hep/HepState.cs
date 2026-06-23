@@ -8,12 +8,17 @@ namespace Alembic.Plan.Hep;
 /// object, allocated just before execution by <see cref="HepInstruction.Prepare"/> on the program and,
 /// recursively, on each of its instructions.
 /// </remarks>
+[Provenance("org.apache.calcite.plan.hep.HepState")]
 abstract class HepState
 {
 
+    [Provenance("org.apache.calcite.plan.hep.HepState.planner")]
     internal readonly HepPlanner Planner;
+
+    [Provenance("org.apache.calcite.plan.hep.HepState.programState")]
     internal readonly HepProgram.State? ProgramState;
 
+    [Provenance("org.apache.calcite.plan.hep.HepState", "HepState(HepInstruction.PrepareContext)")]
     protected HepState(HepInstruction.PrepareContext px)
     {
         Planner = px.Planner;
@@ -23,11 +28,13 @@ abstract class HepState
     /// <summary>
     /// Executes the instruction.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepState", "execute()")]
     internal abstract void Execute();
 
     /// <summary>
     /// Re-initializes the state before a (re-)run.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepState", "init()")]
     internal virtual void Init()
     {
 

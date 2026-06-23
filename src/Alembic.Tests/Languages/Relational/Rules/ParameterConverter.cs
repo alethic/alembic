@@ -21,6 +21,8 @@ sealed class ParameterConverter : ConverterRule
         _physical = physical;
     }
 
+    public override bool IsGuaranteed => true;
+
     public override INode? Convert(INode node)
     {
         if (node is LogicalParameter parameter)

@@ -7,6 +7,7 @@ namespace Alembic.Plan;
 /// enough for most consumers; a consumer that wants multiple dimensions can supply its own
 /// <see cref="ICost"/>.
 /// </summary>
+[Provenance("org.apache.calcite.plan.RelOptCostImpl")]
 public sealed class Cost : ICost
 {
 
@@ -33,6 +34,7 @@ public sealed class Cost : ICost
     /// <summary>
     /// A factory producing <see cref="Cost"/> values.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "FACTORY")]
     public static readonly ICostFactory Factory = new CostFactory();
 
     readonly double _value;
@@ -40,6 +42,7 @@ public sealed class Cost : ICost
     /// <summary>
     /// Creates a cost with the given scalar magnitude.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "RelOptCostImpl(double)")]
     public Cost(double value)
     {
         _value = value;
@@ -51,30 +54,39 @@ public sealed class Cost : ICost
     public double Value => _value;
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "getCpu()")]
     public double Cpu => _value;
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "getIo()")]
     public double Io => 0.0;
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "isInfinite()")]
     public bool IsInfinite => double.IsInfinity(_value);
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "isLe(RelOptCost)")]
     public bool IsLessThanOrEqual(ICost other) => _value <= ((Cost)other)._value;
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "isLt(RelOptCost)")]
     public bool IsLessThan(ICost other) => _value < ((Cost)other)._value;
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "plus(RelOptCost)")]
     public ICost Plus(ICost other) => new Cost(_value + ((Cost)other)._value);
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "minus(RelOptCost)")]
     public ICost Minus(ICost other) => IsInfinite ? this : new Cost(_value - ((Cost)other)._value);
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "multiplyBy(double)")]
     public ICost MultiplyBy(double factor) => IsInfinite ? this : new Cost(_value * factor);
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "divideBy(RelOptCost)")]
     public double DivideBy(ICost other)
     {
         // A single component (the magnitude): the geometric mean reduces to its ratio when both are
@@ -87,6 +99,7 @@ public sealed class Cost : ICost
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "isEqWithEpsilon(RelOptCost)")]
     public bool IsEqWithEpsilon(ICost other)
     {
         return other is Cost that && (ReferenceEquals(this, that) || Math.Abs(_value - that._value) < Epsilon);
@@ -95,25 +108,34 @@ public sealed class Cost : ICost
     const double Epsilon = 1.0e-5;
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "equals(Object)")]
     public override bool Equals(object? obj) => obj is Cost other && _value == other._value;
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "hashCode()")]
     public override int GetHashCode() => _value.GetHashCode();
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl", "toString()")]
     public override string ToString() => _value.ToString();
 
+    [Provenance("org.apache.calcite.plan.RelOptCostImpl.Factory")]
     sealed class CostFactory : ICostFactory
     {
 
+        [Provenance("org.apache.calcite.plan.RelOptCostImpl.Factory", "makeCost(double, double, double)")]
         public ICost MakeCost(double cpu, double io) => new Cost(cpu);
 
+        [Provenance("org.apache.calcite.plan.RelOptCostImpl.Factory", "makeZeroCost()")]
         public ICost MakeZeroCost() => Zero;
 
+        [Provenance("org.apache.calcite.plan.RelOptCostImpl.Factory", "makeInfiniteCost()")]
         public ICost MakeInfiniteCost() => Infinity;
 
+        [Provenance("org.apache.calcite.plan.RelOptCostImpl.Factory", "makeHugeCost()")]
         public ICost MakeHugeCost() => Huge;
 
+        [Provenance("org.apache.calcite.plan.RelOptCostImpl.Factory", "makeTinyCost()")]
         public ICost MakeTinyCost() => Tiny;
 
     }

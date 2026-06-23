@@ -12,16 +12,20 @@ namespace Alembic.Plan.Hep;
 /// A program is immutable, but the planner uses its state as read/write during planning, so a program
 /// can only be used by one planner at a time.
 /// </remarks>
+[Provenance("org.apache.calcite.plan.hep.HepProgram")]
 public sealed class HepProgram : HepInstruction
 {
 
     /// <summary>
     /// Match-limit value meaning "keep matching until no more matches occur".
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepProgram.MATCH_UNTIL_FIXPOINT")]
     public const int MatchUntilFixpoint = int.MaxValue;
 
+    [Provenance("org.apache.calcite.plan.hep.HepProgram.instructions")]
     internal readonly ImmutableArray<HepInstruction> Instructions;
 
+    [Provenance("org.apache.calcite.plan.hep.HepProgram", "HepProgram(List<HepInstruction>)")]
     internal HepProgram(IEnumerable<HepInstruction> instructions)
     {
         Instructions = instructions.ToImmutableArray();
@@ -31,11 +35,13 @@ public sealed class HepProgram : HepInstruction
     /// Starts building a program. The program begins with a match order of
     /// <see cref="HepMatchOrder.DepthFirst"/> and a match limit of <see cref="MatchUntilFixpoint"/>.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepProgram", "builder()")]
     public static HepProgramBuilder Builder()
     {
         return new HepProgramBuilder();
     }
 
+    [Provenance("org.apache.calcite.plan.hep.HepProgram", "prepare(PrepareContext)")]
     internal override HepState Prepare(PrepareContext px)
     {
         return new State(px, this);
@@ -44,15 +50,25 @@ public sealed class HepProgram : HepInstruction
     /// <summary>
     /// The mutable state for one execution of a program.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.hep.HepProgram.State")]
     internal sealed class State : HepState
     {
 
         readonly HepProgram _program;
+
+        [Provenance("org.apache.calcite.plan.hep.HepProgram.State.instructionStates")]
         internal readonly ImmutableArray<HepState> InstructionStates;
+
+        [Provenance("org.apache.calcite.plan.hep.HepProgram.State.matchLimit")]
         internal int MatchLimit = MatchUntilFixpoint;
+
+        [Provenance("org.apache.calcite.plan.hep.HepProgram.State.matchOrder")]
         internal HepMatchOrder MatchOrder = HepMatchOrder.DepthFirst;
+
+        [Provenance("org.apache.calcite.plan.hep.HepProgram.State.group")]
         internal EndGroup.State? Group;
 
+        [Provenance("org.apache.calcite.plan.hep.HepProgram.State", "State(PrepareContext, List<HepInstruction>)")]
         internal State(PrepareContext px, HepProgram program) : base(px)
         {
             _program = program;
@@ -86,6 +102,7 @@ public sealed class HepProgram : HepInstruction
             InstructionStates = states.ToImmutableArray();
         }
 
+        [Provenance("org.apache.calcite.plan.hep.HepProgram.State", "init()")]
         internal override void Init()
         {
             MatchLimit = MatchUntilFixpoint;
@@ -93,11 +110,13 @@ public sealed class HepProgram : HepInstruction
             Group = null;
         }
 
+        [Provenance("org.apache.calcite.plan.hep.HepProgram.State", "execute()")]
         internal override void Execute()
         {
             Planner.ExecuteProgram(_program, this);
         }
 
+        [Provenance("org.apache.calcite.plan.hep.HepProgram.State", "skippingGroup()")]
         internal bool SkippingGroup()
         {
             // Skip if we are in a group but have already collected its rule set.

@@ -19,6 +19,8 @@ sealed class SortEnforcer : ConverterRule
 
     }
 
+    public override bool IsGuaranteed => true;
+
     public override INode? Convert(INode node)
     {
         // The operand also admits already-sorted nodes (sorted satisfies an unsorted requirement),

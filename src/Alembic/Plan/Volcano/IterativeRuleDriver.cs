@@ -6,6 +6,7 @@ namespace Alembic.Plan.Volcano;
 /// Applies matches repeatedly, in the order they were queued, until the queue is empty — the
 /// exhaustive bottom-up search.
 /// </summary>
+[Provenance("org.apache.calcite.plan.volcano.IterativeRuleDriver")]
 public sealed class IterativeRuleDriver : IRuleDriver
 {
 
@@ -14,15 +15,18 @@ public sealed class IterativeRuleDriver : IRuleDriver
     /// <summary>
     /// Creates a driver for the given planner.
     /// </summary>
+    [Provenance("org.apache.calcite.plan.volcano.IterativeRuleDriver", "IterativeRuleDriver(VolcanoPlanner)")]
     public IterativeRuleDriver(VolcanoPlanner planner)
     {
         _queue = new IterativeRuleQueue(planner);
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.volcano.IterativeRuleDriver", "getRuleQueue()")]
     public RuleQueue Queue => _queue;
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.volcano.IterativeRuleDriver", "drive()")]
     public void Drive()
     {
         VolcanoRuleMatch? match;
@@ -31,16 +35,19 @@ public sealed class IterativeRuleDriver : IRuleDriver
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.volcano.IterativeRuleDriver", "onProduce(RelNode, RelSubset)")]
     public void OnProduce(INode node, NodeSubset subset)
     {
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.volcano.IterativeRuleDriver", "onSetMerged(RelSet)")]
     public void OnSetMerged(NodeSet set)
     {
     }
 
     /// <inheritdoc />
+    [Provenance("org.apache.calcite.plan.volcano.IterativeRuleDriver", "clear()")]
     public void Clear()
     {
         _queue.Clear();

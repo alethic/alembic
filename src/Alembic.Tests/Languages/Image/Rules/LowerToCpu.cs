@@ -16,6 +16,8 @@ sealed class LowerToCpu : ConverterRule
 
     }
 
+    public override bool IsGuaranteed => true;
+
     public override INode? Convert(INode node)
     {
         return node.Copy(node.Traits.Replace(ConventionTraitDef.Instance, ImageConventions.Cpu), node.Children);

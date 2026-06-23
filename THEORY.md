@@ -119,8 +119,8 @@ That order is `ITrait.Satisfies` — a value can stand in for a weaker one.
 
 ### Trait machinery
 
-- **`ITraitDef`** — a *dimension* / axis (e.g. "sortedness", "convention"). Has a `Name` and a
-  `Default`.
+- **`TraitDef`** — a *dimension* / axis (e.g. "sortedness", "convention"). Has a `Name` and a
+  `Default`. A non-generic abstract base, with the strongly-typed `TraitDef<TTrait>` subclass.
 - **`ITrait`** — a *value* on a dimension (e.g. "Sorted"). `Def` names its dimension; `Satisfies(other)`
   is the partial order (defaults to equality); `Register(planner)` lets a trait contribute rules.
 - **`TraitSet`** — one value per dimension: a node's full physical fingerprint, a point in trait-space.
@@ -405,7 +405,7 @@ to any tree-shaped computation.
 | A plan node | `INode`; bases `AbstractNode`, `SingleNode`, `BiNode` |
 | Structural identity | `DeepEquals` / `DeepHashCode`; `Explain(INodeWriter)`; `INodeDigest` |
 | Plan rendering | `INode.ToPlanString()` |
-| A physical property (value / dimension) | `ITrait` / `ITraitDef`; multi-valued: `IMultipleTrait`, `CompositeTrait` |
+| A physical property (value / dimension) | `ITrait` / `TraitDef`; multi-valued: `IMultipleTrait`, `CompositeTrait` |
 | A node's full property fingerprint | `TraitSet` |
 | Calling convention (logical/physical family) | `IConvention` / `Convention` |
 | A transformation rule | `IRule`, `Operand`, `OperandMatcher`, `RuleCall` |
