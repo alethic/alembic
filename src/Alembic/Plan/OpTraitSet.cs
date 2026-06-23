@@ -64,6 +64,18 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     }
 
     /// <summary>
+    /// The trait carried at the given dimension index.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "getTrait(int)")]
+    public IOpTrait Get(int index) => _traits[index];
+
+    /// <summary>
+    /// The number of dimensions in this set.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "size()")]
+    public int Count => _traits.Length;
+
+    /// <summary>
     /// Returns an interned set with the given trait added, or replaced if its dimension is already
     /// present.
     /// </summary>

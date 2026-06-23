@@ -25,13 +25,17 @@ public class ConverterProgramTests
     [Fact]
     public void Add_converters_lowers_to_the_requested_convention()
     {
-        var planner = new HepPlanner(HepProgram.Builder().AddConverters(true).Build());
+        // Type-specific converters are non-guaranteed, so they lower bottom-up: the leaf source is always
+        // implementable and is applied directly, then the filter fires via the TraitMatchingRule that
+        // AddConverters(false) installs, once its input is physical.
+        var planner = new HepPlanner(HepProgram.Builder()
+            .AddRuleInstance(new SourceConverter(Physical))
+            .AddConverters(false)
+            .Build());
         var cluster = new OpCluster(planner);
         IOp root = new LogicalFilter(Logical, new LogicalSource(cluster, Logical, "t"), "x > 5");
 
-        planner.AddRule(new SourceConverter(Physical));
         planner.AddRule(new FilterConverter(Physical));
-        planner.AddRule(new ParameterConverter(Physical));
         planner.SetRoot(root);
         planner.ChangeTraits(root, Physical);
 

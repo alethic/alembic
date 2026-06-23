@@ -452,7 +452,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     static bool CostEquals(IOpCost a, IOpCost b) => !a.IsLessThan(b) && !b.IsLessThan(a);
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getCost(RelNode, RelMetadataQuery)")]
-    IOpCost GetCost(IOp op)
+    internal IOpCost GetCost(IOp op)
     {
         if (op is OpSubset subset)
             return subset.BestCost;
@@ -637,129 +637,36 @@ public class VolcanoPlanner : AbstractOpPlanner
     }
 
     /// <summary>
-    /// Converts a subset to the given traits, finding a (possibly multi-step) chain of converter rules
-    /// and trait-dimension conversion hooks and applying it. Returns the target subset once it has a
-    /// member, or <c>null</c> if no chain reaches the traits.
+    /// Converts <paramref name="rel"/> toward <paramref name="toTraits"/> one dimension at a time,
+    /// delegating each differing dimension to its <see cref="OpTraitDef.Convert"/> and registering each
+    /// converted op as an equivalent. Returns the converted op, or <c>null</c> if a dimension cannot be
+    /// converted. Traits may build on one another, so each step converts against the just-converted op's
+    /// traits; excess dimensions in <paramref name="rel"/> beyond <paramref name="toTraits"/> are left as-is.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "changeTraitsUsingConverters(RelNode, RelTraitSet)")]
-    internal IOp? ChangeTraitsUsingConverters(IOp op, OpTraitSet toTraits)
+    internal IOp? ChangeTraitsUsingConverters(IOp rel, OpTraitSet toTraits)
     {
-        var subset = (OpSubset)op;
-        if (subset.Traits.Equals(toTraits))
-            return subset;
+        // Calcite reads this from the ALLOW_INFINITE_COST_CONVERTERS system property (default false).
+        const bool allowInfiniteCostConverters = false;
 
-        var path = FindConversionPath(subset.Traits, toTraits);
-        if (path is null)
-            return null;
-
-        var current = subset;
-        foreach (var step in path)
+        IOp? converted = rel;
+        for (int i = 0; converted is not null && i < toTraits.Count; i++)
         {
-            foreach (var member in EquivRoot(current.Set).Ops.ToArray())
-            {
-                if (!member.Traits.Satisfies(current.Traits))
-                    continue;
+            var fromTrait = converted.Traits.Get(i);
+            var traitDef = fromTrait.TraitDef;
+            var toTrait = toTraits.Get(i);
 
-                var converted = step.Convert(member);
-                if (converted is not null)
-                    Register(converted, member);
-            }
-
-            var next = EquivRoot(current.Set).GetSubset(step.Result);
-            if (next is null)
-                return null;
-
-            current = next;
-        }
-
-        return current.Best is not null ? current : null;
-    }
-
-    List<ConversionStep>? FindConversionPath(OpTraitSet from, OpTraitSet to)
-    {
-        var visited = new HashSet<OpTraitSet> { from };
-        var cameFrom = new Dictionary<OpTraitSet, (OpTraitSet Previous, ConversionStep Step)>();
-        var queue = new Queue<OpTraitSet>();
-        queue.Enqueue(from);
-
-        while (queue.Count > 0)
-        {
-            var current = queue.Dequeue();
-            foreach (var (next, step) in ConversionEdges(current, to))
-            {
-                if (!visited.Add(next))
-                    continue;
-
-                cameFrom[next] = (current, step);
-                if (next.Equals(to))
-                    return Reconstruct(cameFrom, from, to);
-
-                queue.Enqueue(next);
-            }
-        }
-
-        return null;
-    }
-
-    IEnumerable<(OpTraitSet Next, ConversionStep Step)> ConversionEdges(OpTraitSet current, OpTraitSet to)
-    {
-        // A registered converter rule converts the dimension named by its Source/Target.
-        foreach (var rule in Rules)
-        {
-            if (rule is not ConverterRule converter)
+            if (fromTrait.Satisfies(toTrait))
                 continue;
 
-            if (!current.Get(converter.Source.TraitDef).Equals(converter.Source))
-                continue;
+            var convertedRel = traitDef.Convert(this, converted, toTrait, allowInfiniteCostConverters);
+            if (convertedRel is not null)
+                Register(convertedRel, converted);
 
-            var next = current.Plus(converter.Target);
-            if (!next.Equals(current))
-                yield return (next, new ConversionStep(next, member => converter.Convert(member)));
+            converted = convertedRel;
         }
 
-        // A dimension may convert itself toward its goal value via its trait-def hook.
-        foreach (var def in TraitDefs)
-        {
-            var source = current.Get(def);
-            var target = to.Get(def);
-            if (source.Equals(target) || !def.CanConvert(this, source, target))
-                continue;
-
-            var next = current.Plus(target);
-            var hookDef = def;
-            if (!next.Equals(current))
-                yield return (next, new ConversionStep(next, member => hookDef.Convert(this, member, target, true)));
-        }
-    }
-
-    static List<ConversionStep> Reconstruct(Dictionary<OpTraitSet, (OpTraitSet Previous, ConversionStep Step)> cameFrom, OpTraitSet from, OpTraitSet to)
-    {
-        var steps = new List<ConversionStep>();
-        var trait = to;
-        while (!trait.Equals(from))
-        {
-            var (previous, step) = cameFrom[trait];
-            steps.Add(step);
-            trait = previous;
-        }
-
-        steps.Reverse();
-        return steps;
-    }
-
-    sealed class ConversionStep
-    {
-
-        public ConversionStep(OpTraitSet result, Func<IOp, IOp?> convert)
-        {
-            Result = result;
-            Convert = convert;
-        }
-
-        public OpTraitSet Result { get; }
-
-        public Func<IOp, IOp?> Convert { get; }
-
+        return converted;
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "merge(RelSet, RelSet)")]

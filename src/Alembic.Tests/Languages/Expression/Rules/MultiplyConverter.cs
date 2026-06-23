@@ -21,7 +21,7 @@ sealed class MultiplyConverter : ConverterRule
         _physical = physical;
     }
 
-    public override bool IsGuaranteed => true;
+    public override bool IsGuaranteed => false;
 
     public override IOp? Convert(IOp op)
     {
