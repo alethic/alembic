@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 using Alembic.Algebra;
 using Alembic.Algebra.Convert;
@@ -22,7 +23,7 @@ public class AbstractConverter : ConverterImpl
     public AbstractConverter(OpTraitSet target, IOp input, OpTraitDef? traitDef = null)
         : base(traitDef, target, input)
     {
-
+        Debug.Assert(target.AllSimple());
     }
 
     /// <inheritdoc />

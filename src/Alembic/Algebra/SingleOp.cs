@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 using Alembic.Plan;
 
@@ -47,6 +48,7 @@ public abstract class SingleOp : AbstractOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel", "replaceInput(int, RelNode)")]
     public override void ReplaceInput(int ordinalInParent, IOp rel)
     {
+        Debug.Assert(ordinalInParent == 0);
         _input = rel;
         RecomputeDigest();
     }

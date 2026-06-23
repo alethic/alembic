@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 using Alembic.Algebra;
 
@@ -20,6 +21,7 @@ public class OpSubset : AbstractOp
         : base(cluster, traits)
     {
         Set = set;
+        Debug.Assert(traits.AllSimple());
         ComputeBestCost((VolcanoPlanner)cluster.Planner);
         UpperBound = BestCost;
     }

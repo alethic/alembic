@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 using Alembic.Algebra;
 using Alembic.Plan.Rules;
@@ -56,6 +57,12 @@ public class VolcanoRuleCall : OpRuleCall
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "onMatch()")]
     public virtual void OnMatch()
     {
+        // The match was already validated in MatchRecurse before being queued; Calcite only asserts it
+        // here (it does not re-gate). (Calcite also calls checkCancel() here — Alembic has no
+        // cooperative-cancellation subsystem yet — and pushes/pops a ruleCallStack for provenance, which
+        // Alembic does not track.)
+        Debug.Assert(Rule.Matches(this), "rule should still match its bound operands");
+
         if (_planner.IsRuleExcluded(Rule))
             return;
 
@@ -76,9 +83,6 @@ public class VolcanoRuleCall : OpRuleCall
             if (_planner.IsPruned(rel))
                 return;
         }
-
-        if (!Rule.Matches(this))
-            return;
 
         _planner.FireRuleAttempted(this, true);
         Rule.OnMatch(this);
