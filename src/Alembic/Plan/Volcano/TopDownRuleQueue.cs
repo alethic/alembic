@@ -14,7 +14,6 @@ namespace Alembic.Plan.Volcano;
 public sealed class TopDownRuleQueue : RuleQueue
 {
 
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue", "matches")]
     readonly Dictionary<INode, LinkedList<VolcanoRuleMatch>> _matches = new Dictionary<INode, LinkedList<VolcanoRuleMatch>>(ReferenceEqualityComparer.Instance);
     readonly HashSet<VolcanoRuleMatch> _seen = new HashSet<VolcanoRuleMatch>();
 

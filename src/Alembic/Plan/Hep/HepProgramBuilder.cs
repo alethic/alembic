@@ -12,13 +12,11 @@ namespace Alembic.Plan.Hep;
 public sealed class HepProgramBuilder
 {
 
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder.instructions")]
     readonly List<HepInstruction> _instructions = new List<HepInstruction>();
 
     /// <summary>
     /// If a group is under construction, the ordinal of its first instruction; otherwise -1.
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder.group")]
     int _group = -1;
 
     /// <summary>

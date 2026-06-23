@@ -382,7 +382,6 @@ public sealed class NodeSubset : AbstractNode
 
         readonly VolcanoPlanner _planner;
 
-        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset.CheapestPlanReplacer", "visited")]
         readonly Dictionary<INode, INode> _visited = new Dictionary<INode, INode>(ReferenceEqualityComparer.Instance);
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset.CheapestPlanReplacer", "CheapestPlanReplacer(VolcanoPlanner)")]

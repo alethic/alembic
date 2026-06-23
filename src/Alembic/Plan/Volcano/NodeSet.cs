@@ -17,7 +17,6 @@ public sealed class NodeSet
     readonly ICostFactory _costFactory;
 
     // Trait-set pairs already wired with a converter, so each conversion is seeded at most once.
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "conversions")]
     readonly HashSet<Pair<TraitSet, TraitSet>> _conversions = new HashSet<Pair<TraitSet, TraitSet>>();
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "RelSet(int, Set<CorrelationId>, Set<CorrelationId>)")]

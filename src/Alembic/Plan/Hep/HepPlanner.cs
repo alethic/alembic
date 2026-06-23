@@ -35,7 +35,6 @@ public sealed class HepPlanner : AbstractPlanner
     int _nTransformations;
     int _graphSizeLastGC;
     int _nTransformationsLastGC;
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "noDag")]
     bool _noDag;
     bool _enableFiredRulesCache;
     bool _largePlanMode;
