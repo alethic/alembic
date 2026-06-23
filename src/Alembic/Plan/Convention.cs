@@ -58,7 +58,7 @@ public class Convention : IConvention
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention.Impl", "satisfies(RelTrait)")]
     public virtual bool Satisfies(IOpTrait trait)
     {
-        return Equals(trait);
+        return ReferenceEquals(this, trait);
     }
 
     /// <summary>
@@ -84,17 +84,8 @@ public class Convention : IConvention
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention.Impl", "enforce(RelNode, RelTraitSet)")]
     public virtual IOp? Enforce(IOp input, OpTraitSet required) => null;
 
-    /// <inheritdoc />
-    public override bool Equals(object? obj)
-    {
-        return obj is Convention other && string.Equals(_name, other._name, StringComparison.Ordinal);
-    }
-
-    /// <inheritdoc />
-    public override int GetHashCode()
-    {
-        return _name.GetHashCode();
-    }
+    // Calcite's Convention.Impl overrides neither equals nor hashCode: conventions are singletons,
+    // compared by reference identity (see Satisfies). Alembic follows suit — no by-name override.
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention.Impl", "toString()")]
