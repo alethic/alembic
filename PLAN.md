@@ -197,7 +197,7 @@ machinery it needs (`DeepEquals`/`DeepHashCode`) is already in place.
 
 `VolcanoPlanner` keeps the shared graph HEP does not. **Registration** (`SetRoot` → `RegisterImpl`)
 replaces each op's children with their `OpSubset` (via `OnRegister`), dedups by digest, places the
-op in a `OpSet`, costs it (`PropagateCostImprovements`), and **fires rules** — a `DeferringRuleCall`
+op in an `OpSet`, costs it (`PropagateCostImprovements`), and **fires rules** — a `DeferringRuleCall`
 defers each operand match as a `VolcanoRuleMatch` added to the `RuleQueue`. `FindBestPlan` hands the
 queue to the `IRuleDriver` (`IterativeRuleDriver`), which pops each match and applies it; the match's
 `Transform` registers the equivalent into the matched op's set. Each subset remembers its cheapest
@@ -356,7 +356,7 @@ planner, rules, operands, and `Convention.register` all take `IOp`. (The generic
    digest), so a rule fires once per distinct subexpression and a rewrite is shared by every parent
    that references it. A vertex's identity is stable (`Id`), so replacing its content leaves parents'
    digests intact; the planner's own operand matching sees through a vertex to its current op (as
-   Volcano's matcher descends a `OpSubset` — each planner owns its stand-in op, no shared
+   Volcano's matcher descends an `OpSubset` — each planner owns its stand-in op, no shared
    abstraction). `SharedDagTests` proves the sharing (`Assert.Same` on a folded common subexpression).
 4. **✅ Done — `HepInstruction` model.** `HepProgram` is an ordered list of `HepInstruction`s
    (`RuleInstance`, `RuleCollection`, `RuleClass`, `RuleLookup`, `ConverterRules`,

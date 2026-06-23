@@ -222,7 +222,7 @@ A **deterministic, program-driven rewriter**. It holds the plan as a **shared gr
 rule fires once per distinct subexpression and a rewrite is shared by every parent that references it. A
 vertex's identity is stable, so replacing its content (a rewrite) leaves referencing parents' digests
 intact; the planner's own operand matching sees through a vertex to its current op (just as the
-Volcano matcher descends through a `OpSubset`). It visits the vertices in
+Volcano matcher descends through an `OpSubset`). It visits the vertices in
 a configured order (`HepMatchOrder`), applies each matching rule (at most one transform per vertex per
 pass), and re-passes until nothing changes (a fixed point). A rewrite re-points the vertex's parents and
 orphaned vertices are reclaimed by mark-and-sweep garbage collection. There is **no cost model** — it
