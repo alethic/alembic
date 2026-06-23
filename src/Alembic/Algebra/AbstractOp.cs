@@ -70,6 +70,15 @@ public abstract class AbstractOp : IOp
     }
 
     /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "childrenAccept(RelVisitor)")]
+    public void ChildrenAccept(OpVisitor visitor)
+    {
+        var inputs = Children;
+        for (int i = 0; i < inputs.Length; i++)
+            visitor.Visit(inputs[i], i, this);
+    }
+
+    /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "copy(RelTraitSet, List<RelNode>)")]
     public abstract IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children);
 

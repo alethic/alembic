@@ -1,49 +1,46 @@
 namespace Alembic.Algebra;
 
 /// <summary>
-/// A depth-first walk over an op tree. Override <see cref="Visit(IOp, int, IOp?)"/> to act on each
-/// op; the default descends into its children. Start a walk with <see cref="Visit(IOp)"/>.
+/// A visitor that walks an op tree depth-first. Override <see cref="Visit(IOp, int, IOp?)"/> to act on
+/// each op; the default descends into its children (via <see cref="IOp.ChildrenAccept"/>). Start a walk
+/// with <see cref="Go(IOp)"/>, which records the root and returns it — a visitor may swap the root out
+/// mid-walk with <see cref="ReplaceRoot"/>.
 /// </summary>
-/// <remarks>
-/// The shape is deliberately minimal: just an entry point (<see cref="Visit(IOp)"/>) and the per-op
-/// hook. A rewriting-capable visitor would also carry a mutable root field, a replace-root method, and a
-/// separate entry point so it could swap the tree's root out as it walks — but that bolts a rewriting
-/// concern onto a traversal; rewriting, if ever needed, belongs in a separate shuttle. The walk reads
-/// <see cref="IOp.Children"/> directly rather than through a double-dispatch <c>accept</c>.
-/// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelVisitor")]
 public abstract class OpVisitor
 {
 
-    /// <summary>
-    /// Visits the tree rooted at <paramref name="root"/>.
-    /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelVisitor", "go(RelNode)")]
-    public void Visit(IOp root)
-    {
-        Visit(root, 0, null);
-    }
+    IOp? _root;
 
     /// <summary>
-    /// Visits <paramref name="op"/> — the input at <paramref name="ordinal"/> of <paramref name="parent"/>,
-    /// or the root (ordinal 0, null parent). The default descends into the op's children; override to
-    /// act on the op (call <see cref="VisitChildren"/> to continue the descent).
+    /// Visits <paramref name="node"/> — the input at <paramref name="ordinal"/> of <paramref name="parent"/>,
+    /// or the root (ordinal 0, null parent). The default descends into the op's children; override to act
+    /// on the op.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelVisitor", "visit(RelNode, int, RelNode)")]
-    public virtual void Visit(IOp op, int ordinal, IOp? parent)
+    public virtual void Visit(IOp node, int ordinal, IOp? parent)
     {
-        VisitChildren(op);
+        node.ChildrenAccept(this);
     }
 
     /// <summary>
-    /// Visits each child of <paramref name="op"/> in order.
+    /// Replaces the root recorded for the current walk — for a visitor that rewrites the tree as it goes.
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "childrenAccept(RelVisitor)")]
-    protected void VisitChildren(IOp op)
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelVisitor", "replaceRoot(RelNode)")]
+    public void ReplaceRoot(IOp? node)
     {
-        var children = op.Children;
-        for (int i = 0; i < children.Length; i++)
-            Visit(children[i], i, op);
+        _root = node;
+    }
+
+    /// <summary>
+    /// Walks the tree rooted at <paramref name="p"/>, returning the (possibly replaced) root.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelVisitor", "go(RelNode)")]
+    public IOp? Go(IOp p)
+    {
+        _root = p;
+        Visit(p, 0, null);
+        return _root;
     }
 
 }

@@ -26,7 +26,8 @@ Whole subsystems Alembic does not implement, by design or as future work:
 | `RelSubset` `passThrough`/`derive` *trait-derivation logic* | **done** — covered by `CascadesTests`: `PassThrough`/`Derive` composition unit tests, an end-to-end top-down pass-through (a filter pushes a sortedness requirement down to its source), and an end-to-end bottom-up derive (a filter derives a sorted equivalent from a source that independently offers a sorted scan) |
 | `RelBuilder` and the relational operator library | **out of scope** — medium-agnostic engine |
 | `RexNode`, `RelDataType`/row types, row counts, hints, correlation, schemas | **out of scope** — relational |
-| `RelShuttle`/`RexShuttle`/`RelVisitor` | **out of scope** — visitors |
+| `RelShuttle`/`RexShuttle` | **out of scope** — shuttles (`RexShuttle` is relational) |
+| `RelVisitor` | **ported** — `OpVisitor` (`Go`/`Visit`/`ReplaceRoot`, descending via `IOp.ChildrenAccept`) |
 | ~~`RelNode.getId()` global id sequence~~ | **ported** — `IOp.Id` / `AbstractOp.Id`, handed out in creation order from an atomic counter (Calcite's `NEXT_ID.getAndIncrement()`); used by `VolcanoRuleMatch.computeDigest()`. (An earlier note claimed Alembic used object identity instead; that was never an actual decision.) |
 | `Dumpers`, `assertNoCycles`, `assertGraphConsistent`, `dumpGraph`, `VolcanoTimeoutException` | **debug/ops** — not ported |
 | materialized views (`RelOptMaterialization`) | **out of scope** — relational |

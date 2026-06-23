@@ -75,6 +75,13 @@ public interface IOp
     void Explain(IOpWriter writer);
 
     /// <summary>
+    /// Visits each of this op's children in order with <paramref name="visitor"/> — the double dispatch
+    /// that <see cref="OpVisitor"/> descends through.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "childrenAccept(RelVisitor)")]
+    void ChildrenAccept(OpVisitor visitor);
+
+    /// <summary>
     /// This op's structural digest — the key the planner deduplicates on.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getRelDigest()")]
