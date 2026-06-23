@@ -16,12 +16,12 @@ public sealed class OpSubset : AbstractOp
 {
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "RelSubset(RelOptCluster, RelSet, RelTraitSet)")]
-    internal OpSubset(OpSet set, OpTraitSet traits, IOpCost infiniteCost)
-        : base(set.Cluster, traits)
+    internal OpSubset(OpCluster cluster, OpSet set, OpTraitSet traits)
+        : base(cluster, traits)
     {
         Set = set;
-        BestCost = infiniteCost;
-        UpperBound = infiniteCost;
+        BestCost = cluster.Planner.CostFactory.MakeInfiniteCost();
+        UpperBound = BestCost;
     }
 
     /// <summary>
@@ -74,7 +74,7 @@ public sealed class OpSubset : AbstractOp
         if (Set.Ops.Contains(op))
             return;
 
-        ((AbstractOpPlanner)Set.Cluster.Planner).FireOpEquivalenceFound(op, Set.Id, !op.Convention.Equals(Convention.None));
+        ((AbstractOpPlanner)op.Cluster.Planner).FireOpEquivalenceFound(op, Set.Id, !op.Convention.Equals(Convention.None));
         Set.AddInternal(op);
     }
 
@@ -457,7 +457,7 @@ public sealed class OpSubset : AbstractOp
             if (traitSet1.Equals(Traits))
                 return this;
 
-            return Set.GetOrCreateSubset(traitSet1, IsRequired);
+            return Set.GetOrCreateSubset(Cluster, traitSet1, IsRequired);
         }
 
         throw new NotSupportedException();

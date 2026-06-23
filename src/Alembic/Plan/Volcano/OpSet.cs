@@ -14,17 +14,16 @@ namespace Alembic.Plan.Volcano;
 public sealed class OpSet
 {
 
-    readonly IOpCostFactory _costFactory;
-
     // Trait-set pairs already wired with a converter, so each conversion is seeded at most once.
     readonly HashSet<Pair<OpTraitSet, OpTraitSet>> _conversions = new HashSet<Pair<OpTraitSet, OpTraitSet>>();
 
+    // NOTE: Calcite's RelSet(int, Set<CorrelationId>, Set<CorrelationId>) also records the correlation
+    // variables propagated/used by the set; those parameters are omitted here until correlation (Rex) is
+    // ported. RelSet stores no cluster or cost factory — both are threaded in from the op/subset.
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "RelSet(int, Set<CorrelationId>, Set<CorrelationId>)")]
-    internal OpSet(int id, IOpCostFactory costFactory, OpCluster cluster)
+    internal OpSet(int id)
     {
         Id = id;
-        _costFactory = costFactory;
-        Cluster = cluster;
     }
 
     /// <summary>
@@ -32,11 +31,6 @@ public sealed class OpSet
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "id")]
     internal readonly int Id;
-
-    /// <summary>
-    /// The cluster the set's ops belong to.
-    /// </summary>
-    public OpCluster Cluster { get; }
 
     /// <summary>
     /// Every op in the set (across all subsets).
@@ -109,12 +103,12 @@ public sealed class OpSet
         return null;
     }
 
-    internal OpSubset GetOrCreateSubset(OpTraitSet traits)
+    internal OpSubset GetOrCreateSubset(OpCluster cluster, OpTraitSet traits)
     {
         var subset = GetSubset(traits);
         if (subset is null)
         {
-            subset = new OpSubset(this, traits, _costFactory.MakeInfiniteCost());
+            subset = new OpSubset(cluster, this, traits);
             Subsets.Add(subset);
         }
 
@@ -128,14 +122,14 @@ public sealed class OpSet
     /// seeded between it and the complementary subsets so the planner can convert between them.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "getOrCreateSubset(RelOptCluster, RelTraitSet, boolean)")]
-    internal OpSubset GetOrCreateSubset(OpTraitSet traits, bool required)
+    internal OpSubset GetOrCreateSubset(OpCluster cluster, OpTraitSet traits, bool required)
     {
         var needsConverter = false;
         var subset = GetSubset(traits);
         if (subset is null)
         {
             needsConverter = true;
-            subset = new OpSubset(this, traits, _costFactory.MakeInfiniteCost());
+            subset = new OpSubset(cluster, this, traits);
             Subsets.Add(subset);
         }
         else if ((required && !subset.IsRequired) || (!required && !subset.IsDelivered))
@@ -151,7 +145,7 @@ public sealed class OpSet
             subset.SetDelivered();
 
         if (needsConverter)
-            AddConverters(subset, required, useAbstractConverter: !((VolcanoPlanner)Cluster.Planner).TopDownOpt);
+            AddConverters(subset, required, useAbstractConverter: !((VolcanoPlanner)cluster.Planner).TopDownOpt);
 
         return subset;
     }
@@ -165,7 +159,8 @@ public sealed class OpSet
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "addConverters(RelSubset, boolean, boolean)")]
     void AddConverters(OpSubset subset, bool required, bool useAbstractConverter)
     {
-        var planner = (VolcanoPlanner)Cluster.Planner;
+        var cluster = subset.Cluster;
+        var planner = (VolcanoPlanner)cluster.Planner;
 
         var others = new List<OpSubset>();
         foreach (var n in Subsets)
@@ -228,7 +223,7 @@ public sealed class OpSet
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "add(RelNode)")]
     internal OpSubset Add(IOp op)
     {
-        var subset = GetOrCreateSubset(op.Traits, op.IsEnforcer);
+        var subset = GetOrCreateSubset(op.Cluster, op.Traits, op.IsEnforcer);
         subset.Add(op);
         return subset;
     }
@@ -292,7 +287,7 @@ public sealed class OpSet
 
         foreach (var op in other.Ops)
         {
-            var subset = GetOrCreateSubset(op.Traits, op.IsEnforcer);
+            var subset = GetOrCreateSubset(op.Cluster, op.Traits, op.IsEnforcer);
             AddInternal(op);
             planner.MapOpToSubset(op, subset);
             planner.PropagateCostImprovements(op);

@@ -223,7 +223,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
     public override IOp ChangeTraits(IOp op, OpTraitSet toTraits)
     {
         var subset = EnsureRegistered(op, null);
-        return EquivRoot(subset.Set).GetOrCreateSubset(toTraits, required: true);
+        return EquivRoot(subset.Set).GetOrCreateSubset(subset.Cluster, toTraits, required: true);
     }
 
     /// <inheritdoc />
@@ -298,7 +298,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
         if (subset.Set.EquivalentSet is null)
             return subset;
 
-        return EquivRoot(subset.Set).GetOrCreateSubset(subset.Traits, subset.IsRequired);
+        return EquivRoot(subset.Set).GetOrCreateSubset(subset.Cluster, subset.Traits, subset.IsRequired);
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "registerImpl(RelNode, RelSet)")]
@@ -360,7 +360,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
 
         if (set is null)
         {
-            set = new OpSet(_nextSetId++, CostFactory, _cluster ??= op.Cluster);
+            set = new OpSet(_nextSetId++);
             _allSets.Add(set);
         }
 
@@ -409,7 +409,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
         {
             var childSubset = EnsureRegistered(child, null);
             if (!bridge && !childSubset.Traits.Convention.Equals(convention))
-                childSubset = childSubset.Set.GetOrCreateSubset(childSubset.Traits.Replace(ConventionTraitDef.Instance, convention));
+                childSubset = childSubset.Set.GetOrCreateSubset(childSubset.Cluster, childSubset.Traits.Replace(ConventionTraitDef.Instance, convention));
 
             children.Add(childSubset);
         }
@@ -824,7 +824,7 @@ public sealed class VolcanoPlanner : AbstractOpPlanner
         // If the absorbed set held the root, the survivor's subset for the root traits is the new root.
         if (_root is not null && ReferenceEquals(set2, rootSet))
         {
-            _root = set1.GetOrCreateSubset(_root.Traits, _root.IsRequired);
+            _root = set1.GetOrCreateSubset(_root.Cluster, _root.Traits, _root.IsRequired);
             EnsureRootConverters();
         }
     }
