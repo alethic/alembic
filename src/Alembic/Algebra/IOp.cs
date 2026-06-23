@@ -72,10 +72,7 @@ public interface IOp
     /// This op's structural digest — the key the planner deduplicates on.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getRelDigest()")]
-    IOpDigest GetDigest()
-    {
-        return new OpDigest(this);
-    }
+    IOpDigest GetDigest();
 
     /// <summary>
     /// Recomputes this op's digest, discarding any cached value. A planner calls this after something
