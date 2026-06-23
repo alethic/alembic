@@ -218,6 +218,85 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     }
 
     /// <summary>
+    /// Whether the given dimension is present in this set.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "isEnabled(RelTraitDef)")]
+    public bool IsEnabled<TTrait>(OpTraitDef<TTrait> def)
+        where TTrait : class, IOpTrait
+        => FindIndex(def) >= 0;
+
+    /// <summary>
+    /// Whether every dimension in this set holds its default value.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "isDefault()")]
+    public bool IsDefault()
+    {
+        foreach (var trait in _traits)
+            if (!ReferenceEquals(trait, trait.TraitDef.Default))
+                return false;
+
+        return true;
+    }
+
+    /// <summary>
+    /// As <see cref="IsDefault"/>, ignoring the convention dimension.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "isDefaultSansConvention()")]
+    public bool IsDefaultSansConvention()
+    {
+        foreach (var trait in _traits)
+        {
+            if (ReferenceEquals(trait.TraitDef, ConventionTraitDef.Instance))
+                continue;
+
+            if (!ReferenceEquals(trait, trait.TraitDef.Default))
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// This set with every dimension reset to its default.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "getDefault()")]
+    public OpTraitSet GetDefault()
+    {
+        var builder = ImmutableArray.CreateBuilder<IOpTrait>(_traits.Length);
+        foreach (var trait in _traits)
+            builder.Add(trait.TraitDef.Default);
+
+        return _cache.GetOrAdd(new OpTraitSet(_cache, builder.MoveToImmutable()));
+    }
+
+    /// <summary>
+    /// As <see cref="GetDefault"/>, but keeping the convention dimension unchanged.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "getDefaultSansConvention()")]
+    public OpTraitSet GetDefaultSansConvention()
+    {
+        var builder = ImmutableArray.CreateBuilder<IOpTrait>(_traits.Length);
+        foreach (var trait in _traits)
+            builder.Add(ReferenceEquals(trait.TraitDef, ConventionTraitDef.Instance) ? trait : trait.TraitDef.Default);
+
+        return _cache.GetOrAdd(new OpTraitSet(_cache, builder.MoveToImmutable()));
+    }
+
+    /// <summary>
+    /// Whether <paramref name="trait"/> is carried here, or its dimension is absent (so it does not
+    /// apply). A canonized trait is compared by reference.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "containsIfApplicable(RelTrait)")]
+    public bool ContainsIfApplicable(IOpTrait trait)
+    {
+        var index = FindIndex(trait.TraitDef);
+        if (index < 0)
+            return true;
+
+        return ReferenceEquals(_traits[index], trait);
+    }
+
+    /// <summary>
     /// Whether this set carries exactly <paramref name="traits"/>, in order.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "comprises(RelTrait[])")]

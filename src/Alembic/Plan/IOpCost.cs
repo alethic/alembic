@@ -71,4 +71,23 @@ public interface IOpCost
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCost", "isEqWithEpsilon(RelOptCost)")]
     bool IsEqWithEpsilon(IOpCost other);
 
+    /// <summary>
+    /// Renders a scalar cost magnitude, using Calcite's special tokens for the named extremes
+    /// (<c>{huge}</c>, <c>{inf}</c>, <c>{tiny}</c>, <c>{0}</c>) and the plain number otherwise.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCost", "toString(double)")]
+    static string ToString(double value)
+    {
+        if (value == double.MaxValue)
+            return "{huge}";
+        if (double.IsPositiveInfinity(value))
+            return "{inf}";
+        if (value == 1.0)
+            return "{tiny}";
+        if (value == 0.0)
+            return "{0}";
+
+        return value.ToString();
+    }
+
 }

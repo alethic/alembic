@@ -47,7 +47,10 @@ public class OpWriterImpl : IOpWriter
     void Explain(IOp op, (string Name, object? Value)[] values)
     {
         _builder.Append(' ', _spaces);
-        _builder.Append(op.GetType().Name).Append(' ').Append(op.Traits);
+
+        // Calcite's RelWriterImpl(PrintWriter) defaults withIdPrefix to true, then prints getRelTypeName()
+        // (the simple class name). It does not print the trait set.
+        _builder.Append(op.Id).Append(':').Append(op.GetType().Name);
 
         int attributes = 0;
         foreach (var (name, value) in values)
@@ -56,7 +59,7 @@ public class OpWriterImpl : IOpWriter
             if (value is IOp)
                 continue;
 
-            _builder.Append(attributes++ == 0 ? " (" : ", ").Append(name).Append('=').Append(value);
+            _builder.Append(attributes++ == 0 ? "(" : ", ").Append(name).Append("=[").Append(value).Append(']');
         }
 
         if (attributes > 0)

@@ -80,7 +80,7 @@ public class OpCost : IOpCost
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostImpl", "toString()")]
-    public override string ToString() => _value.ToString();
+    public override string ToString() => IOpCost.ToString(_value);
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostImpl.Factory")]
     sealed class CostFactory : IOpCostFactory

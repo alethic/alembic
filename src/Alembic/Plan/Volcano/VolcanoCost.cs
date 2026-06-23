@@ -137,7 +137,21 @@ internal class VolcanoCost : IOpCost
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost", "toString()")]
-    public override string ToString() => $"{{{_cpu} cpu, {_io} io}}";
+    public override string ToString()
+    {
+        // Calcite's named singletons override toString to the special tokens; every other cost renders
+        // its components.
+        if (ReferenceEquals(this, InfinityCost))
+            return IOpCost.ToString(double.PositiveInfinity);
+        if (ReferenceEquals(this, HugeCost))
+            return IOpCost.ToString(double.MaxValue);
+        if (ReferenceEquals(this, ZeroCost))
+            return IOpCost.ToString(0.0);
+        if (ReferenceEquals(this, TinyCost))
+            return IOpCost.ToString(1.0);
+
+        return $"{{{_cpu} cpu, {_io} io}}";
+    }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost.Factory")]
     sealed class VolcanoCostFactory : IOpCostFactory

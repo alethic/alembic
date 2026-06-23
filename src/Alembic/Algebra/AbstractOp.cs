@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 using Alembic.Plan;
@@ -268,6 +269,11 @@ public abstract class AbstractOp : IOp
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "item(String, Object)")]
         public IOpWriter Item(string name, object? value)
         {
+            // We can't rely on value-based hashCode/equals for an array, so stringify it (per-instance,
+            // matching Calcite's `"" + value`, i.e. Object.toString = type@identityHash).
+            if (value is Array)
+                value = value.GetType().Name + "@" + RuntimeHelpers.GetHashCode(value).ToString("x");
+
             Items.Add((name, value));
             return this;
         }

@@ -34,4 +34,16 @@ public interface IOpWriter
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelWriter", "done(RelNode)")]
     IOpWriter Done(IOp op);
 
+    /// <summary>
+    /// Whether the writer renders nested values rather than flattening them. Defaults to <c>false</c>.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelWriter", "nest()")]
+    bool Nest => false;
+
+    /// <summary>
+    /// Whether the writer expands each op's detail when printing. Defaults to <c>false</c>.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelWriter", "expand()")]
+    bool Expand => false;
+
 }

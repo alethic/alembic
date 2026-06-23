@@ -28,19 +28,19 @@ public interface IOp
     /// <summary>
     /// The cluster this op belongs to — its shared planning context. Every op in a plan shares one.
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getCluster()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptNode", "getCluster()")]
     OpCluster Cluster { get; }
 
     /// <summary>
     /// The physical properties (convention, etc.) carried by this op.
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getTraitSet()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptNode", "getTraitSet()")]
     OpTraitSet Traits { get; }
 
     /// <summary>
     /// This op's child ops, in order.
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "getInputs()")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptNode", "getInputs()")]
     ImmutableArray<IOp> Children { get; }
 
     /// <summary>

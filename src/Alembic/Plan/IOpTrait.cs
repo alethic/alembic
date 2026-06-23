@@ -34,4 +34,10 @@ public interface IOpTrait
 
     }
 
+    /// <summary>
+    /// Whether this trait is its dimension's default value.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTrait", "isDefault()")]
+    bool IsDefault => ReferenceEquals(this, TraitDef.Default);
+
 }
