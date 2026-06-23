@@ -191,6 +191,20 @@ public class OpSubset : AbstractOp
         return physical.PassThrough(Traits);
     }
 
+    /// <summary>
+    /// Folds <paramref name="other"/>'s pass-through cache into this subset's during a set merge: adopt
+    /// it wholesale when this subset has none, otherwise union the entries in. Mirrors the
+    /// <c>passThroughCache</c> merge in Calcite's <c>RelSet.mergeWith</c>.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "passThroughCache")]
+    internal void AdoptPassThroughCache(OpSubset other)
+    {
+        if (_passThroughCache is null)
+            _passThroughCache = other._passThroughCache;
+        else if (other._passThroughCache is not null)
+            _passThroughCache.UnionWith(other._passThroughCache);
+    }
+
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "isExplored()")]
     internal bool IsExplored => Set.Exploring == OpSet.ExploringState.Explored;
 

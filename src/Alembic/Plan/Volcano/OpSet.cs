@@ -285,27 +285,73 @@ internal class OpSet
         other.EquivalentSet = this;
         planner.RemoveSet(other);
 
-        foreach (var op in other.Ops)
+        var cluster = Rel!.Cluster;
+        var changedRels = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
+
+        // Merge subsets: recreate each of the other set's subsets here (with the same required/delivered
+        // flags), fold in its pass-through cache, and note any whose best cost should now improve.
+        foreach (var otherSubset in other.Subsets)
         {
-            var subset = GetOrCreateSubset(op.Cluster, op.Traits, op.IsEnforcer);
-            AddInternal(op);
-            planner.MapOpToSubset(op, subset);
-            planner.PropagateCostImprovements(op);
+            OpSubset? subset = null;
+            var otherTraits = otherSubset.Traits;
+
+            // A logical or delivered-physical subset.
+            if (otherSubset.IsDelivered || !otherSubset.IsRequired)
+                subset = GetOrCreateSubset(cluster, otherTraits, false);
+
+            // It may be required only, or both delivered and required, in which case register again.
+            if (otherSubset.IsRequired)
+                subset = GetOrCreateSubset(cluster, otherTraits, true);
+
+            subset!.AdoptPassThroughCache(otherSubset);
+
+            if (otherSubset.BestCost.IsLessThan(subset.BestCost) && otherSubset.Best is not null)
+                changedRels.Add(otherSubset.Best);
         }
 
-        // Parents referenced subsets of the now-dead set as children; re-point them at the surviving
-        // set, recomputing their digests. Snapshot first, since re-pointing mutates the parent lists.
-        var parents = new List<IOp>(other.Parents);
-        Parents.AddRange(other.Parents);
-        other.Parents.Clear();
+        var parentRels = new HashSet<IOp>(Parents, ReferenceEqualityComparer.Instance);
+        foreach (var otherRel in other.Ops)
+        {
+            // If otherRel is an enforcing operator (e.g. a converter) do not prune it; otherwise, when it
+            // is a parent that adds nothing over its single input, it is redundant and can be pruned.
+            if (!otherRel.IsEnforcer && parentRels.Contains(otherRel))
+            {
+                if (otherRel.Children.Length != 1
+                    || otherRel.Children[0].Traits.Satisfies(otherRel.Traits))
+                {
+                    planner.Prune(otherRel);
+                }
+            }
 
-        foreach (var op in other.Ops)
+            planner.ReRegister(this, otherRel);
+        }
+
+        // Propagate the new best information from the changed ops.
+        foreach (var rel in changedRels)
+            planner.PropagateCostImprovements(rel);
+
+        // Update every op that had a child in the other set, to reflect the renamed child. Copy first,
+        // since renaming mutates the parent lists.
+        var previousParents = new List<IOp>(other.Parents);
+        foreach (var parentRel in previousParents)
+            planner.Rename(parentRel);
+
+        // Renaming may have caused this set to merge into another; if so this set is now obsolete and its
+        // children must not be touched.
+        if (EquivalentSet is not null)
+            return;
+
+        // Make sure cost changes from the merge are propagated to the parents.
+        foreach (var parentRel in Parents)
+            planner.PropagateCostImprovements(parentRel);
+
+        // Each op in the old set now has new parents, so rules may fire again, as if newly registered.
+        foreach (var op in Ops)
             planner.FireRules(op);
 
-        foreach (var parent in parents)
-            planner.Rename(parent);
-
-        planner.RuleDriver.OnSetMerged(this);
+        // Fire rule matches on the subsets as well.
+        foreach (var subset in Subsets)
+            planner.FireRules(subset);
     }
 
 }

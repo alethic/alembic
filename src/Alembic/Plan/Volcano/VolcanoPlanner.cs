@@ -403,6 +403,24 @@ public class VolcanoPlanner : AbstractOpPlanner
         return subset;
     }
 
+    /// <summary>
+    /// Re-adds <paramref name="op"/> into <paramref name="set"/> during a set merge. If an equivalent op
+    /// already exists (its child may have just become equivalent to another set), the two are reconciled
+    /// for pruning and this op is dropped; otherwise the op is added to its subset (unless pruned).
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "reregister(RelSet, RelNode)")]
+    internal void ReRegister(OpSet set, IOp op)
+    {
+        if (_digestToOp.TryGetValue(op.GetDigest(), out var equiv) && !ReferenceEquals(equiv, op))
+        {
+            CheckPruned(equiv, op);
+            return;
+        }
+
+        if (!IsPruned(op))
+            AddOpToSet(op, set);
+    }
+
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "propagateCostImprovements(RelNode)")]
     internal void PropagateCostImprovements(IOp op)
     {
@@ -711,6 +729,8 @@ public class VolcanoPlanner : AbstractOpPlanner
             _root = set1.GetOrCreateSubset(_root.Cluster, _root.Traits, _root.IsRequired);
             EnsureRootConverters();
         }
+
+        _ruleDriver.OnSetMerged(set1);
     }
 
     /// <summary>
