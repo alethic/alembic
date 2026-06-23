@@ -675,28 +675,39 @@ public sealed class HepPlanner : AbstractOpPlanner
         if (ReferenceEquals(preservedVertex, discardedVertex))
             return;
 
-        UpdateVertex(preservedVertex, preservedVertex.CurrentOp);
+        var rel = preservedVertex.CurrentOp;
+        UpdateVertex(preservedVertex, rel);
 
+        // Update specified parents of discardedVertex.
         foreach (var parent in parents)
         {
             var parentRel = parent.CurrentOp;
             var inputs = parentRel.Children;
-            ImmutableArray<IOp>.Builder? builder = null;
             for (int i = 0; i < inputs.Length; i++)
             {
-                if (ReferenceEquals(inputs[i], discardedVertex))
-                {
-                    builder ??= inputs.ToBuilder();
-                    builder[i] = preservedVertex;
-                }
-            }
+                var child = inputs[i];
+                if (!ReferenceEquals(child, discardedVertex))
+                    continue;
 
-            // Ops are immutable, so re-point a parent by rebuilding it rather than mutating in place.
-            if (builder is not null)
-                parentRel = parentRel.Copy(parentRel.Traits, builder.ToImmutable());
+                parentRel.ReplaceInput(i, preservedVertex);
+            }
 
             ClearCache(parent);
             _graph.RemoveEdge(parent, discardedVertex);
+
+            if (!_noDag && _largePlanMode)
+            {
+                // Recursive merge parent path
+                if (_mapDigestToVertex.TryGetValue(parentRel.GetDigest(), out var addedVertex)
+                    && !ReferenceEquals(addedVertex, parent))
+                {
+                    // contractVertices will change predecessorList
+                    var parentCopy = new List<HepOpVertex>(Graphs.PredecessorListOf(_graph, parent));
+                    ContractVertices(addedVertex, parent, parentCopy, garbage);
+                    continue;
+                }
+            }
+
             _graph.AddEdge(parent, preservedVertex);
             UpdateVertex(parent, parentRel);
         }

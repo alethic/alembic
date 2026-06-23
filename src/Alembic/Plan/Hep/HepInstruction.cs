@@ -315,7 +315,7 @@ public abstract class HepInstruction
         }
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.SubProgram", "prepare(PrepareContext)")]
-        internal override HepState Prepare(PrepareContext px) => new State(px, this);
+        internal override HepState Prepare(PrepareContext px) => Program.Prepare(px);
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.SubProgram.State")]
         internal sealed class State : HepState
