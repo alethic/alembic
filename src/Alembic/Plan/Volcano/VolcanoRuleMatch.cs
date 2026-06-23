@@ -13,7 +13,7 @@ namespace Alembic.Plan.Volcano;
 /// are equal when they have the same rule and the same bound ops, so duplicates are dropped.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch")]
-public sealed class VolcanoRuleMatch : VolcanoRuleCall
+internal class VolcanoRuleMatch : VolcanoRuleCall
 {
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "VolcanoRuleMatch(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]

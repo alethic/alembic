@@ -11,7 +11,7 @@ namespace Alembic.Plan.Volcano;
 /// (e.g. to transformation rules while merely exploring).
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue")]
-public sealed class TopDownRuleQueue : RuleQueue
+internal class TopDownRuleQueue : RuleQueue
 {
 
     readonly Dictionary<IOp, LinkedList<VolcanoRuleMatch>> _matches = new Dictionary<IOp, LinkedList<VolcanoRuleMatch>>(ReferenceEqualityComparer.Instance);
@@ -28,7 +28,7 @@ public sealed class TopDownRuleQueue : RuleQueue
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue", "addMatch(VolcanoRuleMatch)")]
-    public override void AddMatch(VolcanoRuleMatch match)
+    internal override void AddMatch(VolcanoRuleMatch match)
     {
         var rel = match.Op(0);
         if (!_matches.TryGetValue(rel, out var queue))

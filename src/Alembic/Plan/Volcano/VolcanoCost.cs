@@ -7,7 +7,7 @@ namespace Alembic.Plan.Volcano;
 /// combined by summing both dimensions; a cost is infinite when either dimension is.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost")]
-public sealed class VolcanoCost : IOpCost
+internal class VolcanoCost : IOpCost
 {
 
     /// <summary>

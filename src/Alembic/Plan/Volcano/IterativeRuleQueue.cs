@@ -8,7 +8,7 @@ namespace Alembic.Plan.Volcano;
 /// most once per match.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue")]
-public sealed class IterativeRuleQueue : RuleQueue
+internal class IterativeRuleQueue : RuleQueue
 {
 
     readonly Queue<VolcanoRuleMatch> _matches = new Queue<VolcanoRuleMatch>();
@@ -25,7 +25,7 @@ public sealed class IterativeRuleQueue : RuleQueue
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue", "addMatch(VolcanoRuleMatch)")]
-    public override void AddMatch(VolcanoRuleMatch match)
+    internal override void AddMatch(VolcanoRuleMatch match)
     {
         if (_seen.Add(match))
             _matches.Enqueue(match);

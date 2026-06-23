@@ -11,7 +11,7 @@ namespace Alembic.Plan.Volcano;
 /// planner's rule queue, for the <see cref="IRuleDriver"/> to apply later.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall.DeferringRuleCall")]
-public sealed class DeferringRuleCall : VolcanoRuleCall
+internal class DeferringRuleCall : VolcanoRuleCall
 {
 
     readonly VolcanoPlanner _planner;

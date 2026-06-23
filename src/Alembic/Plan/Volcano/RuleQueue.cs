@@ -34,7 +34,7 @@ public abstract class RuleQueue
     /// Adds a match to the queue.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue", "addMatch(VolcanoRuleMatch)")]
-    public abstract void AddMatch(VolcanoRuleMatch match);
+    internal abstract void AddMatch(VolcanoRuleMatch match);
 
     /// <summary>
     /// Empties the queue.
@@ -48,7 +48,7 @@ public abstract class RuleQueue
     /// consuming its own output, which would only generate useless equivalents).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue", "skipMatch(VolcanoRuleMatch)")]
-    protected virtual bool SkipMatch(VolcanoRuleMatch match)
+    private protected virtual bool SkipMatch(VolcanoRuleMatch match)
     {
         foreach (var rel in match.Ops)
             if (Planner.IsPruned(rel))
