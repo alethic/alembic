@@ -6,7 +6,7 @@ namespace Alembic.Plan;
 /// planner.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCluster")]
-public sealed class OpCluster
+public class OpCluster
 {
 
     /// <summary>

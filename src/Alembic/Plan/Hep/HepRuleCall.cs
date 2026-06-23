@@ -11,7 +11,7 @@ namespace Alembic.Plan.Hep;
 /// per match; heuristic rewriting applies the first that differs from the matched op.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRuleCall")]
-public sealed class HepRuleCall : OpRuleCall
+public class HepRuleCall : OpRuleCall
 {
 
     readonly List<IOp> _results = new List<IOp>();

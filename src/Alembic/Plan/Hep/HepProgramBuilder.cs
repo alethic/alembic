@@ -9,7 +9,7 @@ namespace Alembic.Plan.Hep;
 /// Builds a <see cref="HepProgram"/> from an ordered list of instructions.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder")]
-public sealed class HepProgramBuilder
+public class HepProgramBuilder
 {
 
     readonly List<HepInstruction> _instructions = new List<HepInstruction>();

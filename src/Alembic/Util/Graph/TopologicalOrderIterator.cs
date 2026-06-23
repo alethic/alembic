@@ -11,7 +11,7 @@ namespace Alembic.Util.Graph;
 /// iterator.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator")]
-public sealed class TopologicalOrderIterator<V, E> : IEnumerator<V>
+public class TopologicalOrderIterator<V, E> : IEnumerator<V>
     where V : notnull
     where E : DefaultEdge
 {

@@ -7,7 +7,7 @@ namespace Alembic.Util.Graph;
 /// Iterates the vertices reachable from a start vertex breadth-first.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.BreadthFirstIterator")]
-public sealed class BreadthFirstIterator<V, E> : IEnumerator<V>
+public class BreadthFirstIterator<V, E> : IEnumerator<V>
     where V : notnull
     where E : DefaultEdge
 {

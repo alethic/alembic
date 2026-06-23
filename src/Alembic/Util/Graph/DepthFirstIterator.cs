@@ -7,7 +7,7 @@ namespace Alembic.Util.Graph;
 /// Iterates the vertices reachable from a start vertex in depth-first, pre-order.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DepthFirstIterator")]
-public sealed class DepthFirstIterator<V, E> : IEnumerator<V>
+public class DepthFirstIterator<V, E> : IEnumerator<V>
     where V : notnull
     where E : DefaultEdge
 {

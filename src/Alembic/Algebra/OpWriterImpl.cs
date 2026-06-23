@@ -9,7 +9,7 @@ namespace Alembic.Algebra;
 /// — its type, traits, and attributes — and then recurses into its inputs, one indent level deeper.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.externalize.RelWriterImpl")]
-public sealed class OpWriterImpl : IOpWriter
+public class OpWriterImpl : IOpWriter
 {
 
     readonly StringBuilder _builder;

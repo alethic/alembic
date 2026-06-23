@@ -8,7 +8,7 @@ namespace Alembic.Plan;
 /// multiple dimensions can supply its own <see cref="IOpCost"/>.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostImpl")]
-public sealed class OpCost : IOpCost
+public class OpCost : IOpCost
 {
 
     /// <summary>

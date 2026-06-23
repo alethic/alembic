@@ -8,7 +8,7 @@ namespace Alembic.Plan.Rules;
 /// converted bottom-up, once its input has been converted.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.TraitMatchingRule")]
-public sealed class TraitMatchingRule : OpRule
+public class TraitMatchingRule : OpRule
 {
 
     readonly ConverterRule _converterRule;

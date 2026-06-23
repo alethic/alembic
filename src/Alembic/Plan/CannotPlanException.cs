@@ -8,7 +8,7 @@ namespace Alembic.Plan;
 /// chain converts some op into the required form.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner.CannotPlanException")]
-public sealed class CannotPlanException : Exception
+public class CannotPlanException : Exception
 {
 
     /// <summary>

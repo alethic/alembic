@@ -20,7 +20,7 @@ namespace Alembic.Plan.Hep;
 /// mark-and-sweep garbage collection.
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner")]
-public sealed class HepPlanner : AbstractOpPlanner
+public class HepPlanner : AbstractOpPlanner
 {
 
     readonly HepProgram _mainProgram;

@@ -13,7 +13,7 @@ namespace Alembic.Plan.Hep;
 /// can only be used by one planner at a time.
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgram")]
-public sealed class HepProgram : HepInstruction
+public class HepProgram : HepInstruction
 {
 
     /// <summary>

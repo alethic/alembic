@@ -10,7 +10,7 @@ namespace Alembic.Plan;
 /// and flatten composite traits without knowing the member type.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait")]
-public abstract class OpCompositeTrait : IOpTrait
+internal abstract class OpCompositeTrait : IOpTrait
 {
 
     /// <summary>
@@ -41,7 +41,7 @@ public abstract class OpCompositeTrait : IOpTrait
 /// </summary>
 /// <typeparam name="T">The member trait type.</typeparam>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait")]
-public sealed class OpCompositeTrait<T> : OpCompositeTrait
+internal class OpCompositeTrait<T> : OpCompositeTrait
     where T : class, IOpMultipleTrait
 {
 
