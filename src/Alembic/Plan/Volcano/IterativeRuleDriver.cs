@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 
 using Alembic.Algebra;
 
@@ -43,6 +44,7 @@ internal class IterativeRuleDriver : IRuleDriver
             if (match is null)
                 break;
 
+            Debug.Assert(match.Rule.Matches(match));
             try
             {
                 match.OnMatch();

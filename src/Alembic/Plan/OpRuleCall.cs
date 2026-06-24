@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 
 using Alembic.Algebra;
 using Alembic.Algebra.Metadata;
@@ -29,13 +30,13 @@ public abstract class OpRuleCall
     /// is taken from the seed operand.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "RelOptRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>, List<RelNode>)")]
-    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs, IReadOnlyList<IOp>? parents)
+    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, IOp?[] rels, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs, IReadOnlyList<IOp>? parents)
     {
         Id = _nextId++;
         Planner = planner;
         Operand0 = operand0;
         Rule = operand0.Rule;
-        Ops = ops;
+        Ops = rels;
         _nodeInputs = nodeInputs;
         Parents = parents;
     }
@@ -44,8 +45,8 @@ public abstract class OpRuleCall
     /// Creates a call with no recorded parents (they default to <c>null</c>).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "RelOptRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs)
-        : this(planner, operand0, ops, nodeInputs, null)
+    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, IOp?[] rels, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs)
+        : this(planner, operand0, rels, nodeInputs, null)
     {
     }
 
@@ -88,10 +89,12 @@ public abstract class OpRuleCall
     public OpRule Rule { get; }
 
     /// <summary>
-    /// The ops bound to the rule's operands, in operand order.
+    /// The ops bound to the rule's operands, indexed by <see cref="OpRuleOperand.OrdinalInRule"/>. The
+    /// contents are mutable: slots are filled in as a match solves outward, and hold the bound ops once
+    /// the match is complete.
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "getRelList()")]
-    public ImmutableArray<IOp> Ops { get; }
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "rels")]
+    public readonly IOp?[] Ops;
 
     /// <summary>
     /// The parents of the first matched op — the common-subexpression context for a
@@ -104,7 +107,13 @@ public abstract class OpRuleCall
     /// The op bound to the operand at the given ordinal. The operand root is ordinal 0.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "rel(int)")]
-    public IOp Op(int ordinal) => Ops[ordinal];
+    public IOp Op(int ordinal) => Ops[ordinal]!;
+
+    /// <summary>
+    /// A snapshot of the ops bound to the rule's operands, in operand order.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "getRelList()")]
+    public ImmutableArray<IOp> GetOpList() => ImmutableArray.CreateRange(Ops.Select(r => r!));
 
     /// <summary>
     /// The metadata query for this call — the one on the matched op's cluster.

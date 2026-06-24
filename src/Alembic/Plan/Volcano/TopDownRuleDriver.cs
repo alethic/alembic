@@ -464,6 +464,11 @@ internal class TopDownRuleDriver : IRuleDriver
             }
 
             _input.SetExplored();
+            foreach (var subset in _input.Set.Subsets)
+            {
+                // Clear the LB cache as exploring state has changed.
+                _input.Cluster.GetMetadataQuery().ClearCache(subset);
+            }
         }
     }
 

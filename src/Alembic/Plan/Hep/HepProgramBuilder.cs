@@ -64,7 +64,8 @@ public class HepProgramBuilder
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder", "addGroupBegin()")]
     public HepProgramBuilder AddGroupBegin()
     {
-        Check(_group < 0);
+        if (_group >= 0)
+            throw new ArgumentException();
         _group = _instructions.Count;
         return AddInstruction(new HepInstruction.Placeholder());
     }
@@ -75,7 +76,8 @@ public class HepProgramBuilder
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder", "addGroupEnd()")]
     public HepProgramBuilder AddGroupEnd()
     {
-        Check(_group >= 0);
+        if (_group < 0)
+            throw new ArgumentException();
         var endGroup = new HepInstruction.EndGroup();
         _instructions[_group] = new HepInstruction.BeginGroup(endGroup);
         _group = -1;
@@ -88,7 +90,8 @@ public class HepProgramBuilder
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder", "addConverters(boolean)")]
     public HepProgramBuilder AddConverters(bool guaranteed)
     {
-        Check(_group < 0);
+        if (_group >= 0)
+            throw new ArgumentException();
         return AddInstruction(new HepInstruction.ConverterRules(guaranteed));
     }
 
@@ -99,7 +102,8 @@ public class HepProgramBuilder
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder", "addCommonRelSubExprInstruction()")]
     public HepProgramBuilder AddCommonRelSubExprInstruction()
     {
-        Check(_group < 0);
+        if (_group >= 0)
+            throw new ArgumentException();
         return AddInstruction(new HepInstruction.CommonOpSubExprRules());
     }
 
@@ -109,7 +113,8 @@ public class HepProgramBuilder
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder", "addMatchOrder(HepMatchOrder)")]
     public HepProgramBuilder AddMatchOrder(HepMatchOrder order)
     {
-        Check(_group < 0);
+        if (_group >= 0)
+            throw new ArgumentException();
         return AddInstruction(new HepInstruction.MatchOrder(order));
     }
 
@@ -119,7 +124,8 @@ public class HepProgramBuilder
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder", "addMatchLimit(int)")]
     public HepProgramBuilder AddMatchLimit(int limit)
     {
-        Check(_group < 0);
+        if (_group >= 0)
+            throw new ArgumentException();
         return AddInstruction(new HepInstruction.MatchLimit(limit));
     }
 
@@ -129,7 +135,8 @@ public class HepProgramBuilder
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder", "addSubprogram(HepProgram)")]
     public HepProgramBuilder AddSubprogram(HepProgram program)
     {
-        Check(_group < 0);
+        if (_group >= 0)
+            throw new ArgumentException();
         return AddInstruction(new HepInstruction.SubProgram(program));
     }
 
@@ -146,17 +153,12 @@ public class HepProgramBuilder
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder", "build()")]
     public HepProgram Build()
     {
-        Check(_group < 0);
+        if (_group >= 0)
+            throw new ArgumentException();
         var program = new HepProgram(_instructions);
         _instructions.Clear();
         _group = -1;
         return program;
-    }
-
-    static void Check(bool condition)
-    {
-        if (!condition)
-            throw new InvalidOperationException("Illegal program builder state.");
     }
 
 }

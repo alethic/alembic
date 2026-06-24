@@ -623,7 +623,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     }
 
     /// <summary>
-    /// The subset a registered op belongs to. (The traversal helpers <c>GetParentRels</c> / <c>GetRels</c>
+    /// The subset a registered op belongs to. (The traversal helpers <c>GetParentOps</c> / <c>GetOps</c>
     /// / <c>Contains</c> live on <see cref="OpSubset"/>.)
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getSubsetNonNull(RelNode)")]

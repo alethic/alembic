@@ -1,5 +1,3 @@
-using System.Collections.Immutable;
-
 using Alembic.Algebra;
 
 namespace Alembic.Plan.Volcano;
@@ -31,11 +29,7 @@ internal class DeferringRuleCall : VolcanoRuleCall
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner.DeferringRuleCall", "onMatch()")]
     public override void OnMatch()
     {
-        var builder = ImmutableArray.CreateBuilder<IOp>(Rels.Length);
-        foreach (var rel in Rels)
-            builder.Add(rel!);
-
-        _planner.RuleDriver.Queue.AddMatch(new VolcanoRuleMatch(_planner, Operand0, builder.MoveToImmutable(), NodeInputs));
+        _planner.RuleDriver.Queue.AddMatch(new VolcanoRuleMatch(_planner, Operand0, Ops, NodeInputs));
     }
 
 }

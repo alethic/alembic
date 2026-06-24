@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -25,11 +24,11 @@ internal class VolcanoRuleMatch : VolcanoRuleCall
     /// <paramref name="operand0"/>; throws if any operand is unbound.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "VolcanoRuleMatch(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    internal VolcanoRuleMatch(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs)
-        : base(planner, operand0, ops, nodeInputs)
+    internal VolcanoRuleMatch(VolcanoPlanner planner, OpRuleOperand operand0, IOp?[] rels, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs)
+        : base(planner, operand0, (IOp?[])rels.Clone(), nodeInputs)
     {
         // A completed match must have bound an op to every operand.
-        Debug.Assert(ops.All(op => op is not null));
+        Debug.Assert(rels.All(op => op is not null));
 
         _digest = ComputeDigest();
     }
@@ -51,12 +50,12 @@ internal class VolcanoRuleMatch : VolcanoRuleCall
     string ComputeDigest()
     {
         var buf = new StringBuilder("rule [" + Rule.Description + "] rels [");
-        for (int i = 0; i < Rels.Length; i++)
+        for (int i = 0; i < Ops.Length; i++)
         {
             if (i > 0)
                 buf.Append(',');
 
-            buf.Append('#').Append(Rels[i]!.Id);
+            buf.Append('#').Append(Ops[i]!.Id);
         }
 
         buf.Append(']');

@@ -144,7 +144,7 @@ public class OpRuleOperandTests
         public override void OnMatch(OpRuleCall call)
         {
             Fired = true;
-            Binding = call.Ops;
+            Binding = call.GetOpList();
         }
 
         public static OpRuleOperand AnyOf<TOp>() where TOp : IOp => Operand<TOp>(Any());

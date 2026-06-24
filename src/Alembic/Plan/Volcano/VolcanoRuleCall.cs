@@ -20,21 +20,12 @@ public class VolcanoRuleCall : OpRuleCall
     readonly VolcanoPlanner _planner;
 
     /// <summary>
-    /// The ops bound to each operand, indexed by <see cref="OpRuleOperand.OrdinalInRule"/>. Filled in as
-    /// the match solves outward.
-    /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "rels")]
-    internal readonly IOp?[] Rels;
-
-    /// <summary>
     /// Creates a call seeded at <paramref name="operand0"/>, with no ops bound yet.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand)")]
     internal VolcanoRuleCall(VolcanoPlanner planner, OpRuleOperand operand0)
-        : base(planner, operand0, ImmutableArray<IOp>.Empty, ImmutableDictionary<IOp, IReadOnlyList<IOp>>.Empty)
+        : this(planner, operand0, new IOp?[operand0.Rule.Operands.Length], ImmutableDictionary<IOp, IReadOnlyList<IOp>>.Empty)
     {
-        _planner = planner;
-        Rels = new IOp?[operand0.Rule.Operands.Length];
     }
 
     /// <summary>
@@ -42,13 +33,10 @@ public class VolcanoRuleCall : OpRuleCall
     /// <paramref name="operand0"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    protected VolcanoRuleCall(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs)
+    protected VolcanoRuleCall(VolcanoPlanner planner, OpRuleOperand operand0, IOp?[] ops, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs)
         : base(planner, operand0, ops, nodeInputs)
     {
         _planner = planner;
-        Rels = new IOp?[operand0.Rule.Operands.Length];
-        for (int i = 0; i < ops.Length; i++)
-            Rels[i] = ops[i];
     }
 
     /// <summary>
@@ -77,7 +65,7 @@ public class VolcanoRuleCall : OpRuleCall
 
             // Skip the match if any bound op has gone stale since it was queued: its set was merged away,
             // it was removed from its subset (during a rename), or it has been pruned.
-            foreach (var op in Rels)
+            foreach (var op in Ops)
             {
                 if (op is null)
                     continue;
@@ -99,7 +87,7 @@ public class VolcanoRuleCall : OpRuleCall
         }
         catch (Exception e)
         {
-            throw new InvalidOperationException($"Error while applying rule {Rule}, args [{string.Join(", ", (object?[])Rels)}]", e);
+            throw new InvalidOperationException($"Error while applying rule {Rule}, args [{string.Join(", ", (object?[])Ops)}]", e);
         }
     }
 
@@ -138,7 +126,7 @@ public class VolcanoRuleCall : OpRuleCall
     {
         const int solve = 0;
         int operandOrdinal = Operand0.SolveOrder[solve];
-        Rels[operandOrdinal] = op;
+        Ops[operandOrdinal] = op;
         MatchRecurse(solve + 1);
     }
 
@@ -167,7 +155,7 @@ public class VolcanoRuleCall : OpRuleCall
         bool ascending = operandOrdinal < previousOperandOrdinal;
         var previousOperand = operands[previousOperandOrdinal];
         var operand = operands[operandOrdinal];
-        var previous = Rels[previousOperandOrdinal]!;
+        var previous = Ops[previousOperandOrdinal]!;
 
         OpRuleOperand parentOperand;
         IEnumerable<IOp> successors;
@@ -188,7 +176,7 @@ public class VolcanoRuleCall : OpRuleCall
         else
         {
             parentOperand = operand.Parent ?? throw new NullReferenceException($"operand.Parent for {operand}");
-            var parentRel = Rels[parentOperand.OrdinalInRule]!;
+            var parentRel = Ops[parentOperand.OrdinalInRule]!;
             var inputs = parentRel.Children;
             // If the child is unordered, then add all ops in all input subsets to the successors list
             // because unordered can match a child in any ordinal.
@@ -306,7 +294,7 @@ public class VolcanoRuleCall : OpRuleCall
                 }
             }
 
-            Rels[operandOrdinal] = rel;
+            Ops[operandOrdinal] = rel;
             MatchRecurse(solve + 1);
         }
     }

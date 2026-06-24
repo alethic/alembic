@@ -520,7 +520,7 @@ public class HepPlanner : AbstractOpPlanner
         if (!MatchOperand(rule.GetOperand(), vertex.CurrentOp, bindings, nodeChildren))
             return null;
 
-        var boundOps = bindings.ToImmutableArray();
+        var boundOps = bindings.ToArray();
 
         // Cache the fired rule before constructing a HepRuleCall.
         ImmutableIntList? opIds = null;
@@ -856,7 +856,8 @@ public class HepPlanner : AbstractOpPlanner
             TryCleanVertices(child);
 
         if (_enableFiredRulesCache)
-            RemoveFiredRules(op);
+            foreach (var opIds in _firedRulesCacheIndex.Get(op.Id))
+                _firedRulesCache.RemoveAll(opIds);
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "collectGarbage(Set<HepRelVertex>)")]
@@ -905,15 +906,12 @@ public class HepPlanner : AbstractOpPlanner
 
         if (_enableFiredRulesCache)
             foreach (var vertex in sweepSet)
-                RemoveFiredRules(vertex.CurrentOp);
-    }
+            {
+                foreach (var opIds in _firedRulesCacheIndex.Get(vertex.CurrentOp.Id))
+                    _firedRulesCache.RemoveAll(opIds);
 
-    void RemoveFiredRules(IOp op)
-    {
-        foreach (var opIds in _firedRulesCacheIndex.Get(op.Id))
-            _firedRulesCache.RemoveAll(opIds);
-
-        _firedRulesCacheIndex.RemoveAll(op.Id);
+                _firedRulesCacheIndex.RemoveAll(vertex.CurrentOp.Id);
+            }
     }
 
 

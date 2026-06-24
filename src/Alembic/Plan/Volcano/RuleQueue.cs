@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 using Alembic.Algebra;
 
@@ -49,11 +50,11 @@ public abstract class RuleQueue
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RuleQueue", "skipMatch(VolcanoRuleMatch)")]
     private protected virtual bool SkipMatch(VolcanoRuleMatch match)
     {
-        foreach (var rel in match.Ops)
+        foreach (var rel in match.GetOpList())
             if (Planner.IsPruned(rel))
                 return true;
 
-        return HasDuplicateSubsetOnPath(new Stack<OpSubset>(), match.Rule.GetOperand(), match.Ops);
+        return HasDuplicateSubsetOnPath(new Stack<OpSubset>(), match.Rule.GetOperand(), match.GetOpList());
     }
 
     /// <summary>
@@ -75,7 +76,8 @@ public abstract class RuleQueue
                 if (HasDuplicateSubsetOnPath(subsets, child, rels))
                     return true;
 
-            subsets.Pop();
+            var x = subsets.Pop();
+            Debug.Assert(ReferenceEquals(x, subset));
         }
 
         return false;
