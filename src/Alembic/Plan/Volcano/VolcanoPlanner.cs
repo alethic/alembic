@@ -634,10 +634,10 @@ public class VolcanoPlanner : AbstractOpPlanner
     internal bool IsTransformationRule(VolcanoRuleMatch match) => match.Rule is ITransformationRule;
 
     /// <summary>
-    /// Whether a match is for a substitution rule. Alembic has no substitution rules.
+    /// Whether a match is for a substitution rule (one whose result supersedes the original).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "isSubstituteRule(VolcanoRuleCall)")]
-    internal bool IsSubstituteRule(VolcanoRuleMatch match) => false;
+    internal bool IsSubstituteRule(VolcanoRuleMatch match) => match.Rule is ISubstitutionRule;
 
     /// <summary>
     /// Whether an op has been registered.

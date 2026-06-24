@@ -104,6 +104,10 @@ public class VolcanoRuleCall : OpRuleCall
 
         _planner.FireRuleProductionSucceeded(this, equivalent, before: true);
 
+        // A substitution rule that opts in prunes the original op, since its substitute supersedes it.
+        if (Rule is ISubstitutionRule substitution && substitution.AutoPruneOld)
+            _planner.Prune(Op(0));
+
         // Register the explicit equivalences first, so registering the root below does not register them
         // twice and cause churn.
         foreach (var entry in equiv)
