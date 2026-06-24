@@ -23,17 +23,25 @@ public abstract class AbstractOpPlanner : IOpPlanner
     readonly IOpCostFactory _costFactory;
     Regex? _ruleDescExclusionFilter;
 
+    protected readonly HashSet<Type> _classes = new HashSet<Type>();
+    readonly HashSet<IConvention> _conventions = new HashSet<IConvention>();
+
     /// <summary>
     /// Initializes the planner with a cost factory (defaulting to the scalar <see cref="OpCost"/>
     /// factory). The trait-dimension registry lives on the cost-based planner — the base keeps no-op
     /// versions of the registry members, as Calcite's <c>AbstractRelOptPlanner</c> does.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "AbstractRelOptPlanner(RelOptCostFactory, Context)")]
-    protected AbstractOpPlanner(IOpCostFactory? costFactory = null, IContext? context = null)
+    protected AbstractOpPlanner(IOpCostFactory costFactory, IContext? context = null)
     {
+        _costFactory = costFactory ?? throw new ArgumentNullException(nameof(costFactory));
         Context = context ?? Contexts.Empty();
-        _costFactory = costFactory ?? OpCost.Factory;
         CancellationToken = Context.MaybeUnwrap<CancellationToken>();
+
+        // Add the abstract op class. No op is ever registered with this type, but some operands may match
+        // it. (Calcite also adds RelSubset here, but Alembic deliberately has no subset-matching operands
+        // — see §1 — and adding OpSubset would route operands to fire on subsets, which it cannot do.)
+        _classes.Add(typeof(IOp));
     }
 
     /// <summary>
@@ -79,10 +87,33 @@ public abstract class AbstractOpPlanner : IOpPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "addRelTraitDef(RelTraitDef)")]
-    public virtual void AddTraitDef(OpTraitDef def)
+    public virtual bool AddTraitDef(OpTraitDef def)
     {
         // The base planner keeps no trait-dimension registry (Calcite's base returns false). The
         // cost-based planner overrides this.
+        return false;
+    }
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "registerClass(RelNode)")]
+    public void RegisterClass(IOp op)
+    {
+        var clazz = op.GetType();
+        if (_classes.Add(clazz))
+            OnNewClass(op);
+
+        var convention = op.Convention;
+        if (convention is not null && _conventions.Add(convention))
+            convention.Register(this);
+    }
+
+    /// <summary>
+    /// Called by <see cref="RegisterClass"/> the first time an op of a given concrete class is seen. The
+    /// base does nothing; the cost-based planner overrides it to index the class against the rules.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "onNewClass(RelNode)")]
+    protected virtual void OnNewClass(IOp op)
+    {
     }
 
     /// <inheritdoc />
@@ -142,7 +173,10 @@ public abstract class AbstractOpPlanner : IOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "clear()")]
     public virtual void Clear()
     {
-        // The base planner has no search state to reset; concrete planners override to clear theirs.
+        // Reset the class/convention registry, keeping the abstract op class the ctor seeds.
+        _classes.Clear();
+        _classes.Add(typeof(IOp));
+        _conventions.Clear();
     }
 
     /// <inheritdoc />

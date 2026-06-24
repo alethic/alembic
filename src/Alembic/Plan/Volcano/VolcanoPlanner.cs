@@ -28,7 +28,6 @@ public class VolcanoPlanner : AbstractOpPlanner
     readonly Dictionary<IOpDigest, IOp> _digestToOp = new Dictionary<IOpDigest, IOp>();
     readonly Dictionary<IOp, OpSubset> _opToSubset = new Dictionary<IOp, OpSubset>(ReferenceEqualityComparer.Instance);
     readonly Multimap<Type, OpRuleOperand> _classOperands = new Multimap<Type, OpRuleOperand>();
-    readonly HashSet<Type> _classes = new HashSet<Type>();
     readonly HashSet<IOp> _prunedOps = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
 
     readonly List<OpTraitDef> _traitDefs = new List<OpTraitDef>();
@@ -59,10 +58,13 @@ public class VolcanoPlanner : AbstractOpPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "addRelTraitDef(RelTraitDef)")]
-    public override void AddTraitDef(OpTraitDef def)
+    public override bool AddTraitDef(OpTraitDef def)
     {
-        if (!_traitDefs.Contains(def))
-            _traitDefs.Add(def);
+        if (_traitDefs.Contains(def))
+            return false;
+
+        _traitDefs.Add(def);
+        return true;
     }
 
     /// <inheritdoc />
@@ -199,7 +201,6 @@ public class VolcanoPlanner : AbstractOpPlanner
             RemoveRule(rule);
 
         _classOperands.Clear();
-        _classes.Clear();
         _allSets.Clear();
         _digestToOp.Clear();
         _opToSubset.Clear();
@@ -226,12 +227,10 @@ public class VolcanoPlanner : AbstractOpPlanner
     /// operands of every rule registered so far (and any registered later, via <see cref="AddRule"/>).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "onNewClass(RelNode)")]
-    void OnNewClass(IOp op)
+    protected override void OnNewClass(IOp op)
     {
+        // RegisterClass has already added the class; index its operands against the registered rules.
         var clazz = op.GetType();
-        if (!_classes.Add(clazz))
-            return;
-
         bool isPhysical = typeof(IPhysicalOp).IsAssignableFrom(clazz);
         foreach (var rule in Rules)
         {
@@ -405,8 +404,8 @@ public class VolcanoPlanner : AbstractOpPlanner
 
         set = EquivRoot(set);
 
-        // Let the new class register its operands before the op joins a subset.
-        OnNewClass(op);
+        // Let the new class register its operands (and its convention's rules) before the op joins a subset.
+        RegisterClass(op);
 
         var subsetBeforeCount = set.Subsets.Count;
         var added = AddOpToSet(op, set);

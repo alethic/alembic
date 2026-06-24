@@ -44,7 +44,7 @@ public class HepPlanner : AbstractOpPlanner
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "HepPlanner(HepProgram, Context)")]
     public HepPlanner(HepProgram program, IContext? context = null)
-        : base(null, context)
+        : base(OpCost.Factory, context)
     {
         _mainProgram = program;
     }

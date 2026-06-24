@@ -14,10 +14,18 @@ public interface IOpPlanner
 {
 
     /// <summary>
-    /// Registers a trait dimension. Must be done before <see cref="EmptyTraitSet"/> is used.
+    /// Registers a trait dimension, returning whether it was newly added (the base planner keeps no
+    /// registry and always returns <c>false</c>).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "addRelTraitDef(RelTraitDef)")]
-    void AddTraitDef(OpTraitDef def);
+    bool AddTraitDef(OpTraitDef def);
+
+    /// <summary>
+    /// Records <paramref name="op"/>'s concrete class (so later ops of that class match the rules
+    /// registered for it) and registers its convention's rules the first time that convention is seen.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "registerClass(RelNode)")]
+    void RegisterClass(IOp op);
 
     /// <summary>
     /// The registered trait dimensions.
