@@ -211,7 +211,7 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     public bool Contains(IOpTrait trait)
     {
         foreach (var t in _traits)
-            if (Equals(t, trait))
+            if (ReferenceEquals(t, trait))
                 return true;
 
         return false;
@@ -321,7 +321,7 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     {
         var n = Math.Min(_traits.Length, that._traits.Length);
         for (int i = 0; i < n; i++)
-            if (!Equals(_traits[i], that._traits[i]))
+            if (!ReferenceEquals(_traits[i], that._traits[i]))
                 return false;
 
         return true;
@@ -337,7 +337,7 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
         var builder = ImmutableArray.CreateBuilder<IOpTrait>();
         var n = Math.Min(_traits.Length, traitSet._traits.Length);
         for (int i = 0; i < n; i++)
-            if (!Equals(_traits[i], traitSet._traits[i]))
+            if (!ReferenceEquals(_traits[i], traitSet._traits[i]))
                 builder.Add(traitSet._traits[i]);
 
         return builder.ToImmutable();
