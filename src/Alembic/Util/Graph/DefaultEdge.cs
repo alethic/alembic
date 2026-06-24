@@ -1,3 +1,5 @@
+using System;
+
 namespace Alembic.Util.Graph;
 
 /// <summary>
@@ -14,6 +16,8 @@ public class DefaultEdge
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultEdge", "DefaultEdge(Object, Object)")]
     public DefaultEdge(object source, object target)
     {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(target);
         Source = source;
         Target = target;
     }
