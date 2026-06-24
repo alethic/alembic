@@ -55,7 +55,7 @@ internal class VolcanoCost : IOpCost
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost", "isLe(RelOptCost)")]
-    public bool IsLessThanOrEqual(IOpCost other) => _cpu <= ((VolcanoCost)other)._cpu;
+    public bool IsLessThanOrEqual(IOpCost other) => ReferenceEquals(this, other) || _cpu <= ((VolcanoCost)other)._cpu;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost", "isLt(RelOptCost)")]

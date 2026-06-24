@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -40,6 +41,7 @@ internal class VolcanoRuleMatch : VolcanoRuleCall
     /// <summary>
     /// Recomputes this match's digest (after its bound ops have changed).
     /// </summary>
+    [Obsolete("To be removed before 2.0")]
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "recomputeDigest()")]
     public void RecomputeDigest() => _digest = ComputeDigest();
 
