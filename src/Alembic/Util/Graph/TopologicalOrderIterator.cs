@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 using Alembic.Plan.Hep;
 
@@ -38,6 +39,7 @@ public class TopologicalOrderIterator<V, E> : IEnumerator<V>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator", "TopologicalOrderIterator(DirectedGraph<V, E>, HepMatchOrder)")]
     public TopologicalOrderIterator(DirectedGraph<V, E> graph, HepMatchOrder order)
     {
+        Debug.Assert(order == HepMatchOrder.TopDown || order == HepMatchOrder.BottomUp);
         _graph = graph;
         _order = order;
         Populate();

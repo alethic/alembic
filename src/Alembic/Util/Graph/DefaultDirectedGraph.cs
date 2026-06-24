@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Alembic.Util.Graph;
 
@@ -96,29 +97,32 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     public bool RemoveEdge(V source, V target)
     {
         var outEdges = GetVertex(source).OutEdges;
-        var removed = false;
+        var outRemoved = false;
         for (int i = 0; i < outEdges.Count; i++)
         {
             if (outEdges[i].Target.Equals(target))
             {
                 _edges.Remove(outEdges[i]);
                 outEdges.RemoveAt(i);
-                removed = true;
+                outRemoved = true;
                 break;
             }
         }
 
         var inEdges = GetVertex(target).InEdges;
+        var inRemoved = false;
         for (int i = 0; i < inEdges.Count; i++)
         {
             if (inEdges[i].Source.Equals(source))
             {
                 inEdges.RemoveAt(i);
+                inRemoved = true;
                 break;
             }
         }
 
-        return removed;
+        Debug.Assert(outRemoved == inRemoved);
+        return outRemoved;
     }
 
     /// <inheritdoc />
