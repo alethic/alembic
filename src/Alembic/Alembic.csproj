@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <!-- XML docs are still being filled in during early milestones. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Shown on the NuGet.org package page. -->
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
@@ -12,8 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Pack the solution README into the package so it renders on NuGet.org. -->
     <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false" />
+    <!-- Pack the package icon shown on NuGet.org. -->
     <None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" Visible="false" />
+    <!-- Pack the license shown on NuGet.org. -->
     <None Include="..\..\LICENSE" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
