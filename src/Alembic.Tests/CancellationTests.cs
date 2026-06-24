@@ -3,6 +3,7 @@ using System;
 using Alembic.Plan;
 using Alembic.Plan.Hep;
 using Alembic.Plan.Volcano;
+using Alembic.Util;
 
 using Xunit;
 
@@ -41,6 +42,19 @@ public class CancellationTests
 
         planner.CancelFlag.RequestCancel();
         Assert.Throws<OperationCanceledException>(() => planner.CheckCancel());
+    }
+
+    [Fact]
+    public void A_cancel_flag_supplied_via_the_context_is_the_one_the_planner_uses()
+    {
+        var flag = new CancelFlag();
+        var planner = new VolcanoPlanner(context: Contexts.Of(flag));
+
+        Assert.Same(flag, planner.CancelFlag);
+
+        // Cancelling through the externally held flag aborts the planner.
+        flag.RequestCancel();
+        Assert.Throws<VolcanoTimeoutException>(() => planner.CheckCancel());
     }
 
 }

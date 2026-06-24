@@ -42,8 +42,9 @@ public class HepPlanner : AbstractOpPlanner
     /// Creates a planner driven by the given program. More rules can be added with
     /// <see cref="AbstractOpPlanner.AddRule"/> (e.g. by a convention's <see cref="IOpTrait.Register"/>).
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "HepPlanner(HepProgram)")]
-    public HepPlanner(HepProgram program)
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "HepPlanner(HepProgram, Context)")]
+    public HepPlanner(HepProgram program, IContext? context = null)
+        : base(null, context)
     {
         _mainProgram = program;
     }
@@ -52,8 +53,8 @@ public class HepPlanner : AbstractOpPlanner
     /// Creates a planner driven by the given program, costing ops with <paramref name="costFactory"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "HepPlanner(HepProgram, Context, boolean, Function2<RelNode, RelNode, Void>, RelOptCostFactory)")]
-    public HepPlanner(HepProgram program, IOpCostFactory costFactory)
-        : base(costFactory)
+    public HepPlanner(HepProgram program, IOpCostFactory costFactory, IContext? context = null)
+        : base(costFactory, context)
     {
         _mainProgram = program;
     }

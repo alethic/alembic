@@ -45,8 +45,8 @@ public class VolcanoPlanner : AbstractOpPlanner
     /// Creates a planner with an optional cost factory (defaulting to <see cref="VolcanoCost"/>).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "VolcanoPlanner(RelOptCostFactory, Context)")]
-    public VolcanoPlanner(IOpCostFactory? costFactory = null)
-        : base(costFactory ?? VolcanoCost.Factory)
+    public VolcanoPlanner(IOpCostFactory? costFactory = null, IContext? context = null)
+        : base(costFactory ?? VolcanoCost.Factory, context)
     {
         _ruleDriver = new IterativeRuleDriver(this);
         AddTraitDef(ConventionTraitDef.Instance);

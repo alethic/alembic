@@ -28,10 +28,19 @@ public abstract class AbstractOpPlanner : IOpPlanner
     /// versions of the registry members, as Calcite's <c>AbstractRelOptPlanner</c> does.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "AbstractRelOptPlanner(RelOptCostFactory, Context)")]
-    protected AbstractOpPlanner(IOpCostFactory? costFactory = null)
+    protected AbstractOpPlanner(IOpCostFactory? costFactory = null, IContext? context = null)
     {
+        Context = context ?? Contexts.Empty();
         _costFactory = costFactory ?? OpCost.Factory;
+        CancelFlag = Context.Unwrap<CancelFlag>() ?? new CancelFlag();
     }
+
+    /// <summary>
+    /// The optional configuration this planner was created with. A caller passes config a planner may
+    /// recognise (e.g. a <see cref="CancelFlag"/>) via the constructor's context.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getContext()")]
+    public IContext Context { get; }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getRelTraitDefs()")]
@@ -42,11 +51,11 @@ public abstract class AbstractOpPlanner : IOpPlanner
     public IOpCostFactory CostFactory => _costFactory;
 
     /// <summary>
-    /// The flag a caller uses to cooperatively cancel a running plan (e.g. to impose a timeout). Calcite
-    /// takes this from the planner's <c>Context</c>; Alembic, having no context, owns one per planner.
+    /// The flag a caller uses to cooperatively cancel a running plan (e.g. to impose a timeout). Taken
+    /// from the planner's <see cref="Context"/> if it carries one, otherwise a fresh flag — as Calcite does.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "cancelFlag")]
-    public CancelFlag CancelFlag { get; } = new CancelFlag();
+    public CancelFlag CancelFlag { get; }
 
     /// <summary>
     /// Throws if cancellation has been requested. Called at each rule firing so a plan can be aborted.
