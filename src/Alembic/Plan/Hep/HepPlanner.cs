@@ -105,7 +105,12 @@ public class HepPlanner : AbstractOpPlanner
     public override void SetRoot(IOp op)
     {
         _rootOp = op;
-        _root = AddOpToGraph(op);
+
+        // initRelToVertexCache quickly skips common (shared) nodes before traversing their inputs.
+        var initRelToVertexCache = _largePlanMode && !_noDag
+            ? new Dictionary<IOp, HepOpVertex>(ReferenceEqualityComparer.Instance)
+            : null;
+        _root = AddOpToGraph(op, initRelToVertexCache);
     }
 
     /// <inheritdoc />
@@ -593,7 +598,7 @@ public class HepPlanner : AbstractOpPlanner
             parents.Add(parent);
         }
 
-        var newVertex = AddOpToGraph(bestRel!);
+        var newVertex = AddOpToGraph(bestRel!, null);
         var garbage = new HashSet<HepOpVertex>();
 
         // The new vertex may already be one of the parents (common subexpression); treat that as a nop
@@ -627,18 +632,26 @@ public class HepPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "addRelToGraph(RelNode, IdentityHashMap<RelNode, HepRelVertex>)")]
-    HepOpVertex AddOpToGraph(IOp rel)
+    HepOpVertex AddOpToGraph(IOp rel, Dictionary<IOp, HepOpVertex>? initRelToVertexCache)
     {
         if (rel is HepOpVertex existing && _graph.VertexSet.Contains(existing))
             return existing;
 
+        // Fast equiv vertex for set-root, before traversing children (skips shared subexpressions).
+        if (initRelToVertexCache is not null && initRelToVertexCache.TryGetValue(rel, out var cached))
+            return cached;
+
         // Recursively add children, replacing this op's inputs with their vertices.
         var newInputs = new List<IOp>(rel.Children.Length);
         foreach (var input in rel.Children)
-            newInputs.Add(AddOpToGraph(input));
+            newInputs.Add(AddOpToGraph(input, initRelToVertexCache));
 
         if (!ShallowEqual(rel.Children, newInputs))
             rel = rel.Copy(rel.Traits, newInputs.ToImmutableArray());
+
+        // Compute the digest the first time we add to the DAG, otherwise a common subexpression can't be
+        // found for the equivalent-vertex lookup below.
+        rel.RecomputeDigest();
 
         if (!_noDag && _mapDigestToVertex.TryGetValue(rel.GetDigest(), out var equivVertex))
             return equivVertex; // Use the existing equivalent vertex.
@@ -649,6 +662,9 @@ public class HepPlanner : AbstractOpPlanner
 
         foreach (var input in rel.Children)
             _graph.AddEdge(newVertex, (HepOpVertex)input);
+
+        if (initRelToVertexCache is not null)
+            initRelToVertexCache[rel] = newVertex;
 
         _nTransformations++;
         return newVertex;
