@@ -15,14 +15,14 @@ sealed class HepVertexIterator : IEnumerator<HepOpVertex>
 {
 
     readonly Stack<HepOpVertex> _deque = new Stack<HepOpVertex>();
-    readonly HashSet<HepOpVertex> _visited;
+    readonly HashSet<int> _visited;
     HepOpVertex _current = default!;
 
     /// <summary>
     /// Creates an iterator from <paramref name="root"/>, sharing the <paramref name="visited"/> set.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepVertexIterator", "HepVertexIterator(V, Set<Integer>)")]
-    internal HepVertexIterator(HepOpVertex root, HashSet<HepOpVertex> visited)
+    internal HepVertexIterator(HepOpVertex root, HashSet<int> visited)
     {
         _visited = visited;
         _deque.Push(root);
@@ -33,7 +33,7 @@ sealed class HepVertexIterator : IEnumerator<HepOpVertex>
     /// <paramref name="visited"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepVertexIterator", "of(V, Set<Integer>)")]
-    public static IEnumerable<HepOpVertex> Of(HepOpVertex root, HashSet<HepOpVertex> visited)
+    public static IEnumerable<HepOpVertex> Of(HepOpVertex root, HashSet<int> visited)
     {
         var iterator = new HepVertexIterator(root, visited);
         while (iterator.MoveNext())
@@ -68,7 +68,7 @@ sealed class HepVertexIterator : IEnumerator<HepOpVertex>
         if (current is SingleOp single)
         {
             var target = (HepOpVertex)single.Child;
-            if (_visited.Add(target))
+            if (_visited.Add(target.Id))
                 _deque.Push(target);
         }
         else
@@ -76,7 +76,7 @@ sealed class HepVertexIterator : IEnumerator<HepOpVertex>
             foreach (var input in current.Children)
             {
                 var target = (HepOpVertex)input;
-                if (_visited.Add(target))
+                if (_visited.Add(target.Id))
                     _deque.Push(target);
             }
         }
@@ -85,7 +85,6 @@ sealed class HepVertexIterator : IEnumerator<HepOpVertex>
     }
 
     /// <inheritdoc/>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepVertexIterator", "remove()")]
     public void Reset() => throw new System.NotSupportedException();
 
     /// <inheritdoc/>

@@ -48,7 +48,7 @@ public class HepProgram : HepInstruction
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgram", "prepare(PrepareContext)")]
     internal override HepState Prepare(PrepareContext px)
     {
-        return new State(px, this);
+        return new State(px, this, Instructions);
     }
 
     /// <summary>
@@ -58,6 +58,8 @@ public class HepProgram : HepInstruction
     internal sealed class State : HepState
     {
 
+        // Renders Java's enclosing-instance reference `HepProgram.this` (used by Execute): a C# nested
+        // class does not capture its outer instance, so the program is threaded in explicitly.
         readonly HepProgram _program;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgram.State.instructionStates")]
@@ -76,13 +78,13 @@ public class HepProgram : HepInstruction
         /// Creates the state for <paramref name="program"/>, preparing a child state for each instruction.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgram.State", "State(PrepareContext, List<HepInstruction>)")]
-        internal State(PrepareContext px, HepProgram program) : base(px)
+        internal State(PrepareContext px, HepProgram program, IReadOnlyList<HepInstruction> instructions) : base(px)
         {
             _program = program;
             var px2 = px.WithProgramState(this);
             var states = new List<HepState>();
             var actions = new Dictionary<HepInstruction, Action<HepState>>();
-            foreach (var instruction in program.Instructions)
+            foreach (var instruction in instructions)
             {
                 HepState state;
                 if (instruction is BeginGroup begin)

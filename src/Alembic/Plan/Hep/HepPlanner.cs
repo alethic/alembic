@@ -265,7 +265,7 @@ public class HepPlanner : AbstractOpPlanner
 
         if (state.RuleSet is null)
         {
-            state.RuleSet = new List<OpRule>();
+            state.RuleSet = new LinkedHashSet<OpRule>();
             foreach (var rule in Rules)
                 if (instruction.RuleType.IsInstanceOfType(rule))
                     state.RuleSet.Add(rule);
@@ -294,7 +294,7 @@ public class HepPlanner : AbstractOpPlanner
     {
         if (state.RuleSet is null)
         {
-            state.RuleSet = new List<OpRule>();
+            state.RuleSet = new LinkedHashSet<OpRule>();
             foreach (var rule in Rules)
             {
                 if (rule is not ConverterRule converter || converter.IsGuaranteed != instruction.Guaranteed)
@@ -320,7 +320,7 @@ public class HepPlanner : AbstractOpPlanner
     {
         if (state.RuleSet is null)
         {
-            state.RuleSet = new List<OpRule>();
+            state.RuleSet = new LinkedHashSet<OpRule>();
             foreach (var rule in Rules)
                 if (rule is ICommonSubExprRule)
                     state.RuleSet.Add(rule);
@@ -416,7 +416,7 @@ public class HepPlanner : AbstractOpPlanner
         do
         {
             IEnumerator<HepOpVertex> iter = useHepVertexIterator
-                ? new HepVertexIterator(_root!, new HashSet<HepOpVertex>())
+                ? new HepVertexIterator(_root!, new HashSet<int>())
                 : GetGraphIterator(programState, _root!);
             fixedPoint = true;
             while (iter.MoveNext())
@@ -468,7 +468,7 @@ public class HepPlanner : AbstractOpPlanner
             case HepMatchOrder.Arbitrary:
             case HepMatchOrder.DepthFirst:
                 if (_largePlanMode)
-                    return new HepVertexIterator(start, new HashSet<HepOpVertex>());
+                    return new HepVertexIterator(start, new HashSet<int>());
                 return new DepthFirstIterator<HepOpVertex, DefaultEdge>(_graph, start);
 
             case HepMatchOrder.TopDown:

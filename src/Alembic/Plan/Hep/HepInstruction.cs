@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
+using Alembic.Util;
 
 namespace Alembic.Plan.Hep;
 
@@ -61,9 +62,7 @@ public abstract class HepInstruction
             internal readonly RuleClass Instruction;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleClass.State.ruleSet")]
-            // Insertion-ordered (Calcite's ruleSet is a LinkedHashSet) so rule application order is
-            // deterministic; the source `Rules` is already ordered and duplicate-free.
-            internal List<OpRule>? RuleSet;
+            internal LinkedHashSet<OpRule>? RuleSet;
 
             /// <summary>
             /// Creates the state for <paramref name="instruction"/>.
@@ -154,9 +153,7 @@ public abstract class HepInstruction
             internal readonly ConverterRules Instruction;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.ConverterRules.State.ruleSet")]
-            // Insertion-ordered (Calcite's ruleSet is a LinkedHashSet) so rule application order is
-            // deterministic; the source `Rules` is already ordered and duplicate-free.
-            internal List<OpRule>? RuleSet;
+            internal LinkedHashSet<OpRule>? RuleSet;
 
             /// <summary>
             /// Creates the state for <paramref name="instruction"/>.
@@ -192,9 +189,7 @@ public abstract class HepInstruction
             internal readonly CommonOpSubExprRules Instruction;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules.State.ruleSet")]
-            // Insertion-ordered (Calcite's ruleSet is a LinkedHashSet) so rule application order is
-            // deterministic; the source `Rules` is already ordered and duplicate-free.
-            internal List<OpRule>? RuleSet;
+            internal LinkedHashSet<OpRule>? RuleSet;
 
             /// <summary>
             /// Creates the state for <paramref name="instruction"/>.

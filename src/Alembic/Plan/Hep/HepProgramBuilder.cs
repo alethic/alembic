@@ -19,6 +19,24 @@ public class HepProgramBuilder
     int _group = -1;
 
     /// <summary>
+    /// Creates a builder with no instructions.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder", "HepProgramBuilder()")]
+    public HepProgramBuilder()
+    {
+    }
+
+    /// <summary>
+    /// Resets the builder to its initial empty state.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgramBuilder", "clear()")]
+    void Clear()
+    {
+        _instructions.Clear();
+        _group = -1;
+    }
+
+    /// <summary>
     /// Adds an instruction to attempt every rule of a given type. The rules themselves must also be
     /// added to the planner via <see cref="AbstractOpPlanner.AddRule"/>.
     /// </summary>
@@ -156,8 +174,7 @@ public class HepProgramBuilder
         if (_group >= 0)
             throw new ArgumentException();
         var program = new HepProgram(_instructions);
-        _instructions.Clear();
-        _group = -1;
+        Clear();
         return program;
     }
 
