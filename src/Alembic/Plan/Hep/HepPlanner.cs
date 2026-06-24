@@ -32,7 +32,6 @@ public class HepPlanner : AbstractOpPlanner
     readonly Multimap<int, ImmutableIntList> _firedRulesCacheIndex = new Multimap<int, ImmutableIntList>();
 
     HepOpVertex? _root;
-    IOp? _rootOp;
     OpTraitSet? _requestedRootTraits;
     int _nTransformations;
     int _graphSizeLastGC;
@@ -107,8 +106,6 @@ public class HepPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "setRoot(RelNode)")]
     public override void SetRoot(IOp op)
     {
-        _rootOp = op;
-
         // initOpToVertexCache quickly skips common (shared) nodes before traversing their inputs.
         var initOpToVertexCache = _largePlanMode && !_noDag
             ? new Dictionary<IOp, HepOpVertex>(ReferenceEqualityComparer.Instance)
@@ -150,7 +147,7 @@ public class HepPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "changeTraits(RelNode, RelTraitSet)")]
     public override IOp ChangeTraits(IOp op, OpTraitSet toTraits)
     {
-        if (ReferenceEquals(op, _rootOp) || (_root is not null && ReferenceEquals(op, _root.CurrentOp)))
+        if (ReferenceEquals(op, _root) || (_root is not null && ReferenceEquals(op, _root.CurrentOp)))
             _requestedRootTraits = toTraits;
 
         return op;
@@ -172,7 +169,7 @@ public class HepPlanner : AbstractOpPlanner
         // Get rid of everything except what's in the final plan.
         CollectGarbage();
 
-        return BuildFinalPlan(_root, new Dictionary<HepOpVertex, IOp>());
+        return BuildFinalPlan(_root);
     }
 
     // ~ Program execution ----------------------------------------------------
@@ -810,28 +807,35 @@ public class HepPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "buildFinalPlan(HepRelVertex)")]
-    IOp BuildFinalPlan(HepOpVertex vertex, Dictionary<HepOpVertex, IOp> memo)
+    IOp BuildFinalPlan(HepOpVertex vertex)
     {
-        if (memo.TryGetValue(vertex, out var done))
-            return done;
-
         var op = vertex.CurrentOp;
+
         FireOpChosen(op);
 
-        var children = op.Children;
-        ImmutableArray<IOp>.Builder? builder = null;
-        for (int i = 0; i < children.Length; i++)
+        // Recursively process children, replacing this op's inputs with the corresponding child ops.
+        var inputs = op.Children;
+        var changed = false;
+        for (int i = 0; i < inputs.Length; i++)
         {
-            if (children[i] is HepOpVertex childVertex)
-            {
-                builder ??= children.ToBuilder();
-                builder[i] = BuildFinalPlan(childVertex, memo);
-            }
+            if (inputs[i] is not HepOpVertex child)
+                // Already replaced.
+                continue;
+
+            op.ReplaceInput(i, BuildFinalPlan(child));
+            changed = true;
         }
 
-        var result = builder is null ? op : op.Copy(op.Traits, builder.ToImmutable());
-        memo[vertex] = result;
-        return result;
+        if (changed)
+        {
+            ClearMetadataCache(op);
+            op.RecomputeDigest();
+        }
+
+        if (op is HepOpVertex)
+            throw new InvalidOperationException("post-condition failed: " + op);
+
+        return op;
     }
 
     // ~ Garbage collection ---------------------------------------------------
