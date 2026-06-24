@@ -6,24 +6,22 @@ namespace Alembic.Algebra.Metadata;
 /// <c>Exchange</c> — are relational and not ported.)
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdParallelism")]
-public sealed class OpMdParallelism : BuiltInMetadata.Parallelism.Handler
+public sealed class OpMdParallelism : IMetadataHandler
 {
-    delegate bool? PhaseTransitionImpl(IOp op, OpMetadataQuery mq);
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdParallelism", "SOURCE")]
+    public static readonly IOpMetadataProvider Source =
+        ReflectiveOpMetadataProvider.ReflectiveSource(new OpMdParallelism(), typeof(BuiltInMetadata.Parallelism.Handler));
 
-    delegate int? SplitCountImpl(IOp op, OpMetadataQuery mq);
-
-    readonly MetadataRegistry<PhaseTransitionImpl> _phaseTransition = new MetadataRegistry<PhaseTransitionImpl>();
-    readonly MetadataRegistry<SplitCountImpl> _splitCount = new MetadataRegistry<SplitCountImpl>();
-
-    public OpMdParallelism()
+    OpMdParallelism()
     {
-        _phaseTransition.RegisterDefault((op, mq) => false);
-        _splitCount.RegisterDefault((op, mq) => 1);
     }
 
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdParallelism", "getDef()")]
+    public MetadataDef GetDef() => BuiltInMetadata.Parallelism.Def;
+
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdParallelism", "isPhaseTransition(RelNode, RelMetadataQuery)")]
-    public bool? IsPhaseTransition(IOp op, OpMetadataQuery mq) => _phaseTransition.Resolve(op)(op, mq);
+    public bool? IsPhaseTransition(IOp op, OpMetadataQuery mq) => false;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdParallelism", "splitCount(RelNode, RelMetadataQuery)")]
-    public int? SplitCount(IOp op, OpMetadataQuery mq) => _splitCount.Resolve(op)(op, mq);
+    public int? SplitCount(IOp op, OpMetadataQuery mq) => 1;
 }

@@ -10,53 +10,59 @@ namespace Alembic.Algebra.Metadata;
 /// In Calcite the cumulative/non-cumulative cost handlers live on <c>RelMdPercentageOriginalRows</c>
 /// (a relational provider); Alembic keeps only the cost methods, in their own cost-only handlers.
 /// </remarks>
-public sealed class OpMdCumulativeCost : BuiltInMetadata.CumulativeCost.Handler
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows")]
+public sealed class OpMdCumulativeCost : IMetadataHandler
 {
-    delegate IOpCost? Impl(IOp op, OpMetadataQuery mq);
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows", "SOURCE")]
+    public static readonly IOpMetadataProvider Source =
+        ReflectiveOpMetadataProvider.ReflectiveSource(new OpMdCumulativeCost(), typeof(BuiltInMetadata.CumulativeCost.Handler));
 
-    readonly MetadataRegistry<Impl> _registry = new MetadataRegistry<Impl>();
-
-    public OpMdCumulativeCost()
+    OpMdCumulativeCost()
     {
-        _registry.RegisterDefault((op, mq) =>
-        {
-            var cost = mq.GetNonCumulativeCost(op);
-            if (cost is null)
-                return null;
-
-            foreach (var input in op.Children)
-            {
-                var inputCost = mq.GetCumulativeCost(input);
-                if (inputCost is null)
-                    return null;
-
-                cost = cost.Plus(inputCost);
-            }
-
-            return cost;
-        });
     }
 
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows", "getDef()")]
+    public MetadataDef GetDef() => BuiltInMetadata.CumulativeCost.Def;
+
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows", "getCumulativeCost(RelNode, RelMetadataQuery)")]
-    public IOpCost? GetCumulativeCost(IOp op, OpMetadataQuery mq) => _registry.Resolve(op)(op, mq);
+    public IOpCost? GetCumulativeCost(IOp op, OpMetadataQuery mq)
+    {
+        var cost = mq.GetNonCumulativeCost(op);
+        if (cost is null)
+            return null;
+
+        foreach (var input in op.Children)
+        {
+            var inputCost = mq.GetCumulativeCost(input);
+            if (inputCost is null)
+                return null;
+
+            cost = cost.Plus(inputCost);
+        }
+
+        return cost;
+    }
 }
 
 /// <summary>
 /// Handler for <see cref="BuiltInMetadata.NonCumulativeCost"/>: an op's own cost, asked of the op via
 /// <see cref="IOp.ComputeSelfCost"/>.
 /// </summary>
-public sealed class OpMdNonCumulativeCost : BuiltInMetadata.NonCumulativeCost.Handler
+[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows")]
+public sealed class OpMdNonCumulativeCost : IMetadataHandler
 {
-    delegate IOpCost? Impl(IOp op, OpMetadataQuery mq);
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows", "SOURCE")]
+    public static readonly IOpMetadataProvider Source =
+        ReflectiveOpMetadataProvider.ReflectiveSource(new OpMdNonCumulativeCost(), typeof(BuiltInMetadata.NonCumulativeCost.Handler));
 
-    readonly MetadataRegistry<Impl> _registry = new MetadataRegistry<Impl>();
-
-    public OpMdNonCumulativeCost()
+    OpMdNonCumulativeCost()
     {
-        // Calcite: rel.computeSelfCost(rel.getCluster().getPlanner(), mq).
-        _registry.RegisterDefault((op, mq) => op.ComputeSelfCost(op.Cluster.Planner, mq));
     }
 
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows", "getDef()")]
+    public MetadataDef GetDef() => BuiltInMetadata.NonCumulativeCost.Def;
+
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows", "getNonCumulativeCost(RelNode, RelMetadataQuery)")]
-    public IOpCost? GetNonCumulativeCost(IOp op, OpMetadataQuery mq) => _registry.Resolve(op)(op, mq);
+    public IOpCost? GetNonCumulativeCost(IOp op, OpMetadataQuery mq)
+        => op.ComputeSelfCost(op.Cluster.Planner, mq);
 }

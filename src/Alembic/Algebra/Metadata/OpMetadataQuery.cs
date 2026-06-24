@@ -4,13 +4,16 @@ using Alembic.Plan.Volcano;
 namespace Alembic.Algebra.Metadata;
 
 /// <summary>
-/// The entry point for asking an op for its metadata. Holds one handler per kind and exposes one method
-/// per kind, each running through the per-query cache in <see cref="OpMetadataQueryBase"/>. New metadata
-/// kinds are added by writing a handler and a method here (or on a subclass).
+/// The entry point for asking an op for its metadata. Holds one handler dispatcher per kind — obtained
+/// from a <see cref="IMetadataHandlerProvider"/>, which builds each by reflection over the registered
+/// handlers — and exposes one method per kind, each running through the per-query cache in
+/// <see cref="OpMetadataQueryBase"/>.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery")]
 public class OpMetadataQuery : OpMetadataQueryBase
 {
+    // The default provider: a proxying (reflective) handler provider over the central handler list.
+    static readonly IMetadataHandlerProvider DefaultProvider = new ProxyingMetadataHandlerProvider(DefaultOpMetadataProvider.Instance);
 
     // Per-kind cache keys (each metadata kind needs a distinct key for the same op). The lower-bound
     // kind's planner argument is constant within a query, so it need not enter the key.
@@ -23,11 +26,27 @@ public class OpMetadataQuery : OpMetadataQueryBase
     static readonly object IsPhaseTransitionKey = new object();
     static readonly object SplitCountKey = new object();
 
-    readonly BuiltInMetadata.CumulativeCost.Handler _cumulativeCost = new OpMdCumulativeCost();
-    readonly BuiltInMetadata.NonCumulativeCost.Handler _nonCumulativeCost = new OpMdNonCumulativeCost();
-    readonly BuiltInMetadata.LowerBoundCost.Handler _lowerBoundCost = new OpMdLowerBoundCost();
-    readonly BuiltInMetadata.Memory.Handler _memory = new OpMdMemory();
-    readonly BuiltInMetadata.Parallelism.Handler _parallelism = new OpMdParallelism();
+    readonly BuiltInMetadata.CumulativeCost.Handler _cumulativeCost;
+    readonly BuiltInMetadata.NonCumulativeCost.Handler _nonCumulativeCost;
+    readonly BuiltInMetadata.LowerBoundCost.Handler _lowerBoundCost;
+    readonly BuiltInMetadata.Memory.Handler _memory;
+    readonly BuiltInMetadata.Parallelism.Handler _parallelism;
+
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "RelMetadataQuery()")]
+    public OpMetadataQuery()
+        : this(DefaultProvider)
+    {
+    }
+
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "RelMetadataQuery(MetadataHandlerProvider)")]
+    public OpMetadataQuery(IMetadataHandlerProvider provider)
+    {
+        _cumulativeCost = provider.Handler<BuiltInMetadata.CumulativeCost.Handler>();
+        _nonCumulativeCost = provider.Handler<BuiltInMetadata.NonCumulativeCost.Handler>();
+        _lowerBoundCost = provider.Handler<BuiltInMetadata.LowerBoundCost.Handler>();
+        _memory = provider.Handler<BuiltInMetadata.Memory.Handler>();
+        _parallelism = provider.Handler<BuiltInMetadata.Parallelism.Handler>();
+    }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "getCumulativeCost(RelNode)")]
     public IOpCost? GetCumulativeCost(IOp op)
@@ -84,5 +103,4 @@ public class OpMetadataQuery : OpMetadataQueryBase
         op = Delegate(op);
         return Cache(op, SplitCountKey, () => _parallelism.SplitCount(op, this));
     }
-
 }
