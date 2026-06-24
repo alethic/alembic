@@ -1,0 +1,33 @@
+<svg width="520" height="180" viewBox="0 0 520 180" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Alembic logo</title>
+  <desc>An alembic distillation still — a round flask with bronze distillate, a domed distilling head, and a curved beak dripping — beside the lowercase wordmark "alembic".</desc>
+  <style>
+    .ink { stroke: #1a1a1a; fill: none; }
+    .word { fill: #1a1a1a; font-family: 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif; }
+    .sub { fill: #6b6b6b; font-family: 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif; }
+    @media (prefers-color-scheme: dark) {
+      .ink { stroke: #ededed; }
+      .word { fill: #ededed; }
+      .sub { fill: #a0a0a0; }
+    }
+  </style>
+
+  <g transform="translate(0,-10)">
+    <clipPath id="flaskClip"><circle cx="100" cy="110" r="42"/></clipPath>
+    <g clip-path="url(#flaskClip)">
+      <rect x="56" y="116" width="88" height="42" fill="#c47a3d"/>
+    </g>
+
+    <circle cx="100" cy="110" r="42" class="ink" stroke-width="5"/>
+    <path d="M82 73 L84 52 M118 73 L116 52" class="ink" stroke-width="5" stroke-linecap="round"/>
+    <path d="M84 52 C68 50 60 38 60 24 C60 7 78 0 100 0 C122 0 140 7 140 24 C140 38 132 50 116 52"
+      class="ink" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M138 40 C164 46 178 66 178 94 C178 106 175 114 170 122"
+      class="ink" stroke-width="5" stroke-linecap="round"/>
+    <path d="M169 128 C165 133 165 139 169 141 C173 139 173 133 169 128 Z" fill="#c47a3d"/>
+    <circle cx="167" cy="154" r="3.4" fill="#c47a3d"/>
+  </g>
+
+  <text x="232" y="103" class="word" font-size="64" font-weight="500" letter-spacing="-1">alembic</text>
+  <text x="236" y="133" class="sub" font-size="16">query plans, distilled</text>
+</svg>

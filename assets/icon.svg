@@ -1,0 +1,22 @@
+<svg width="200" height="200" viewBox="0 0 200 200" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Alembic icon</title>
+  <desc>A square glyph of an alembic still: a round flask of bronze distillate with a domed head and a curved dripping beak.</desc>
+  <style>
+    .ink { stroke: #1a1a1a; fill: none; }
+    @media (prefers-color-scheme: dark) { .ink { stroke: #ededed; } }
+  </style>
+
+  <clipPath id="flaskClip"><circle cx="92" cy="124" r="48"/></clipPath>
+  <g clip-path="url(#flaskClip)">
+    <rect x="44" y="130" width="96" height="48" fill="#c47a3d"/>
+  </g>
+
+  <circle cx="92" cy="124" r="48" class="ink" stroke-width="6"/>
+  <path d="M72 82 L74 60 M112 82 L110 60" class="ink" stroke-width="6" stroke-linecap="round"/>
+  <path d="M74 60 C56 58 47 44 47 28 C47 9 67 0 92 0 C117 0 137 9 137 28 C137 44 128 58 110 60"
+    class="ink" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M134 48 C162 55 177 77 177 107 C177 120 174 129 168 138"
+    class="ink" stroke-width="6" stroke-linecap="round"/>
+  <path d="M167 145 C162 151 162 158 167 160 C172 158 172 151 167 145 Z" fill="#c47a3d"/>
+  <circle cx="165" cy="174" r="4" fill="#c47a3d"/>
+</svg>

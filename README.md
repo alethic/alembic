@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="Alembic" width="360">
+</p>
+
 # Alembic
 
 **A language-agnostic planning and rewrite engine for .NET.**
