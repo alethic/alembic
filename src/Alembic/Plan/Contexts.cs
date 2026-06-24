@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 namespace Alembic.Plan;
 
@@ -45,7 +46,7 @@ public static class Contexts
     /// A context that chains the given contexts.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Contexts", "chain(Context...)")]
-    public static IContext Chain(params IContext[] contexts) => Chain((IEnumerable<IContext>)contexts);
+    public static IContext Chain(params IContext[] contexts) => Chain(contexts.ToImmutableArray());
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Contexts", "chain(Iterable)")]
     static IContext Chain(IEnumerable<IContext> contexts)
@@ -120,7 +121,12 @@ public static class Contexts
         /// <summary>
         /// Wraps the flat chain <paramref name="contexts"/>.
         /// </summary>
-        public ChainContext(ImmutableArray<IContext> contexts) => Contexts = contexts;
+        public ChainContext(ImmutableArray<IContext> contexts)
+        {
+            Contexts = contexts;
+            foreach (var context in contexts)
+                Debug.Assert(context is not ChainContext, "must be flat");
+        }
 
         /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Contexts.ChainContext", "unwrap(Class)")]

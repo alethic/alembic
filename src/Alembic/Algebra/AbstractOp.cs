@@ -162,6 +162,12 @@ public abstract class AbstractOp : IOp
     }
 
     /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "register(RelOptPlanner)")]
+    public virtual void Register(IOpPlanner planner)
+    {
+    }
+
+    /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "deepEquals(Object)")]
     public virtual bool DeepEquals(IOp? other)
     {

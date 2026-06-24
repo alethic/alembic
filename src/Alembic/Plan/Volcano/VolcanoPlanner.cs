@@ -220,6 +220,8 @@ public class VolcanoPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "onNewClass(RelNode)")]
     protected override void OnNewClass(IOp op)
     {
+        base.OnNewClass(op);
+
         // RegisterClass has already added the class; index its operands against the registered rules.
         var clazz = op.GetType();
         bool isPhysical = typeof(IPhysicalOp).IsAssignableFrom(clazz);

@@ -111,6 +111,13 @@ public interface IOp
     IOp OnRegister(IOpPlanner planner);
 
     /// <summary>
+    /// Registers any rules specific to this kind of op. The planner calls this the first time it sees an
+    /// op of this class; the default does nothing.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "register(RelOptPlanner)")]
+    void Register(IOpPlanner planner);
+
+    /// <summary>
     /// This op's convention, or <c>null</c> if it carries no convention dimension. (Calcite's
     /// <c>getConvention()</c> is abstract and <c>@Nullable</c>; the abstract base derives it from the
     /// trait set.)

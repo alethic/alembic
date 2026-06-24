@@ -115,11 +115,13 @@ public abstract class AbstractOpPlanner : IOpPlanner
 
     /// <summary>
     /// Called by <see cref="RegisterClass"/> the first time an op of a given concrete class is seen. The
-    /// base does nothing; the cost-based planner overrides it to index the class against the rules.
+    /// base lets the op register any class-specific rules (a no-op by default); the cost-based planner
+    /// overrides it to index the class against the rules.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "onNewClass(RelNode)")]
     protected virtual void OnNewClass(IOp op)
     {
+        op.Register(this);
     }
 
     /// <summary>
@@ -166,7 +168,7 @@ public abstract class AbstractOpPlanner : IOpPlanner
             if (existing.Equals(rule))
                 return false;
 
-            throw new InvalidOperationException($"Rule descriptions must be unique; existing rule = '{existing.Description}', new rule = '{rule.Description}'.");
+            throw new InvalidOperationException("Rule's description should be unique; existing rule=" + existing + "; new rule=" + rule);
         }
 
         _mapDescToRule.Add(description, rule);
