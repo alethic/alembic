@@ -212,17 +212,6 @@ public class VolcanoPlanner : AbstractOpPlanner
     }
 
     /// <summary>
-    /// The concrete op classes seen so far that are assignable to <paramref name="matchedClass"/>.
-    /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "subClasses(Class)")]
-    IEnumerable<Type> SubClasses(Type matchedClass)
-    {
-        foreach (var clazz in _classes)
-            if (matchedClass.IsAssignableFrom(clazz))
-                yield return clazz;
-    }
-
-    /// <summary>
     /// Records an op's concrete class the first time it is seen, so that instances of it match the
     /// operands of every rule registered so far (and any registered later, via <see cref="AddRule"/>).
     /// </summary>
@@ -560,13 +549,19 @@ public class VolcanoPlanner : AbstractOpPlanner
     /// / <c>Contains</c> live on <see cref="OpSubset"/>.)
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getSubsetNonNull(RelNode)")]
-    internal OpSubset GetSubsetNonNull(IOp op) => _opToSubset[op];
+    internal OpSubset GetSubsetNonNull(IOp op) => GetSubset(op) ?? throw new InvalidOperationException($"Subset is not found for {op}");
 
     /// <summary>
     /// The subset an op belongs to, or <c>null</c> if it is not registered (or has been removed).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getSubset(RelNode)")]
-    internal OpSubset? GetSubset(IOp op) => _opToSubset.GetValueOrDefault(op);
+    internal OpSubset? GetSubset(IOp op)
+    {
+        if (op is OpSubset subset)
+            return subset;
+
+        return _opToSubset.GetValueOrDefault(op);
+    }
 
     /// <summary>
     /// Prunes an op: marks it as having zero importance, so it is not added to a set on registration and

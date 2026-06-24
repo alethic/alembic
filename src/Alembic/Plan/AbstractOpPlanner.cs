@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 
 using Alembic.Algebra;
+using Alembic.Plan.Volcano;
 using Alembic.Util;
 
 namespace Alembic.Plan;
@@ -38,12 +39,10 @@ public abstract class AbstractOpPlanner : IOpPlanner
         Context = context ?? Contexts.Empty();
         CancellationToken = Context.MaybeUnwrap<CancellationToken>();
 
-        // Add the abstract op class. No op is ever registered with this type, but some operands may match
-        // it. (Calcite also adds RelSubset, for rules whose operands match a subset. Alembic ships no such
-        // rules, and adding OpSubset routes ordinary operands to fire on subsets — which the cost-based
-        // planner's rule-firing does not currently handle (GetSubsetNonNull has no entry for a subset). So
-        // it is left out until subset-matching is supported. TODO: revisit if subset operands are added.)
+        // Add the abstract op classes. No op is ever registered with these types, but some operands may
+        // match them.
         _classes.Add(typeof(IOp));
+        _classes.Add(typeof(OpSubset));
     }
 
     /// <summary>
@@ -118,6 +117,27 @@ public abstract class AbstractOpPlanner : IOpPlanner
     {
     }
 
+    /// <summary>
+    /// Returns the sub-classes of op (among the classes seen so far) for the given matched class.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "subClasses(Class)")]
+    public IEnumerable<Type> SubClasses(Type clazz)
+    {
+        foreach (var c in _classes)
+        {
+            // OpSubset must be exact type, not subclass
+            if (c == typeof(OpSubset))
+            {
+                if (c == clazz)
+                    yield return c;
+            }
+            else if (clazz.IsAssignableFrom(c))
+            {
+                yield return c;
+            }
+        }
+    }
+
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "emptyTraitSet()")]
     public virtual OpTraitSet EmptyTraitSet => OpTraitSet.CreateEmpty();
@@ -175,10 +195,6 @@ public abstract class AbstractOpPlanner : IOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "clear()")]
     public virtual void Clear()
     {
-        // Reset the class/convention registry, keeping the abstract op class the ctor seeds.
-        _classes.Clear();
-        _classes.Add(typeof(IOp));
-        _conventions.Clear();
     }
 
     /// <inheritdoc />
