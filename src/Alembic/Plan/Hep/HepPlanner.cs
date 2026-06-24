@@ -743,8 +743,6 @@ public class HepPlanner : AbstractOpPlanner
         _mapDigestToVertex[rel.GetDigest()] = vertex;
         if (!ReferenceEquals(rel, vertex.CurrentOp))
             vertex.ReplaceOp(rel);
-
-        FireOpEquivalenceFound(rel);
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "buildFinalPlan(HepRelVertex)")]

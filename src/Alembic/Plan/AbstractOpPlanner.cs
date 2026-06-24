@@ -19,7 +19,7 @@ public abstract class AbstractOpPlanner : IOpPlanner
     readonly List<OpTraitDef> _traitDefs = new List<OpTraitDef>();
     readonly List<OpRule> _rules = new List<OpRule>();
     readonly Dictionary<string, OpRule> _mapDescToRule = new Dictionary<string, OpRule>();
-    readonly List<IPlannerListener> _listeners = new List<IPlannerListener>();
+    IPlannerListener? _listener;
     readonly IOpCostFactory _costFactory;
     OpTraitSet? _emptyTraitSet;
     Regex? _ruleDescExclusionFilter;
@@ -164,25 +164,42 @@ public abstract class AbstractOpPlanner : IOpPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "addListener(RelOptListener)")]
-    public void AddListener(IPlannerListener listener)
+    public void AddListener(IPlannerListener newListener)
     {
-        _listeners.Add(listener);
+        // A planner holds a single listener; registering a second wraps both in a multicast (Calcite).
+        if (_listener is null)
+            _listener = newListener;
+        else if (_listener is MulticastPlannerListener multicast)
+            multicast.AddListener(newListener);
+        else
+        {
+            var combined = new MulticastPlannerListener();
+            combined.AddListener(_listener);
+            combined.AddListener(newListener);
+            _listener = combined;
+        }
     }
 
     /// <summary>
-    /// Whether any listener is attached. A planner may skip bookkeeping that only a listener observes.
+    /// The attached listener (a <see cref="MulticastPlannerListener"/> when more than one was added), or
+    /// <c>null</c>. A planner may skip bookkeeping that only a listener observes.
     /// </summary>
-    protected internal bool HasListeners => _listeners.Count > 0;
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getListener()")]
+    protected internal IPlannerListener? Listener => _listener;
+
+    /// <summary>
+    /// Whether any listener is attached.
+    /// </summary>
+    protected internal bool HasListeners => _listener is not null;
 
     /// <summary>
     /// Notifies listeners that an op has joined an equivalence class (optionally identified by
     /// <paramref name="equivalenceClass"/>, with <paramref name="isPhysical"/> flagging a physical op).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "notifyEquivalence(RelNode, Object, boolean)")]
-    protected internal void FireOpEquivalenceFound(IOp op, object? equivalenceClass = null, bool isPhysical = false)
+    protected internal void FireOpEquivalenceFound(IOp op, object? equivalenceClass, bool isPhysical)
     {
-        foreach (var listener in _listeners)
-            listener.OpEquivalenceFound(new IPlannerListener.OpEquivalenceEvent(this, op, equivalenceClass, isPhysical));
+        _listener?.OpEquivalenceFound(new IPlannerListener.OpEquivalenceEvent(this, op, equivalenceClass, isPhysical));
     }
 
     /// <summary>
@@ -191,8 +208,7 @@ public abstract class AbstractOpPlanner : IOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "fireRule(RelOptRuleCall)")]
     protected internal void FireRuleAttempted(OpRuleCall call, bool before)
     {
-        foreach (var listener in _listeners)
-            listener.RuleAttempted(new IPlannerListener.RuleAttemptedEvent(this, call.Op(0), call, before));
+        _listener?.RuleAttempted(new IPlannerListener.RuleAttemptedEvent(this, call.Op(0), call, before));
     }
 
     /// <summary>
@@ -201,8 +217,7 @@ public abstract class AbstractOpPlanner : IOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "notifyTransformation(RelOptRuleCall, RelNode, boolean)")]
     protected internal void FireRuleProductionSucceeded(OpRuleCall call, IOp produced, bool before)
     {
-        foreach (var listener in _listeners)
-            listener.RuleProductionSucceeded(new IPlannerListener.RuleProductionEvent(this, produced, call, before));
+        _listener?.RuleProductionSucceeded(new IPlannerListener.RuleProductionEvent(this, produced, call, before));
     }
 
     /// <summary>
@@ -211,8 +226,7 @@ public abstract class AbstractOpPlanner : IOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "notifyDiscard(RelNode)")]
     protected internal void FireOpDiscarded(IOp op)
     {
-        foreach (var listener in _listeners)
-            listener.OpDiscarded(new IPlannerListener.OpDiscardedEvent(this, op));
+        _listener?.OpDiscarded(new IPlannerListener.OpDiscardedEvent(this, op));
     }
 
     /// <summary>
@@ -222,8 +236,7 @@ public abstract class AbstractOpPlanner : IOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "notifyChosen(RelNode)")]
     protected internal void FireOpChosen(IOp? op)
     {
-        foreach (var listener in _listeners)
-            listener.OpChosen(new IPlannerListener.OpChosenEvent(this, op));
+        _listener?.OpChosen(new IPlannerListener.OpChosenEvent(this, op));
     }
 
     /// <inheritdoc />

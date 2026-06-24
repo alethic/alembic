@@ -104,7 +104,7 @@ public interface IPlannerListener
         /// is whether the op carries a physical (non-logical) convention.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptListener.RelEquivalenceEvent", "RelEquivalenceEvent(Object, RelNode, Object, boolean)")]
-        public OpEquivalenceEvent(IOpPlanner source, IOp op, object? equivalenceClass = null, bool isPhysical = false)
+        public OpEquivalenceEvent(IOpPlanner source, IOp op, object? equivalenceClass, bool isPhysical)
             : base(source, op)
         {
             EquivalenceClass = equivalenceClass;
