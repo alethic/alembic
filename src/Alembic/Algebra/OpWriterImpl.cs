@@ -13,16 +13,29 @@ public class OpWriterImpl : IOpWriter
 {
 
     readonly StringBuilder _builder;
+    readonly bool _withIdPrefix;
     readonly List<(string Name, object? Value)> _values = new List<(string, object?)>();
     int _spaces;
 
     /// <summary>
-    /// Creates a writer that appends to <paramref name="builder"/>.
+    /// Creates a writer that appends to <paramref name="builder"/>, prefixing each op with its id.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.externalize.RelWriterImpl", "RelWriterImpl(PrintWriter)")]
     public OpWriterImpl(StringBuilder builder)
+        : this(builder, true)
+    {
+    }
+
+    /// <summary>
+    /// Creates a writer that appends to <paramref name="builder"/>, prefixing each op with its id only
+    /// when <paramref name="withIdPrefix"/> is set. (Calcite also threads a <c>SqlExplainLevel</c> detail
+    /// level through this ctor; Alembic always renders at the attribute level.)
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.externalize.RelWriterImpl", "RelWriterImpl(PrintWriter, SqlExplainLevel, boolean)")]
+    public OpWriterImpl(StringBuilder builder, bool withIdPrefix)
     {
         _builder = builder;
+        _withIdPrefix = withIdPrefix;
     }
 
     /// <inheritdoc />
@@ -48,9 +61,12 @@ public class OpWriterImpl : IOpWriter
     {
         _builder.Append(' ', _spaces);
 
-        // Calcite's RelWriterImpl(PrintWriter) defaults withIdPrefix to true, then prints getRelTypeName()
-        // (the simple class name). It does not print the trait set.
-        _builder.Append(op.Id).Append(':').Append(op.GetType().Name);
+        // Calcite prints the id prefix only when withIdPrefix is set, then getRelTypeName() (the simple
+        // class name). It does not print the trait set.
+        if (_withIdPrefix)
+            _builder.Append(op.Id).Append(':');
+
+        _builder.Append(op.GetType().Name);
 
         int attributes = 0;
         foreach (var (name, value) in values)

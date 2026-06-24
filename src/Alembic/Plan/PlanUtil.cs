@@ -18,10 +18,13 @@ public static class PlanUtil
     /// op's <see cref="IOp.Explain"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptUtil", "toString(RelNode)")]
-    public static string ToString(IOp op)
+    public static string? ToString(IOp? op)
     {
+        if (op is null)
+            return null;
+
         var builder = new StringBuilder();
-        op.Explain(new OpWriterImpl(builder));
+        op.Explain(new OpWriterImpl(builder, withIdPrefix: false));
         return builder.ToString();
     }
 
