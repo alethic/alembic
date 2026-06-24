@@ -86,8 +86,19 @@ public abstract class AbstractOp : IOp
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// An op with zero inputs need not override this: empty set equals empty set, so the unchanged case
+    /// returns <c>this</c>. Any op that can actually be copied must override it.
+    /// </remarks>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "copy(RelTraitSet, List<RelNode>)")]
-    public abstract IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children);
+    public virtual IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
+    {
+        if (System.Linq.Enumerable.SequenceEqual(Children, children) && ReferenceEquals(traits, Traits))
+            return this;
+
+        throw new InvalidOperationException("Op should override Copy. Class=[" + GetType()
+            + "]; traits=[" + Traits + "]; desired traits=[" + traits + "]");
+    }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "replaceInput(int, RelNode)")]
@@ -98,7 +109,7 @@ public abstract class AbstractOp : IOp
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
-    public virtual IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq)
+    public virtual IOpCost? ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq)
     {
         return planner.CostFactory.MakeTinyCost();
     }
@@ -142,20 +153,15 @@ public abstract class AbstractOp : IOp
     public virtual IOp OnRegister(IOpPlanner planner)
     {
         var oldInputs = Children;
-        var inputs = ImmutableArray.CreateBuilder<IOp>(oldInputs.Length);
-        var changed = false;
+        var builder = ImmutableArray.CreateBuilder<IOp>(oldInputs.Length);
         foreach (var input in oldInputs)
-        {
-            var registered = planner.EnsureRegistered(input, null);
-            if (!ReferenceEquals(registered, input))
-                changed = true;
+            builder.Add(planner.EnsureRegistered(input, null));
 
-            inputs.Add(registered);
-        }
+        var inputs = builder.MoveToImmutable();
 
         IOp r = this;
-        if (changed)
-            r = Copy(Traits, inputs.MoveToImmutable());
+        if (!Alembic.Util.Util.EqualShallow(oldInputs, inputs))
+            r = Copy(Traits, inputs);
 
         r.RecomputeDigest();
         return r;

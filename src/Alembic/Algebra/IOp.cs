@@ -145,6 +145,6 @@ public interface IOp
     /// default.)
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
-    IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq);
+    IOpCost? ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq);
 
 }

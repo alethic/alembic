@@ -37,7 +37,7 @@ public abstract class ConverterImpl : SingleOp, IConverter
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterImpl", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
-    public override IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq)
+    public override IOpCost? ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq)
     {
         return planner.CostFactory.MakeCost(0, 0);
     }

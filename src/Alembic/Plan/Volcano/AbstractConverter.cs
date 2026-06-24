@@ -40,7 +40,7 @@ public class AbstractConverter : ConverterImpl
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
-    public override IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq) => planner.CostFactory.MakeInfiniteCost();
+    public override IOpCost? ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq) => planner.CostFactory.MakeInfiniteCost();
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter", "isEnforcer()")]

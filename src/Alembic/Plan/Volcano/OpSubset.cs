@@ -526,7 +526,7 @@ public class OpSubset : AbstractOp
     /// A subset has no cost of its own.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
-    public override IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq) => planner.CostFactory.MakeZeroCost();
+    public override IOpCost? ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq) => planner.CostFactory.MakeZeroCost();
 
     /// <summary>
     /// A subset is identified by reference: two subsets are structurally equal only if they are the same
