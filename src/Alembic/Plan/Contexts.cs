@@ -90,7 +90,7 @@ public static class Contexts
         public WrapContext(object target) => _target = target ?? throw new ArgumentNullException(nameof(target));
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Contexts.WrapContext", "unwrap(Class)")]
-        public C? Unwrap<C>() where C : class => _target as C;
+        public C? Unwrap<C>() => _target is C c ? c : default;
 
     }
 
@@ -100,7 +100,7 @@ public static class Contexts
     {
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Contexts.EmptyContext", "unwrap(Class)")]
-        public C? Unwrap<C>() where C : class => null;
+        public C? Unwrap<C>() => default;
 
     }
 
@@ -115,7 +115,7 @@ public static class Contexts
         public ChainContext(ImmutableArray<IContext> contexts) => Contexts = contexts;
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Contexts.ChainContext", "unwrap(Class)")]
-        public C? Unwrap<C>() where C : class
+        public C? Unwrap<C>()
         {
             foreach (var context in Contexts)
             {
@@ -124,7 +124,7 @@ public static class Contexts
                     return t;
             }
 
-            return null;
+            return default;
         }
 
     }

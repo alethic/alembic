@@ -33,12 +33,12 @@ public abstract class AbstractOpPlanner : IOpPlanner
     {
         Context = context ?? Contexts.Empty();
         _costFactory = costFactory ?? OpCost.Factory;
-        CancellationToken = Context.Unwrap<CancellationTokenSource>()?.Token ?? CancellationToken.None;
+        CancellationToken = Context.MaybeUnwrap<CancellationToken>();
     }
 
     /// <summary>
     /// The optional configuration this planner was created with. A caller passes config a planner may
-    /// recognise (e.g. a <see cref="CancellationTokenSource"/>) via the constructor's context.
+    /// recognise (e.g. a <see cref="CancellationToken"/>) via the constructor's context.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getContext()")]
     public IContext Context { get; }
@@ -52,10 +52,10 @@ public abstract class AbstractOpPlanner : IOpPlanner
     public IOpCostFactory CostFactory => _costFactory;
 
     /// <summary>
-    /// The token by which a caller cooperatively cancels a running plan (e.g. to impose a timeout). Taken
-    /// from a <see cref="CancellationTokenSource"/> in the planner's <see cref="Context"/> if it carries
-    /// one, otherwise <see cref="CancellationToken.None"/>. (The .NET idiomatic stand-in for Calcite's
-    /// <c>CancelFlag</c>; unlike that, a cancelled token cannot be un-cancelled.)
+    /// The token by which a caller cooperatively cancels a running plan (e.g. to impose a timeout).
+    /// Unwrapped from the planner's <see cref="Context"/> if it carries one, otherwise
+    /// <see cref="CancellationToken.None"/>. (The .NET idiomatic stand-in for Calcite's <c>CancelFlag</c>,
+    /// which it likewise unwraps from the context; unlike that, a cancelled token cannot be un-cancelled.)
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "cancelFlag")]
     public CancellationToken CancellationToken { get; }

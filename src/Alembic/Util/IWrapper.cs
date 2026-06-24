@@ -4,32 +4,32 @@ namespace Alembic.Util;
 
 /// <summary>
 /// Mix-in interface that lets you find a sub-object an implementer carries. The .NET analog of Calcite's
-/// generic <c>Wrapper</c> (its <c>Class&lt;C&gt;</c> argument becomes a type parameter, and its
-/// <c>@Nullable C</c> / <c>Optional&lt;C&gt;</c> results become a nullable reference).
+/// generic <c>Wrapper</c> (its <c>Class&lt;C&gt;</c> argument becomes a type parameter). Works for value
+/// types too: an absent value type yields <c>default</c> (e.g. <c>CancellationToken.None</c>).
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.schema.Wrapper")]
 public interface IWrapper
 {
 
     /// <summary>
-    /// Finds an instance of <typeparamref name="C"/> carried by this object, or <c>null</c> if there is
-    /// none.
+    /// Finds an instance of <typeparamref name="C"/> carried by this object, or its default if there is
+    /// none (<c>null</c> for a reference type, <c>default</c> for a value type).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.schema.Wrapper", "unwrap(Class)")]
-    C? Unwrap<C>() where C : class;
+    C? Unwrap<C>();
 
     /// <summary>
-    /// Finds an instance of <typeparamref name="C"/>, or throws if there is none.
+    /// Finds an instance of the reference type <typeparamref name="C"/>, or throws if there is none.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.schema.Wrapper", "unwrapOrThrow(Class)")]
     C UnwrapOrThrow<C>() where C : class
         => Unwrap<C>() ?? throw new InvalidOperationException($"Can't unwrap {typeof(C)} from {this}");
 
     /// <summary>
-    /// Finds an instance of <typeparamref name="C"/>, or <c>null</c> — the nullable-reference analog of
-    /// Calcite's <c>Optional</c>-returning <c>maybeUnwrap</c>.
+    /// Finds an instance of <typeparamref name="C"/>, or its default — the .NET analog of Calcite's
+    /// <c>Optional</c>-returning <c>maybeUnwrap</c>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.schema.Wrapper", "maybeUnwrap(Class)")]
-    C? MaybeUnwrap<C>() where C : class => Unwrap<C>();
+    C? MaybeUnwrap<C>() => Unwrap<C>();
 
 }

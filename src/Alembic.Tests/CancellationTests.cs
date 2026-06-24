@@ -23,7 +23,7 @@ public class CancellationTests
     public void The_volcano_planner_throws_a_timeout_when_cancellation_is_requested()
     {
         var cts = new CancellationTokenSource();
-        var planner = new VolcanoPlanner(context: Contexts.Of(cts));
+        var planner = new VolcanoPlanner(context: Contexts.Of(cts.Token));
 
         Assert.Equal(cts.Token, planner.CancellationToken);
         planner.CheckCancel(); // not cancelled yet: does nothing
@@ -36,7 +36,7 @@ public class CancellationTests
     public void The_base_planner_throws_a_cancellation_when_cancellation_is_requested()
     {
         var cts = new CancellationTokenSource();
-        var planner = new HepPlanner(HepProgram.Builder().Build(), Contexts.Of(cts));
+        var planner = new HepPlanner(HepProgram.Builder().Build(), Contexts.Of(cts.Token));
 
         planner.CheckCancel();
 
