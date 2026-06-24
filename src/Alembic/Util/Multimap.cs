@@ -48,6 +48,22 @@ public sealed class Multimap<TKey, TValue>
     }
 
     /// <summary>
+    /// Removes every value (across all keys) matching <paramref name="predicate"/>, pruning any key left
+    /// with no values. The .NET stand-in for <c>values().removeIf(predicate)</c>.
+    /// </summary>
+    [Provenance(ProvenanceSource.Other, "com.google.common.collect.Multimap", "values()")]
+    public void RemoveValuesWhere(System.Func<TValue, bool> predicate)
+    {
+        foreach (var key in new List<TKey>(_map.Keys))
+        {
+            var values = _map[key];
+            values.RemoveAll(v => predicate(v));
+            if (values.Count == 0)
+                _map.Remove(key);
+        }
+    }
+
+    /// <summary>
     /// Removes every key→value association.
     /// </summary>
     [Provenance(ProvenanceSource.Other, "com.google.common.collect.Multimap", "clear()")]

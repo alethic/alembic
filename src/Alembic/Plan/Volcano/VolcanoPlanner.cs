@@ -6,6 +6,7 @@ using System.Linq;
 using Alembic.Algebra;
 using Alembic.Algebra.Convert;
 using Alembic.Plan.Rules;
+using Alembic.Util;
 
 namespace Alembic.Plan.Volcano;
 
@@ -26,7 +27,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     readonly List<OpSet> _allSets = new List<OpSet>();
     readonly Dictionary<IOpDigest, IOp> _digestToOp = new Dictionary<IOpDigest, IOp>();
     readonly Dictionary<IOp, OpSubset> _opToSubset = new Dictionary<IOp, OpSubset>(ReferenceEqualityComparer.Instance);
-    readonly Dictionary<Type, List<OpRuleOperand>> _classOperands = new Dictionary<Type, List<OpRuleOperand>>();
+    readonly Multimap<Type, OpRuleOperand> _classOperands = new Multimap<Type, OpRuleOperand>();
     readonly HashSet<Type> _classes = new HashSet<Type>();
     readonly HashSet<IOp> _prunedOps = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
 
@@ -146,7 +147,7 @@ public class VolcanoPlanner : AbstractOpPlanner
                 if (isTransformationRule && typeof(IPhysicalOp).IsAssignableFrom(subClass))
                     continue;
 
-                OperandsFor(subClass).Add(operand);
+                _classOperands.Put(subClass, operand);
             }
 
         // A converter rule registers itself with the trait dimension it converts, building the
@@ -168,8 +169,7 @@ public class VolcanoPlanner : AbstractOpPlanner
         if (!base.RemoveRule(rule))
             return false;
 
-        foreach (var operands in _classOperands.Values)
-            operands.RemoveAll(operand => ReferenceEquals(operand.Rule, rule));
+        _classOperands.RemoveValuesWhere(operand => ReferenceEquals(operand.Rule, rule));
 
         if (rule is ConverterRule converterRule)
         {
@@ -200,17 +200,6 @@ public class VolcanoPlanner : AbstractOpPlanner
         _root = null;
         _cluster = null;
         _nextSetId = 0;
-    }
-
-    List<OpRuleOperand> OperandsFor(Type clazz)
-    {
-        if (!_classOperands.TryGetValue(clazz, out var operands))
-        {
-            operands = new List<OpRuleOperand>();
-            _classOperands[clazz] = operands;
-        }
-
-        return operands;
     }
 
     /// <summary>
@@ -244,7 +233,7 @@ public class VolcanoPlanner : AbstractOpPlanner
 
             foreach (var operand in rule.Operands)
                 if (operand.MatchedClass.IsAssignableFrom(clazz))
-                    OperandsFor(clazz).Add(operand);
+                    _classOperands.Put(clazz, operand);
         }
     }
 
@@ -554,10 +543,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "fireRules(RelNode)")]
     internal void FireRules(IOp op)
     {
-        if (!_classOperands.TryGetValue(op.GetType(), out var operands))
-            return;
-
-        foreach (var operand in operands.ToArray())
+        foreach (var operand in new List<OpRuleOperand>(_classOperands.Get(op.GetType())))
             if (operand.Matches(op))
                 new DeferringRuleCall(this, operand).Match(op);
     }
