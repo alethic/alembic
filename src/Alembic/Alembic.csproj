@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <!-- XML docs are still being filled in during early milestones. -->
+    <Description>A language-agnostic planning and rewrite engine for .NET. Alembic plans operations over a tree of ops: you bring your own op types and rules, and it matches rules against the tree, applies them, and drives the rewrite to a result. The design distills the planner ideas of Apache Calcite — ops, traits, conventions, pattern-matching rules, and a planner — without the relational algebra, so the same machinery applies to any domain.</Description>
+    <PackageTags>planner;rewrite;rules;optimizer;calcite;traits;conventions;tree-rewriting;volcano;cascades</PackageTags>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <!-- Shown on the NuGet.org package page. -->
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
@@ -15,11 +15,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Pack the solution README into the package so it renders on NuGet.org. -->
     <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false" />
-    <!-- Pack the package icon shown on NuGet.org. -->
     <None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" Visible="false" />
-    <!-- Pack the license shown on NuGet.org. -->
     <None Include="..\..\LICENSE" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
