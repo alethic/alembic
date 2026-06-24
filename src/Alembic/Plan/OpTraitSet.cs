@@ -300,17 +300,7 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     /// Whether this set carries exactly <paramref name="traits"/>, in order.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "comprises(RelTrait[])")]
-    public bool Comprises(params IOpTrait[] traits)
-    {
-        if (traits.Length != _traits.Length)
-            return false;
-
-        for (int i = 0; i < _traits.Length; i++)
-            if (!Equals(_traits[i], traits[i]))
-                return false;
-
-        return true;
-    }
+    public bool Comprises(params IOpTrait[] traits) => System.Linq.Enumerable.SequenceEqual(_traits, traits);
 
     /// <summary>
     /// Whether this set matches <paramref name="that"/> exactly on every dimension both define (a
