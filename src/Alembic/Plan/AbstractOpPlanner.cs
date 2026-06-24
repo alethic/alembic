@@ -16,28 +16,26 @@ namespace Alembic.Plan;
 public abstract class AbstractOpPlanner : IOpPlanner
 {
 
-    readonly List<OpTraitDef> _traitDefs = new List<OpTraitDef>();
     readonly List<OpRule> _rules = new List<OpRule>();
     readonly Dictionary<string, OpRule> _mapDescToRule = new Dictionary<string, OpRule>();
     IPlannerListener? _listener;
     readonly IOpCostFactory _costFactory;
-    OpTraitSet? _emptyTraitSet;
     Regex? _ruleDescExclusionFilter;
 
     /// <summary>
-    /// Initializes the planner with the convention dimension registered (every plan has a convention)
-    /// and a cost factory (defaulting to the scalar <see cref="OpCost"/> factory).
+    /// Initializes the planner with a cost factory (defaulting to the scalar <see cref="OpCost"/>
+    /// factory). The trait-dimension registry lives on the cost-based planner — the base keeps no-op
+    /// versions of the registry members, as Calcite's <c>AbstractRelOptPlanner</c> does.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "AbstractRelOptPlanner(RelOptCostFactory, Context)")]
     protected AbstractOpPlanner(IOpCostFactory? costFactory = null)
     {
         _costFactory = costFactory ?? OpCost.Factory;
-        AddTraitDef(ConventionTraitDef.Instance);
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getRelTraitDefs()")]
-    public IReadOnlyList<OpTraitDef> TraitDefs => _traitDefs;
+    public virtual IReadOnlyList<OpTraitDef> TraitDefs => Array.Empty<OpTraitDef>();
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getCostFactory()")]
@@ -50,33 +48,15 @@ public abstract class AbstractOpPlanner : IOpPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "addRelTraitDef(RelTraitDef)")]
-    public void AddTraitDef(OpTraitDef def)
+    public virtual void AddTraitDef(OpTraitDef def)
     {
-        if (_emptyTraitSet is not null)
-            throw new InvalidOperationException("Trait dimensions must be registered before the empty trait set is used.");
-
-        if (!_traitDefs.Contains(def))
-            _traitDefs.Add(def);
+        // The base planner keeps no trait-dimension registry (Calcite's base returns false). The
+        // cost-based planner overrides this.
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "emptyTraitSet()")]
-    public OpTraitSet EmptyTraitSet
-    {
-        get
-        {
-            if (_emptyTraitSet is null)
-            {
-                var set = OpTraitSet.CreateEmpty();
-                foreach (var def in _traitDefs)
-                    set = set.Plus(def.Default);
-
-                _emptyTraitSet = set;
-            }
-
-            return _emptyTraitSet;
-        }
-    }
+    public virtual OpTraitSet EmptyTraitSet => OpTraitSet.CreateEmpty();
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "addRule(RelOptRule)")]
@@ -136,10 +116,9 @@ public abstract class AbstractOpPlanner : IOpPlanner
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "clearRelTraitDefs()")]
-    public void ClearTraitDefs()
+    public virtual void ClearTraitDefs()
     {
-        _traitDefs.Clear();
-        _emptyTraitSet = null;
+        // No-op on the base; the cost-based planner overrides this.
     }
 
     /// <inheritdoc />

@@ -137,7 +137,10 @@ public class RelationalLoweringTests
         planner.ChangeTraits(root, physical);
         var result = planner.FindBestPlan();
 
-        Assert.IsType<PhysicalFilter>(result);
+        var filter = Assert.IsType<PhysicalFilter>(result);
+        // The lowered op carries the physical convention (the converters built their target trait set
+        // from the planner's empty trait set, which is bare for HEP — see D16).
+        Assert.Equal(RelationalConventions.Physical, filter.Convention);
     }
 
     [Fact]

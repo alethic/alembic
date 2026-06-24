@@ -19,7 +19,7 @@ sealed class RelationalPhysical : Convention
 
     public override void Register(IOpPlanner planner)
     {
-        var physical = planner.EmptyTraitSet.Replace(ConventionTraitDef.Instance, this);
+        var physical = planner.EmptyTraitSet.Plus(this);
         planner.AddRule(new SourceConverter(physical));
         planner.AddRule(new FilterConverter(physical));
         planner.AddRule(new ParameterConverter(physical));

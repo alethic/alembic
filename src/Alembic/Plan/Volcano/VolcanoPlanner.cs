@@ -30,6 +30,8 @@ public class VolcanoPlanner : AbstractOpPlanner
     readonly HashSet<Type> _classes = new HashSet<Type>();
     readonly HashSet<IOp> _prunedOps = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
 
+    readonly List<OpTraitDef> _traitDefs = new List<OpTraitDef>();
+
     IRuleDriver _ruleDriver;
     OpSubset? _root;
     OpCluster? _cluster;
@@ -46,8 +48,41 @@ public class VolcanoPlanner : AbstractOpPlanner
         : base(costFactory ?? VolcanoCost.Factory)
     {
         _ruleDriver = new IterativeRuleDriver(this);
+        AddTraitDef(ConventionTraitDef.Instance);
         AddRule(new ExpandConversionRule());
     }
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getRelTraitDefs()")]
+    public override IReadOnlyList<OpTraitDef> TraitDefs => _traitDefs;
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "addRelTraitDef(RelTraitDef)")]
+    public override void AddTraitDef(OpTraitDef def)
+    {
+        if (!_traitDefs.Contains(def))
+            _traitDefs.Add(def);
+    }
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "emptyTraitSet()")]
+    public override OpTraitSet EmptyTraitSet
+    {
+        get
+        {
+            // Calcite computes this fresh each call: the bare base set plus each registered dimension's
+            // default (no caching).
+            var set = base.EmptyTraitSet;
+            foreach (var def in _traitDefs)
+                set = set.Plus(def.Default);
+
+            return set;
+        }
+    }
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "clearRelTraitDefs()")]
+    public override void ClearTraitDefs() => _traitDefs.Clear();
 
     /// <summary>
     /// The driver that applies queued rule matches.

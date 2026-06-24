@@ -1,8 +1,6 @@
-using System;
-
 using Alembic.Algebra;
 using Alembic.Plan;
-using Alembic.Plan.Hep;
+using Alembic.Plan.Volcano;
 
 using Xunit;
 
@@ -38,12 +36,16 @@ public class TraitDimensionTests
     }
 
     [Fact]
-    public void Registering_a_dimension_after_use_throws()
+    public void A_dimension_registered_after_use_takes_effect()
     {
-        var planner = new HepPlanner(HepProgram.Builder().Build());
-        _ = planner.EmptyTraitSet;
+        var planner = new VolcanoPlanner();
 
-        Assert.Throws<InvalidOperationException>(() => planner.AddTraitDef(SortednessTraitDef.Instance));
+        // Using the empty trait set does not freeze the registry: Calcite recomputes emptyTraitSet() on
+        // each call, so a dimension registered afterwards still appears.
+        _ = planner.EmptyTraitSet;
+        planner.AddTraitDef(SortednessTraitDef.Instance);
+
+        Assert.True(planner.EmptyTraitSet.IsEnabled(SortednessTraitDef.Instance));
     }
 
 }
