@@ -37,6 +37,7 @@ public abstract class ConverterRule : OpRule
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "getOutTrait()")]
     public IOpTrait Target { get; }
 
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "getOutConvention()")]
     /// <summary>
     /// The trait dimension this rule converts on (the dimension of <see cref="Source"/> and
     /// <see cref="Target"/>, which share it).
