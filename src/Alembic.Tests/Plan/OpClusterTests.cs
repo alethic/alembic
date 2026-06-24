@@ -1,5 +1,6 @@
 using Alembic.Plan;
 using Alembic.Plan.Hep;
+using Alembic.Plan.Volcano;
 
 using Alembic.Tests.Languages.Relational;
 
@@ -20,9 +21,11 @@ public class OpClusterTests
     }
 
     [Fact]
-    public void Builds_a_trait_set_from_the_default_plus_given_traits()
+    public void Builds_a_trait_set_from_the_default_with_given_traits_applied()
     {
-        var planner = new HepPlanner(HepProgram.Builder().Build());
+        // TraitSetOf replaces each given trait onto its dimension (Calcite's traitSetOf uses replace, not
+        // add), so the dimension must be registered: a VolcanoPlanner registers ConventionTraitDef.
+        var planner = new VolcanoPlanner();
         var cluster = new OpCluster(planner);
 
         var traits = cluster.TraitSetOf(RelationalConventions.Physical);

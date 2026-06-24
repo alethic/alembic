@@ -72,9 +72,15 @@ public class OpCluster
     {
         var result = TraitSet;
         foreach (var trait in traits)
-            result = result.Plus(trait);
+            result = result.Replace(trait);
 
         return result;
     }
+
+    /// <summary>
+    /// The default trait set with the given trait applied.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCluster", "traitSetOf(RelTrait)")]
+    public OpTraitSet TraitSetOf(IOpTrait trait) => TraitSet.Replace(trait);
 
 }
