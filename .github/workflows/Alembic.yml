@@ -176,6 +176,13 @@ jobs:
         artifacts: dist/nuget/*.nupkg,dist/nuget/*.snupkg
         makeLatest: true
         token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Push NuGet (GitHub)
+      if: github.event_name != 'pull_request'
+      shell: pwsh
+      run: dotnet nuget push dist/nuget/*.nupkg --source $env:GITHUB_REPOS --api-key $env:GITHUB_TOKEN --skip-duplicate
+      env:
+        GITHUB_REPOS: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: NuGet Login (Trusted Publishing)
       if: github.ref_type == 'tag'
       id: nuget-login
