@@ -56,13 +56,13 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
     }
 
     /// <summary>
-    /// The value carried on the given dimension, or the dimension's default if it is not present.
+    /// The value carried on the given dimension, or <c>null</c> if the dimension is not present.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitSet", "getTrait(RelTraitDef)")]
-    public IOpTrait Get(OpTraitDef def)
+    public IOpTrait? Get(OpTraitDef def)
     {
         var index = FindIndex(def);
-        return index >= 0 ? _traits[index] : def.Default;
+        return index >= 0 ? _traits[index] : null;
     }
 
     /// <summary>
@@ -128,7 +128,7 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
         if (index < 0)
             return this;
 
-        return _cache.GetOrAdd(new OpTraitSet(_cache, _traits.SetItem(index, value)));
+        return ReplaceAt(index, value);
     }
 
     /// <summary>
