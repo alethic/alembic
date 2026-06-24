@@ -15,7 +15,7 @@ sealed class Download : ConverterImpl
 {
 
     public Download(OpTraitSet traits, IOp input)
-        : base(ConventionTraitDef.Instance, traits, input)
+        : base(input.Cluster, ConventionTraitDef.Instance, traits, input)
     {
 
     }

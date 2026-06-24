@@ -14,7 +14,7 @@ sealed class PhysicalSort : SingleOp
 {
 
     public PhysicalSort(OpTraitSet traits, IOp input)
-        : base(traits, input)
+        : base(input.Cluster, traits, input)
     {
 
     }

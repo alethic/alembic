@@ -21,8 +21,8 @@ public abstract class BiOp : AbstractOp
     /// Initializes the op with its traits and its left and right children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.BiRel", "BiRel(RelOptCluster, RelTraitSet, RelNode, RelNode)")]
-    protected BiOp(OpTraitSet traits, IOp left, IOp right)
-        : base(left.Cluster, traits)
+    protected BiOp(OpCluster cluster, OpTraitSet traits, IOp left, IOp right)
+        : base(cluster, traits)
     {
         _left = left;
         _right = right;

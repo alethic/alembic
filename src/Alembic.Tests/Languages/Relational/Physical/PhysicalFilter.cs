@@ -18,7 +18,7 @@ sealed class PhysicalFilter : SingleOp, IPhysicalOp
     readonly string _predicate;
 
     public PhysicalFilter(OpTraitSet traits, IOp input, string predicate)
-        : base(traits, input)
+        : base(input.Cluster, traits, input)
     {
         _predicate = predicate;
     }

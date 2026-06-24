@@ -12,7 +12,7 @@ abstract class ImageOp : SingleOp, IImageOperation
 {
 
     protected ImageOp(OpTraitSet traits, IOp input)
-        : base(traits, input)
+        : base(input.Cluster, traits, input)
     {
 
     }

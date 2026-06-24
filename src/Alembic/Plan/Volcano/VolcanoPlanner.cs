@@ -698,7 +698,7 @@ public class VolcanoPlanner : AbstractOpPlanner
             if (difference.Count == 1 && subsets.Add(subset))
             {
                 Register(
-                    new AbstractConverter(root.Traits, subset, difference[0].TraitDef),
+                    new AbstractConverter(subset.Cluster, subset, difference[0].TraitDef, root.Traits),
                     root);
             }
         }

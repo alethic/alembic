@@ -14,7 +14,7 @@ sealed class LogicalFilter : SingleOp
     readonly string _predicate;
 
     public LogicalFilter(OpTraitSet traits, IOp input, string predicate)
-        : base(traits, input)
+        : base(input.Cluster, traits, input)
     {
         _predicate = predicate;
     }

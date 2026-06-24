@@ -12,7 +12,7 @@ sealed class PhysicalMultiply : BiOp
 {
 
     public PhysicalMultiply(OpTraitSet traits, IOp left, IOp right)
-        : base(traits, left, right)
+        : base(left.Cluster, traits, left, right)
     {
 
     }

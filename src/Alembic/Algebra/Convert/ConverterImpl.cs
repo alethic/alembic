@@ -15,8 +15,8 @@ public abstract class ConverterImpl : SingleOp, IConverter
     /// the dimension <paramref name="traitDef"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterImpl", "ConverterImpl(RelOptCluster, RelTraitDef, RelTraitSet, RelNode)")]
-    protected ConverterImpl(OpTraitDef? traitDef, OpTraitSet traits, IOp child)
-        : base(traits, child)
+    protected ConverterImpl(OpCluster cluster, OpTraitDef? traitDef, OpTraitSet traits, IOp child)
+        : base(cluster, traits, child)
     {
         InputTraits = child.Traits;
         TraitDef = traitDef;

@@ -20,10 +20,10 @@ public class AbstractConverter : ConverterImpl
     /// Creates a converter that requires <paramref name="input"/> in the given target traits.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter", "AbstractConverter(RelOptCluster, RelSubset, RelTraitDef, RelTraitSet)")]
-    public AbstractConverter(OpTraitSet target, IOp input, OpTraitDef? traitDef = null)
-        : base(traitDef, target, input)
+    public AbstractConverter(OpCluster cluster, IOp rel, OpTraitDef? traitDef, OpTraitSet traits)
+        : base(cluster, traitDef, traits, rel)
     {
-        Debug.Assert(target.AllSimple());
+        Debug.Assert(traits.AllSimple());
     }
 
     /// <inheritdoc />
@@ -49,7 +49,7 @@ public class AbstractConverter : ConverterImpl
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter", "copy(RelTraitSet, List<RelNode>)")]
     public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
-        return new AbstractConverter(traits, children[0], TraitDef);
+        return new AbstractConverter(children[0].Cluster, children[0], TraitDef, traits);
     }
 
 }

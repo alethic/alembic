@@ -207,7 +207,7 @@ internal class OpSet
             if (needsConverter)
             {
                 var enforcer = useAbstractConverter
-                    ? new AbstractConverter(to.Traits, from)
+                    ? new AbstractConverter(from.Cluster, from, null, to.Traits)
                     : subset.Traits.Convention.Enforce(from, to.Traits);
 
                 if (enforcer is not null)

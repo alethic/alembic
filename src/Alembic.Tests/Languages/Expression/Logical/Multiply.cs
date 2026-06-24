@@ -12,7 +12,7 @@ sealed class Multiply : BiOp
 {
 
     public Multiply(OpTraitSet traits, IOp left, IOp right)
-        : base(traits, left, right)
+        : base(left.Cluster, traits, left, right)
     {
 
     }

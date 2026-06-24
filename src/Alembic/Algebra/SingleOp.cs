@@ -20,8 +20,8 @@ public abstract class SingleOp : AbstractOp
     /// Initializes the op with its traits and single child.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel", "SingleRel(RelOptCluster, RelTraitSet, RelNode)")]
-    protected SingleOp(OpTraitSet traits, IOp child)
-        : base(child.Cluster, traits)
+    protected SingleOp(OpCluster cluster, OpTraitSet traits, IOp child)
+        : base(cluster, traits)
     {
         _input = child;
     }
