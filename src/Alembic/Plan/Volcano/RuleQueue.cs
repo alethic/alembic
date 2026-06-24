@@ -53,7 +53,7 @@ public abstract class RuleQueue
             if (Planner.IsPruned(rel))
                 return true;
 
-        return HasDuplicateSubsetOnPath(new Stack<OpSubset>(), match.Rule.Operand, match.Ops);
+        return HasDuplicateSubsetOnPath(new Stack<OpSubset>(), match.Rule.GetOperand(), match.Ops);
     }
 
     /// <summary>

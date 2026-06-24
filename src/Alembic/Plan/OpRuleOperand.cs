@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 
 using Alembic.Algebra;
@@ -38,7 +39,7 @@ public enum RuleOperandChildPolicy
 }
 
 /// <summary>
-/// An op-tree pattern. An op matches an operand when it is an instance of <see cref="MatchedClass"/>,
+/// An op-tree pattern. An op matches an operand when it is an instance of <see cref="MatchedType"/>,
 /// carries <see cref="Trait"/> (if one is required), and satisfies the optional <see cref="Predicate"/>;
 /// the <see cref="ChildPolicy"/> then governs how the child operands match the op's children. Every
 /// <see cref="Rule"/> has one; <see cref="Matches"/> tests a single op, while the recursive tree match
@@ -48,58 +49,41 @@ public enum RuleOperandChildPolicy
 public sealed class OpRuleOperand
 {
 
-    static readonly Func<IOp, bool> AlwaysMatches = static _ => true;
-
     /// <summary>
-    /// Matches ops of <paramref name="matchedClass"/>: with child operands they match positionally
-    /// (<see cref="RuleOperandChildPolicy.Some"/>); with none it matches only a leaf
-    /// (<see cref="RuleOperandChildPolicy.Leaf"/>).
-    /// </summary>
-    internal OpRuleOperand(Type matchedClass, params OpRuleOperand[] children)
-        : this(matchedClass, null, AlwaysMatches, children.Length == 0 ? RuleOperandChildPolicy.Leaf : RuleOperandChildPolicy.Some, children)
-    {
-
-    }
-
-    /// <summary>
-    /// Matches ops of <paramref name="matchedClass"/> with an explicit child policy.
-    /// </summary>
-    internal OpRuleOperand(Type matchedClass, RuleOperandChildPolicy childPolicy, params OpRuleOperand[] children)
-        : this(matchedClass, null, AlwaysMatches, childPolicy, children)
-    {
-
-    }
-
-    /// <summary>
-    /// Matches ops of <paramref name="matchedClass"/> that also satisfy <paramref name="predicate"/>.
-    /// </summary>
-    internal OpRuleOperand(Type matchedClass, Func<IOp, bool> predicate, RuleOperandChildPolicy childPolicy, params OpRuleOperand[] children)
-        : this(matchedClass, null, predicate, childPolicy, children)
-    {
-
-    }
-
-    /// <summary>
-    /// Matches ops of <paramref name="matchedClass"/> that also carry <paramref name="trait"/>.
-    /// </summary>
-    internal OpRuleOperand(Type matchedClass, IOpTrait trait, RuleOperandChildPolicy childPolicy, params OpRuleOperand[] children)
-        : this(matchedClass, trait, AlwaysMatches, childPolicy, children)
-    {
-
-    }
-
-    /// <summary>
-    /// The full form: a matched class, an optional required trait, an extra predicate, a child policy,
-    /// and child operands.
+    /// Creates an operand matching <paramref name="matchedClass"/> that carries <paramref name="trait"/>
+    /// (or any trait, when null) and satisfies <paramref name="predicate"/>, with
+    /// <paramref name="childPolicy"/> governing how <paramref name="children"/> match the op's children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "RelOptRuleOperand(Class, RelTrait, Predicate, RelOptRuleOperandChildPolicy, ImmutableList<RelOptRuleOperand>)")]
-    internal OpRuleOperand(Type matchedClass, IOpTrait? trait, Func<IOp, bool> predicate, RuleOperandChildPolicy childPolicy, params OpRuleOperand[] children)
+    internal OpRuleOperand(Type matchedClass, IOpTrait? trait, Func<IOp, bool> predicate, RuleOperandChildPolicy childPolicy, ImmutableArray<OpRuleOperand> children)
     {
-        MatchedClass = matchedClass;
+        MatchedType = matchedClass;
+        switch (childPolicy)
+        {
+            case RuleOperandChildPolicy.Any:
+                break;
+            case RuleOperandChildPolicy.Leaf:
+                if (!children.IsEmpty)
+                    throw new ArgumentException();
+                break;
+            case RuleOperandChildPolicy.Unordered:
+                Debug.Assert(children.Length == 1);
+                break;
+            default:
+                if (children.IsEmpty)
+                    throw new ArgumentException();
+                break;
+        }
+
+        ChildPolicy = childPolicy;
         Trait = trait;
         Predicate = predicate;
-        ChildPolicy = childPolicy;
-        Children = children.ToImmutableArray();
+        Children = children;
+        foreach (var child in Children)
+        {
+            Debug.Assert(child.Parent is null, "cannot re-use operands");
+            child.Parent = this;
+        }
     }
 
     /// <summary>
@@ -139,7 +123,7 @@ public sealed class OpRuleOperand
     /// The op type this operand matches.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "getMatchedClass()")]
-    public Type MatchedClass { get; }
+    public Type MatchedType { get; }
 
     /// <summary>
     /// A trait the op must carry, or <c>null</c> if the operand does not test traits.
@@ -186,7 +170,7 @@ public sealed class OpRuleOperand
             && ReferenceEquals(rule.TraitDef, converter.TraitDef))
             return false;
 
-        if (!MatchedClass.IsInstanceOfType(op))
+        if (!MatchedType.IsInstanceOfType(op))
             return false;
 
         if (Trait is not null && !op.Traits.Contains(Trait))
@@ -207,7 +191,7 @@ public sealed class OpRuleOperand
             return true;
 
         return obj is OpRuleOperand that
-            && MatchedClass == that.MatchedClass
+            && MatchedType == that.MatchedType
             && Equals(Trait, that.Trait)
             && Children.SequenceEqual(that.Children);
     }
@@ -217,7 +201,7 @@ public sealed class OpRuleOperand
     public override int GetHashCode()
     {
         var hash = new HashCode();
-        hash.Add(MatchedClass);
+        hash.Add(MatchedType);
         hash.Add(Trait);
         foreach (var child in Children)
             hash.Add(child);

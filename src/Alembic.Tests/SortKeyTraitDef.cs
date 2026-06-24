@@ -1,3 +1,4 @@
+using Alembic.Algebra;
 using Alembic.Plan;
 
 namespace Alembic.Tests;
@@ -18,5 +19,9 @@ sealed class SortKeyTraitDef : OpTraitDef<SortKey>
     public override string Name => "sort-key";
 
     public override SortKey Default => SortKey.None;
+
+    public override bool CanConvert(IOpPlanner planner, SortKey fromTrait, SortKey toTrait) => false;
+
+    public override IOp? Convert(IOpPlanner planner, IOp op, SortKey toTrait, bool allowInfiniteCostConverters) => null;
 
 }

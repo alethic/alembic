@@ -14,7 +14,7 @@ sealed class TagFilterOverSource : OpRule
 {
 
     public TagFilterOverSource()
-        : base(Some<LogicalFilter>(Leaf<LogicalSource>()))
+        : base(Operand<LogicalFilter>(Some(Operand<LogicalSource>(None()))))
     {
     }
 

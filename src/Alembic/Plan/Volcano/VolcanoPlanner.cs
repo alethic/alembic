@@ -153,7 +153,7 @@ public class VolcanoPlanner : AbstractOpPlanner
         // implementing one.
         bool isTransformationRule = rule is ITransformationRule;
         foreach (var operand in rule.Operands)
-            foreach (var subClass in SubClasses(operand.MatchedClass))
+            foreach (var subClass in SubClasses(operand.MatchedType))
             {
                 if (isTransformationRule && typeof(IPhysicalOp).IsAssignableFrom(subClass))
                     continue;
@@ -229,7 +229,7 @@ public class VolcanoPlanner : AbstractOpPlanner
                 continue;
 
             foreach (var operand in rule.Operands)
-                if (operand.MatchedClass.IsAssignableFrom(clazz))
+                if (operand.MatchedType.IsAssignableFrom(clazz))
                     _classOperands.Put(clazz, operand);
         }
     }

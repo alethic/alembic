@@ -77,7 +77,7 @@ public class AbstractOpPlannerTests
     {
 
         public NoOp()
-            : base(Leaf<LogicalSource>())
+            : base(Operand<LogicalSource>(None()))
         {
         }
 

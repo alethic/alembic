@@ -12,7 +12,7 @@ sealed class MarkSorted : OpRule
 {
 
     public MarkSorted()
-        : base(Any<IOp>(op => !ReferenceEquals(op.Traits.Get(SortednessTraitDef.Instance), Sortedness.Sorted)))
+        : base(OperandJ<IOp>(null, op => !ReferenceEquals(op.Traits.Get(SortednessTraitDef.Instance), Sortedness.Sorted), Any()))
     {
     }
 

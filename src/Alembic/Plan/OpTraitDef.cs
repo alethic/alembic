@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 using Alembic.Algebra;
 using Alembic.Algebra.Convert;
@@ -52,30 +53,29 @@ public abstract class OpTraitDef
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "canonize(RelTrait)")]
     public IOpTrait Canonize(IOpTrait trait)
     {
+        Debug.Assert(trait is OpCompositeTrait || TraitType.IsInstanceOfType(trait), $"{GetType()} cannot canonize a {trait.GetType()}");
         return _interned.Intern(trait);
     }
 
     /// <summary>
     /// Whether this dimension can convert <paramref name="fromTrait"/> to <paramref name="toTrait"/>
-    /// itself (an alternative to a registered converter rule). The default is no.
+    /// itself (an alternative to a registered converter rule). This is the erased entry point used through
+    /// a non-generic <see cref="OpTraitDef"/> handle; <see cref="OpTraitDef{TTrait}"/> supplies the
+    /// strongly-typed override.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "canConvert(RelOptPlanner, RelTrait, RelTrait)")]
-    public virtual bool CanConvert(IOpPlanner planner, IOpTrait fromTrait, IOpTrait toTrait)
-    {
-        return false;
-    }
+    public abstract bool CanConvert(IOpPlanner planner, IOpTrait fromTrait, IOpTrait toTrait);
 
     /// <summary>
     /// Converts <paramref name="op"/> to <paramref name="toTrait"/> on this dimension, returning the
     /// converted op (e.g. wrapping it in an enforcer) or <c>null</c> to decline. Consulted only when
     /// <see cref="CanConvert"/> allows it. <paramref name="allowInfiniteCostConverters"/> permits a
-    /// converter even when it would carry an infinite cost.
+    /// converter even when it would carry an infinite cost. This is the erased entry point used through a
+    /// non-generic <see cref="OpTraitDef"/> handle; <see cref="OpTraitDef{TTrait}"/> supplies the
+    /// strongly-typed override.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "convert(RelOptPlanner, RelNode, RelTrait, boolean)")]
-    public virtual IOp? Convert(IOpPlanner planner, IOp op, IOpTrait toTrait, bool allowInfiniteCostConverters)
-    {
-        return null;
-    }
+    public abstract IOp? Convert(IOpPlanner planner, IOp op, IOpTrait toTrait, bool allowInfiniteCostConverters);
 
     /// <summary>
     /// Registers a converter rule that operates on this dimension. The default does nothing.
@@ -91,6 +91,7 @@ public abstract class OpTraitDef
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "deregisterConverterRule(RelOptPlanner, ConverterRule)")]
     public virtual void DeregisterConverterRule(IOpPlanner planner, ConverterRule converterRule)
     {
+
     }
 
 }
@@ -114,5 +115,59 @@ public abstract class OpTraitDef<TTrait> : OpTraitDef
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "getDefault()")]
     public abstract override TTrait Default { get; }
+
+    /// <summary>
+    /// Returns the canonical (interned) instance equal to <paramref name="trait"/>. The strongly-typed
+    /// counterpart of <see cref="OpTraitDef.Canonize"/>: equal traits share one object and may be compared
+    /// by reference.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "canonize(RelTrait)")]
+    public TTrait Canonize(TTrait trait)
+    {
+        return (TTrait)base.Canonize(trait);
+    }
+
+    /// <summary>
+    /// Whether this dimension can convert <paramref name="fromTrait"/> to <paramref name="toTrait"/> itself
+    /// (an alternative to a registered converter rule).
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "canConvert(RelOptPlanner, RelTrait, RelTrait)")]
+    public abstract bool CanConvert(IOpPlanner planner, TTrait fromTrait, TTrait toTrait);
+
+    /// <summary>
+    /// Converts <paramref name="op"/> to <paramref name="toTrait"/> on this dimension, returning the
+    /// converted op (e.g. wrapping it in an enforcer) or <c>null</c> to decline. Consulted only when
+    /// <see cref="CanConvert(IOpPlanner, TTrait, TTrait)"/> allows it.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelTraitDef", "convert(RelOptPlanner, RelNode, RelTrait, boolean)")]
+    public abstract IOp? Convert(IOpPlanner planner, IOp op, TTrait toTrait, bool allowInfiniteCostConverters);
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The erased bridge for <see cref="OpTraitDef.CanConvert"/>: a non-generic <see cref="OpTraitDef"/>
+    /// handle (e.g. <see cref="IOpTrait.TraitDef"/>) routes here, which down-casts to
+    /// <typeparamref name="TTrait"/> and forwards to the strongly-typed overload — the C# analog of the
+    /// bridge method <c>javac</c> synthesizes for a generic <c>RelTraitDef&lt;T&gt;</c> (a checked cast that
+    /// throws on a wrong-typed trait, exactly as Calcite's erased raw-type call does).
+    /// </remarks>
+    [Provenance(ProvenanceSource.Local)]
+    public sealed override bool CanConvert(IOpPlanner planner, IOpTrait fromTrait, IOpTrait toTrait)
+    {
+        return CanConvert(planner, (TTrait)fromTrait, (TTrait)toTrait);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The erased bridge for <see cref="OpTraitDef.Convert"/>: a non-generic <see cref="OpTraitDef"/>
+    /// handle (e.g. <see cref="IOpTrait.TraitDef"/>) routes here, which down-casts to
+    /// <typeparamref name="TTrait"/> and forwards to the strongly-typed overload — the C# analog of the
+    /// bridge method <c>javac</c> synthesizes for a generic <c>RelTraitDef&lt;T&gt;</c> (a checked cast that
+    /// throws on a wrong-typed trait, exactly as Calcite's erased raw-type call does).
+    /// </remarks>
+    [Provenance(ProvenanceSource.Local)]
+    public sealed override IOp? Convert(IOpPlanner planner, IOp op, IOpTrait toTrait, bool allowInfiniteCostConverters)
+    {
+        return Convert(planner, op, (TTrait)toTrait, allowInfiniteCostConverters);
+    }
 
 }

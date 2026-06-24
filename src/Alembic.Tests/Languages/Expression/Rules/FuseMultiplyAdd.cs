@@ -15,7 +15,7 @@ sealed class FuseMultiplyAdd : OpRule
 {
 
     public FuseMultiplyAdd()
-        : base(Some<PhysicalAdd>(Any<PhysicalMultiply>(), Any<IOp>()))
+        : base(Operand<PhysicalAdd>(Some(Operand<PhysicalMultiply>(Any()), Operand<IOp>(Any()))))
     {
     }
 

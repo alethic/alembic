@@ -147,13 +147,13 @@ public class OpRuleOperandTests
             Binding = call.Ops;
         }
 
-        public static OpRuleOperand AnyOf<TOp>() where TOp : IOp => Any<TOp>();
+        public static OpRuleOperand AnyOf<TOp>() where TOp : IOp => Operand<TOp>(Any());
 
-        public static OpRuleOperand LeafOf<TOp>() where TOp : IOp => Leaf<TOp>();
+        public static OpRuleOperand LeafOf<TOp>() where TOp : IOp => Operand<TOp>(None());
 
-        public static OpRuleOperand SomeOf<TOp>(params OpRuleOperand[] children) where TOp : IOp => Some<TOp>(children);
+        public static OpRuleOperand SomeOf<TOp>(OpRuleOperand first, params OpRuleOperand[] rest) where TOp : IOp => Operand<TOp>(Some(first, rest));
 
-        public static OpRuleOperand UnorderedOf<TOp>(params OpRuleOperand[] children) where TOp : IOp => Unordered<TOp>(children);
+        public static OpRuleOperand UnorderedOf<TOp>(OpRuleOperand first, params OpRuleOperand[] rest) where TOp : IOp => Operand<TOp>(Unordered(first, rest));
 
     }
 

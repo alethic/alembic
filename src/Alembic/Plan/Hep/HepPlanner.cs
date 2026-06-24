@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 
 using Alembic.Algebra;
 using Alembic.Algebra.Convert;
+using Alembic.Util;
 using Alembic.Util.Graph;
 
 namespace Alembic.Plan.Hep;
@@ -25,8 +27,8 @@ public class HepPlanner : AbstractOpPlanner
     readonly HepProgram _mainProgram;
     readonly Dictionary<IOpDigest, HepOpVertex> _mapDigestToVertex = new Dictionary<IOpDigest, HepOpVertex>();
     readonly DirectedGraph<HepOpVertex, DefaultEdge> _graph = DefaultDirectedGraph<HepOpVertex, DefaultEdge>.Create();
-    readonly Dictionary<FiredKey, HashSet<OpRule>> _firedRulesCache = new Dictionary<FiredKey, HashSet<OpRule>>();
-    readonly Dictionary<IOp, HashSet<FiredKey>> _firedRulesCacheIndex = new Dictionary<IOp, HashSet<FiredKey>>();
+    readonly Multimap<ImmutableIntList, OpRule> _firedRulesCache = new Multimap<ImmutableIntList, OpRule>();
+    readonly Multimap<int, ImmutableIntList> _firedRulesCacheIndex = new Multimap<int, ImmutableIntList>();
 
     HepOpVertex? _root;
     IOp? _rootOp;
@@ -514,20 +516,25 @@ public class HepPlanner : AbstractOpPlanner
 
         var bindings = new List<IOp>();
         var nodeChildren = new Dictionary<IOp, IReadOnlyList<IOp>>();
-        if (!MatchOperand(rule.Operand, vertex.CurrentOp, bindings, nodeChildren))
+        if (!MatchOperand(rule.GetOperand(), vertex.CurrentOp, bindings, nodeChildren))
             return null;
 
         var boundOps = bindings.ToImmutableArray();
 
-        FiredKey? key = null;
+        // Cache the fired rule before constructing a HepRuleCall.
+        ImmutableIntList? relIds = null;
         if (_enableFiredRulesCache)
         {
-            key = new FiredKey(boundOps);
-            if (_firedRulesCache.TryGetValue(key, out var fired) && fired.Contains(rule))
+            var ids = new int[bindings.Count];
+            for (int i = 0; i < bindings.Count; i++)
+                ids[i] = bindings[i].Id;
+
+            relIds = ImmutableIntList.Of(ids);
+            if (_firedRulesCache.Get(relIds).Contains(rule))
                 return null;
         }
 
-        var call = new HepRuleCall(this, rule.Operand, boundOps, nodeChildren, parents);
+        var call = new HepRuleCall(this, rule.GetOperand(), boundOps, nodeChildren, parents);
 
         // Let the rule apply its own side-condition.
         if (!rule.Matches(call))
@@ -537,18 +544,11 @@ public class HepPlanner : AbstractOpPlanner
         rule.OnMatch(call);
         FireRuleAttempted(call, false);
 
-        if (key is not null)
+        if (relIds is not null)
         {
-            if (!_firedRulesCache.TryGetValue(key, out var fired))
-                _firedRulesCache[key] = fired = new HashSet<OpRule>();
-            fired.Add(rule);
-
-            foreach (var op in boundOps)
-            {
-                if (!_firedRulesCacheIndex.TryGetValue(op, out var keys))
-                    _firedRulesCacheIndex[op] = keys = new HashSet<FiredKey>();
-                keys.Add(key);
-            }
+            _firedRulesCache.Put(relIds, rule);
+            for (int i = 0; i < relIds.Count; i++)
+                _firedRulesCacheIndex.Put(relIds.GetInt(i), relIds);
         }
 
         if (call.Results.Count > 0)
@@ -906,13 +906,10 @@ public class HepPlanner : AbstractOpPlanner
 
     void RemoveFiredRules(IOp rel)
     {
-        if (!_firedRulesCacheIndex.TryGetValue(rel, out var keys))
-            return;
+        foreach (var relIds in _firedRulesCacheIndex.Get(rel.Id))
+            _firedRulesCache.RemoveAll(relIds);
 
-        foreach (var key in keys)
-            _firedRulesCache.Remove(key);
-
-        _firedRulesCacheIndex.Remove(rel);
+        _firedRulesCacheIndex.RemoveAll(rel.Id);
     }
 
 
@@ -972,48 +969,6 @@ public class HepPlanner : AbstractOpPlanner
 
                 return true;
         }
-    }
-
-    /// <summary>
-    /// The key for the fired-rules cache: the identity of the matched ops, in order.
-    /// </summary>
-    sealed class FiredKey : IEquatable<FiredKey>
-    {
-
-        readonly ImmutableArray<IOp> _ops;
-        readonly int _hash;
-
-        /// <summary>
-        /// Creates a key over the matched <paramref name="ops"/> (compared by reference identity).
-        /// </summary>
-        public FiredKey(ImmutableArray<IOp> ops)
-        {
-            _ops = ops;
-            var hash = new HashCode();
-            foreach (var op in ops)
-                hash.Add(op, ReferenceEqualityComparer.Instance);
-            _hash = hash.ToHashCode();
-        }
-
-        /// <inheritdoc/>
-        public bool Equals(FiredKey? other)
-        {
-            if (other is null || other._ops.Length != _ops.Length)
-                return false;
-
-            for (int i = 0; i < _ops.Length; i++)
-                if (!ReferenceEquals(_ops[i], other._ops[i]))
-                    return false;
-
-            return true;
-        }
-
-        /// <inheritdoc/>
-        public override bool Equals(object? obj) => Equals(obj as FiredKey);
-
-        /// <inheritdoc/>
-        public override int GetHashCode() => _hash;
-
     }
 
 }

@@ -75,7 +75,7 @@ internal class OpCompositeTrait<T> : OpCompositeTrait
         // Canonize each member, then the whole composite, so equal composites share one instance.
         var canonized = ImmutableArray.CreateBuilder<T>(traits.Count);
         foreach (var trait in traits)
-            canonized.Add((T)def.Canonize(trait));
+            canonized.Add(def.Canonize(trait));
 
         return def.Canonize(new OpCompositeTrait<T>(def, canonized.MoveToImmutable()));
     }

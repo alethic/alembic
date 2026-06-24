@@ -48,6 +48,15 @@ public sealed class Multimap<TKey, TValue>
     }
 
     /// <summary>
+    /// Removes and returns every value associated with <paramref name="key"/>, leaving no entry for it.
+    /// </summary>
+    [Provenance(ProvenanceSource.Other, "com.google.common.collect.Multimap", "removeAll(Object)")]
+    public IReadOnlyList<TValue> RemoveAll(TKey key)
+    {
+        return _map.Remove(key, out var values) ? values : System.Array.Empty<TValue>();
+    }
+
+    /// <summary>
     /// Removes every value (across all keys) matching <paramref name="predicate"/>, pruning any key left
     /// with no values. The .NET stand-in for <c>values().removeIf(predicate)</c>.
     /// </summary>

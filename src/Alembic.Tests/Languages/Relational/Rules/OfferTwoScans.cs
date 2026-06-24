@@ -17,7 +17,7 @@ sealed class OfferTwoScans : OpRule
     readonly OpTraitSet _physical;
 
     public OfferTwoScans(OpTraitSet physical)
-        : base(Leaf<LogicalSource>())
+        : base(Operand<LogicalSource>(None()))
     {
         _physical = physical;
     }

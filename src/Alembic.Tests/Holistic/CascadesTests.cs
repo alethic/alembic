@@ -160,7 +160,7 @@ public class CascadesTests
     {
 
         public SpyTransformationRule()
-            : base(Any<IOp>())
+            : base(Operand<IOp>(Any()))
         {
         }
 
@@ -178,7 +178,7 @@ public class CascadesTests
     {
 
         public OfferSortedSource()
-            : base(Leaf<PhysicalSource>())
+            : base(Operand<PhysicalSource>(None()))
         {
         }
 

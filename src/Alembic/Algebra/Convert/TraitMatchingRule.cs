@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 using Alembic.Algebra;
 using Alembic.Plan;
 
@@ -42,8 +44,9 @@ public class TraitMatchingRule : OpRule
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.TraitMatchingRule", "config(ConverterRule, RelBuilderFactory)")]
     static OpRuleOperand BuildOperand(ConverterRule converterRule)
     {
-        var converterOperand = converterRule.Operand;
-        return new OpRuleOperand(converterOperand.MatchedClass, converterOperand.Trait, converterOperand.Predicate, RuleOperandChildPolicy.Some, new OpRuleOperand(typeof(IOp), RuleOperandChildPolicy.Any));
+        var converterOperand = converterRule.GetOperand();
+        var input = new OpRuleOperand(typeof(IOp), null, static _ => true, RuleOperandChildPolicy.Any, ImmutableArray<OpRuleOperand>.Empty);
+        return new OpRuleOperand(converterOperand.MatchedType, converterOperand.Trait, converterOperand.Predicate, RuleOperandChildPolicy.Some, ImmutableArray.Create(input));
     }
 
 }

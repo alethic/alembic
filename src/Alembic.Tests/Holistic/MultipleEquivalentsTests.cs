@@ -77,7 +77,7 @@ public class MultipleEquivalentsTests
     {
 
         public OfferPrimaryAndSecondary()
-            : base(Leaf<LogicalSource>())
+            : base(Operand<LogicalSource>(None()))
         {
         }
 

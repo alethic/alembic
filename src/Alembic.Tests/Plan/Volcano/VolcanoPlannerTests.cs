@@ -107,7 +107,7 @@ public class VolcanoPlannerTests
     {
 
         public Spy()
-            : base(Any<IOp>())
+            : base(Operand<IOp>(Any()))
         {
         }
 
@@ -124,7 +124,7 @@ public class VolcanoPlannerTests
         public bool Fired;
 
         public SpyRule()
-            : base(Any<IOp>())
+            : base(Operand<IOp>(Any()))
         {
         }
 

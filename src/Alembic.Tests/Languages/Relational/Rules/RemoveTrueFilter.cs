@@ -14,7 +14,7 @@ sealed class RemoveTrueFilter : OpRule
 {
 
     public RemoveTrueFilter()
-        : base(Any<LogicalFilter>(n => ((LogicalFilter)n).Predicate == "true"))
+        : base(OperandJ<LogicalFilter>(null, n => ((LogicalFilter)n).Predicate == "true", Any()))
     {
     }
 

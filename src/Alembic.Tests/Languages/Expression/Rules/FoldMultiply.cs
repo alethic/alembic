@@ -14,7 +14,7 @@ sealed class FoldMultiply : OpRule
 {
 
     public FoldMultiply()
-        : base(Some<Multiply>(Leaf<Literal>(), Leaf<Literal>()))
+        : base(Operand<Multiply>(Some(Operand<Literal>(None()), Operand<Literal>(None()))))
     {
     }
 

@@ -149,6 +149,9 @@ public class VolcanoRuleCall : OpRuleCall
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "matchRecurse(int)")]
     void MatchRecurse(int solve)
     {
+        Debug.Assert(solve > 0);
+        Debug.Assert(solve <= Rule.Operands.Length);
+
         var operands = Rule.Operands;
         if (solve == operands.Length)
         {
@@ -172,25 +175,67 @@ public class VolcanoRuleCall : OpRuleCall
         {
             // The operand being solved is an ancestor of the previous one; climb to the previous op's
             // parents.
+            Debug.Assert(ReferenceEquals(previousOperand.Parent, operand));
+            Debug.Assert(operand.MatchedType != typeof(OpSubset));
+
+            if (previousOperand.MatchedType != typeof(OpSubset) && previous is OpSubset)
+                throw new InvalidOperationException($"OpSubset should not match with {previousOperand.MatchedType.Name}");
+
             parentOperand = operand;
             var subset = _planner.GetSubsetNonNull(previous);
             successors = subset.GetParentRels();
         }
         else
         {
-            parentOperand = operand.Parent!;
+            parentOperand = operand.Parent ?? throw new NullReferenceException($"operand.Parent for {operand}");
             var parentRel = Rels[parentOperand.OrdinalInRule]!;
             var inputs = parentRel.Children;
+            // If the child is unordered, then add all ops in all input subsets to the successors list
+            // because unordered can match a child in any ordinal.
             if (parentOperand.ChildPolicy == RuleOperandChildPolicy.Unordered)
             {
-                // An unordered child can bind any input, so all members of all input subsets are
-                // candidates.
-                successors = AllOpsInInputs(inputs);
+                if (operand.MatchedType == typeof(OpSubset))
+                {
+                    // Find all the sibling subsets that satisfy this subset's trait set.
+                    var subsets = new List<IOp>();
+                    foreach (var input in inputs)
+                        foreach (var subset in ((OpSubset)input).GetSubsetsSatisfyingThis())
+                            subsets.Add(subset);
+                    successors = subsets;
+                }
+                else
+                {
+                    var allOpsInAllSubsets = new List<IOp>();
+                    var duplicates = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
+                    foreach (var input in inputs)
+                    {
+                        if (!duplicates.Add(input))
+                            // Ignore duplicate subsets.
+                            continue;
+
+                        var inputSubset = (OpSubset)input;
+                        foreach (var rel in inputSubset.GetRels())
+                        {
+                            if (!duplicates.Add(rel))
+                                // Ignore duplicate ops.
+                                continue;
+
+                            allOpsInAllSubsets.Add(rel);
+                        }
+                    }
+
+                    successors = allOpsInAllSubsets;
+                }
             }
             else if (operand.OrdinalInParent < inputs.Length)
             {
                 var subset = (OpSubset)inputs[operand.OrdinalInParent];
-                successors = subset.GetRels();
+                if (operand.MatchedType == typeof(OpSubset))
+                    // The operand matches subsets directly: bind the sibling subsets that satisfy this
+                    // subset's trait set.
+                    successors = subset.GetSubsetsSatisfyingThis();
+                else
+                    successors = subset.GetRels();
             }
             else
             {
@@ -203,7 +248,7 @@ public class VolcanoRuleCall : OpRuleCall
         {
             // A transformation rule stays within one convention: don't bind an op whose convention
             // differs from the operand we came from.
-            if (Rule is ITransformationRule && !rel.Convention.Equals(previous.Convention))
+            if (Rule is ITransformationRule && !ReferenceEquals(rel.Convention, previous.Convention))
                 continue;
 
             if (!operand.Matches(rel))
@@ -217,8 +262,26 @@ public class VolcanoRuleCall : OpRuleCall
                     continue;
 
                 var input = (OpSubset)rel.Children[previousOperand.OrdinalInParent];
-                if (!input.Contains(previous))
+                if (previousOperand.MatchedType == typeof(OpSubset))
+                {
+                    // The matched subset (previous) must satisfy our input subset.
+                    bool found = false;
+                    foreach (var sub in input.GetSubsetsSatisfyingThis())
+                    {
+                        if (sub.Equals(previous))
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                        continue;
+                }
+                else if (!input.Contains(previous))
+                {
                     continue;
+                }
             }
 
             // Assign "childRels" if the operand is UNORDERED.
@@ -245,20 +308,6 @@ public class VolcanoRuleCall : OpRuleCall
 
             Rels[operandOrdinal] = rel;
             MatchRecurse(solve + 1);
-        }
-    }
-
-    IEnumerable<IOp> AllOpsInInputs(ImmutableArray<IOp> inputs)
-    {
-        var seen = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
-        foreach (var input in inputs)
-        {
-            if (!seen.Add(input))
-                continue;
-
-            foreach (var rel in ((OpSubset)input).GetRels())
-                if (seen.Add(rel))
-                    yield return rel;
         }
     }
 

@@ -14,7 +14,7 @@ sealed class MergeFilters : OpRule
 {
 
     public MergeFilters()
-        : base(Some<LogicalFilter>(Any<LogicalFilter>()))
+        : base(Operand<LogicalFilter>(Some(Operand<LogicalFilter>(Any()))))
     {
     }
 

@@ -21,7 +21,7 @@ public sealed class ExpandConversionRule : OpRule
     /// Creates a rule that matches any <see cref="AbstractConverter"/>.
     /// </summary>
     public ExpandConversionRule()
-        : base(Any<AbstractConverter>())
+        : base(Operand<AbstractConverter>(Any()))
     {
 
     }

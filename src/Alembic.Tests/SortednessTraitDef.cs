@@ -24,12 +24,12 @@ sealed class SortednessTraitDef : OpTraitDef<Sortedness>
 
     public override Sortedness Default => Sortedness.Unsorted;
 
-    public override bool CanConvert(IOpPlanner planner, IOpTrait fromTrait, IOpTrait toTrait)
+    public override bool CanConvert(IOpPlanner planner, Sortedness fromTrait, Sortedness toTrait)
     {
         return toTrait.Equals(Sortedness.Sorted);
     }
 
-    public override IOp? Convert(IOpPlanner planner, IOp op, IOpTrait toTrait, bool allowInfiniteCostConverters)
+    public override IOp? Convert(IOpPlanner planner, IOp op, Sortedness toTrait, bool allowInfiniteCostConverters)
     {
         if (!toTrait.Equals(Sortedness.Sorted) || ReferenceEquals(op.Traits.Get(Instance), Sortedness.Sorted))
             return null;

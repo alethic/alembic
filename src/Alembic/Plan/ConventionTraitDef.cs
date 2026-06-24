@@ -73,9 +73,8 @@ public class ConventionTraitDef : OpTraitDef<IConvention>
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.ConventionTraitDef", "convert(RelOptPlanner, RelNode, Convention, boolean)")]
-    public override IOp? Convert(IOpPlanner planner, IOp rel, IOpTrait toTrait, bool allowInfiniteCostConverters)
+    public override IOp? Convert(IOpPlanner planner, IOp rel, IConvention toConvention, bool allowInfiniteCostConverters)
     {
-        var toConvention = (IConvention)toTrait;
         var conversionData = GetConversionData(planner);
         var fromConvention = rel.Convention;
 
@@ -133,10 +132,8 @@ public class ConventionTraitDef : OpTraitDef<IConvention>
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.ConventionTraitDef", "canConvert(RelOptPlanner, Convention, Convention)")]
-    public override bool CanConvert(IOpPlanner planner, IOpTrait fromTrait, IOpTrait toTrait)
+    public override bool CanConvert(IOpPlanner planner, IConvention fromConvention, IConvention toConvention)
     {
-        var fromConvention = (IConvention)fromTrait;
-        var toConvention = (IConvention)toTrait;
         var conversionData = GetConversionData(planner);
         return fromConvention.CanConvertConvention(toConvention)
             || conversionData.GetShortestDistance(fromConvention, toConvention) != -1;

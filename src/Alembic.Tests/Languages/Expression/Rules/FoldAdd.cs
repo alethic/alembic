@@ -14,7 +14,7 @@ sealed class FoldAdd : OpRule
 {
 
     public FoldAdd()
-        : base(Some<Add>(Leaf<Literal>(), Leaf<Literal>()))
+        : base(Operand<Add>(Some(Operand<Literal>(None()), Operand<Literal>(None()))))
     {
     }
 

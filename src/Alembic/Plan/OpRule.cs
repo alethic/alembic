@@ -12,9 +12,10 @@ namespace Alembic.Plan;
 /// if <see cref="Matches"/> also allows it, calls <see cref="OnMatch"/>.
 /// </summary>
 /// <remarks>
-/// Operands form a closed world: a rule builds its operand only through the <c>protected static</c>
-/// factory methods here (<see cref="Any{TOp}()"/>, <see cref="Leaf{TOp}"/>, <see cref="Some{TOp}"/>,
-/// <see cref="Unordered{TOp}"/>, <see cref="ConvertOperand{TOp}"/>), passing the result to the
+/// Operands form a closed world: a rule builds its operand only through the static factory methods here —
+/// the <see cref="Operand{TOp}"/> / <see cref="OperandJ{TOp}"/> builders combined with the
+/// <see cref="Some"/>, <see cref="Unordered"/>, <see cref="None"/>, and <see cref="Any"/> child-operand
+/// lists (plus <see cref="ConvertOperand{TOp}"/> for converter rules), passing the result to the
 /// constructor. The <see cref="OpRuleOperand"/> constructor itself is not public, so only well-formed
 /// operand trees can exist.
 /// </remarks>
@@ -28,20 +29,24 @@ public abstract class OpRule
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "RelOptRule(RelOptRuleOperand)")]
     protected OpRule(OpRuleOperand operand)
     {
-        Operand = operand;
+        _operand = operand;
         Operands = FlattenOperands(operand);
         AssignSolveOrder(Operands);
     }
 
+    readonly OpRuleOperand _operand;
+
     /// <summary>
-    /// The pattern this rule matches.
+    /// The pattern this rule matches. (A method, not a property: Calcite's static factory
+    /// <see cref="Operand{TOp}"/> mirrors <c>operand(...)</c> and the accessor mirrors <c>getOperand()</c>
+    /// — both distinct in Java, but a property and same-named static method cannot coexist in C#.)
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "getOperand()")]
-    public OpRuleOperand Operand { get; }
+    public OpRuleOperand GetOperand() => _operand;
 
     /// <summary>
     /// The rule's operands flattened into a single list in prefix order (root first), each tagged with
-    /// its position. A planner indexes these by <see cref="OpRuleOperand.MatchedClass"/> so that an op
+    /// its position. A planner indexes these by <see cref="OpRuleOperand.MatchedType"/> so that an op
     /// can seed a match at any operand position.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "getOperands()")]
@@ -101,62 +106,79 @@ public abstract class OpRule
             || (obj is OpRule that
                 && GetType() == that.GetType()
                 && Description == that.Description
-                && Operand.Equals(that.Operand));
+                && GetOperand().Equals(that.GetOperand()));
     }
 
-    // ~ Operand factories (the RelOptRule operand/some/any/none/unordered/convertOperand analogs) ------
+    // ~ Operand factories — Calcite's two-layer operand construction: the operand/operandJ builders plus
+    // the some/none/any/unordered child-operand lists (all @Deprecated // to be removed before 2.0 in
+    // Calcite, superseded by RelRule.Config, which Alembic does not port). ConvertOperand mirrors
+    // convertOperand; its converter-on-converter guard lives on OpRuleOperand (IsConverterOperand).
 
     /// <summary>
-    /// An operand matching an op of type <typeparamref name="TOp"/> regardless of its children.
+    /// Creates an operand matching an op of type <typeparamref name="TOp"/> with the given child operands.
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "any()")]
-    protected static OpRuleOperand Any<TOp>()
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "operand(Class, RelOptRuleOperandChildren)")]
+    public static OpRuleOperand Operand<TOp>(OpRuleOperandChildren operandList)
         where TOp : IOp
     {
-        return new OpRuleOperand(typeof(TOp), RuleOperandChildPolicy.Any);
+        return new OpRuleOperand(typeof(TOp), null, static _ => true, operandList.Policy, operandList.Operands);
     }
 
     /// <summary>
-    /// An operand matching an op of type <typeparamref name="TOp"/> that also satisfies a predicate,
-    /// regardless of its children.
+    /// Creates an operand matching an op of type <typeparamref name="TOp"/> that carries
+    /// <paramref name="trait"/> and satisfies <paramref name="predicate"/>, with the given child operands.
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "any()")]
-    protected static OpRuleOperand Any<TOp>(Func<IOp, bool> predicate)
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "operandJ(Class, RelTrait, Predicate, RelOptRuleOperandChildren)")]
+    public static OpRuleOperand OperandJ<TOp>(IOpTrait? trait, Func<IOp, bool> predicate, OpRuleOperandChildren operandList)
         where TOp : IOp
     {
-        return new OpRuleOperand(typeof(TOp), predicate, RuleOperandChildPolicy.Any);
+        return new OpRuleOperand(typeof(TOp), trait, predicate, operandList.Policy, operandList.Operands);
     }
 
     /// <summary>
-    /// An operand matching a leaf op of type <typeparamref name="TOp"/> (one with no children).
-    /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "none()")]
-    protected static OpRuleOperand Leaf<TOp>()
-        where TOp : IOp
-    {
-        return new OpRuleOperand(typeof(TOp), RuleOperandChildPolicy.Leaf);
-    }
-
-    /// <summary>
-    /// An operand matching an op of type <typeparamref name="TOp"/> whose children match the given
-    /// child operands positionally.
+    /// A list of child operands that matches child ops in the order they appear.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "some(RelOptRuleOperand, RelOptRuleOperand...)")]
-    protected static OpRuleOperand Some<TOp>(params OpRuleOperand[] children)
-        where TOp : IOp
+    public static OpRuleOperandChildren Some(OpRuleOperand first, params OpRuleOperand[] rest)
     {
-        return new OpRuleOperand(typeof(TOp), RuleOperandChildPolicy.Some, children);
+        return new OpRuleOperandChildren(RuleOperandChildPolicy.Some, AsList(first, rest));
     }
 
     /// <summary>
-    /// An operand matching an op of type <typeparamref name="TOp"/> whose children match the given
-    /// child operands in any order.
+    /// A list of child operands that matches child ops in any order.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "unordered(RelOptRuleOperand, RelOptRuleOperand...)")]
-    protected static OpRuleOperand Unordered<TOp>(params OpRuleOperand[] children)
-        where TOp : IOp
+    public static OpRuleOperandChildren Unordered(OpRuleOperand first, params OpRuleOperand[] rest)
     {
-        return new OpRuleOperand(typeof(TOp), RuleOperandChildPolicy.Unordered, children);
+        return new OpRuleOperandChildren(RuleOperandChildPolicy.Unordered, AsList(first, rest));
+    }
+
+    /// <summary>
+    /// An empty list of child operands (matches a leaf op, one with no children).
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "none()")]
+    public static OpRuleOperandChildren None()
+    {
+        return OpRuleOperandChildren.LeafChildren;
+    }
+
+    /// <summary>
+    /// A list of child operands that matches any number of child ops.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "any()")]
+    public static OpRuleOperandChildren Any()
+    {
+        return OpRuleOperandChildren.AnyChildren;
+    }
+
+    // The .NET stand-in for Guava's Lists.asList(first, rest): a list whose head is first, tail is rest.
+    [Provenance(ProvenanceSource.Other, "com.google.common.collect.Lists", "asList(E, E[])")]
+    static OpRuleOperand[] AsList(OpRuleOperand first, OpRuleOperand[] rest)
+    {
+        var operands = new OpRuleOperand[rest.Length + 1];
+        operands[0] = first;
+        System.Array.Copy(rest, 0, operands, 1, rest.Length);
+        return operands;
     }
 
     /// <summary>
@@ -167,7 +189,7 @@ public abstract class OpRule
     protected static OpRuleOperand ConvertOperand<TOp>(IOpTrait trait)
         where TOp : IOp
     {
-        return new OpRuleOperand(typeof(TOp), trait, RuleOperandChildPolicy.Any) { IsConverterOperand = true };
+        return new OpRuleOperand(typeof(TOp), trait, static _ => true, RuleOperandChildPolicy.Any, ImmutableArray<OpRuleOperand>.Empty) { IsConverterOperand = true };
     }
 
     /// <summary>

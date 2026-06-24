@@ -14,7 +14,7 @@ sealed class PushFilterIntoSource : OpRule
 {
 
     public PushFilterIntoSource()
-        : base(Some<PhysicalFilter>(Leaf<PhysicalSource>()))
+        : base(Operand<PhysicalFilter>(Some(Operand<PhysicalSource>(None()))))
     {
     }
 
