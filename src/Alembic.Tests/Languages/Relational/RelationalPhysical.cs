@@ -1,3 +1,4 @@
+using Alembic.Algebra;
 using Alembic.Plan;
 
 using Alembic.Tests.Languages.Relational.Rules;
@@ -12,7 +13,7 @@ sealed class RelationalPhysical : Convention
 {
 
     public RelationalPhysical()
-        : base("REL-PHYSICAL")
+        : base("REL-PHYSICAL", typeof(IOp))
     {
 
     }

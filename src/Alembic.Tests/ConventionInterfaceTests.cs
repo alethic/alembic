@@ -36,7 +36,7 @@ public class ConventionInterfaceTests
     public void A_op_in_a_convention_without_a_marker_is_accepted()
     {
         // The default interface is IOp, which every op implements, so registration succeeds.
-        var plain = new Convention("PLAIN");
+        var plain = new Convention("PLAIN", typeof(IOp));
         var traits = OpTraitSet.CreateEmpty().Plus(plain);
 
         var planner = new VolcanoPlanner();

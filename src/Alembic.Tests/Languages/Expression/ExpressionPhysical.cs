@@ -1,3 +1,4 @@
+using Alembic.Algebra;
 using Alembic.Plan;
 
 using Alembic.Tests.Languages.Expression.Rules;
@@ -12,7 +13,7 @@ sealed class ExpressionPhysical : Convention
 {
 
     public ExpressionPhysical()
-        : base("EXPR-PHYSICAL")
+        : base("EXPR-PHYSICAL", typeof(IOp))
     {
 
     }

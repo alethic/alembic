@@ -1,3 +1,4 @@
+using Alembic.Algebra;
 using Alembic.Plan;
 
 namespace Alembic.Tests.Languages.Expression;
@@ -9,7 +10,7 @@ namespace Alembic.Tests.Languages.Expression;
 static class ExpressionConventions
 {
 
-    public static readonly Convention Logical = new Convention("EXPR-LOGICAL");
+    public static readonly Convention Logical = new Convention("EXPR-LOGICAL", typeof(IOp));
 
     public static readonly Convention Physical = new ExpressionPhysical();
 

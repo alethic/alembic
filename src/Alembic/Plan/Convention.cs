@@ -22,16 +22,6 @@ public class Convention : IConvention
     readonly Type _interface;
 
     /// <summary>
-    /// Creates a convention with the given name and no op-interface marker (members may be any
-    /// <see cref="IOp"/>).
-    /// </summary>
-    public Convention(string name)
-        : this(name, typeof(IOp))
-    {
-
-    }
-
-    /// <summary>
     /// Creates a convention with the given name and the op interface its members must implement.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Convention.Impl", "Impl(String, Class)")]

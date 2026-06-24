@@ -11,6 +11,13 @@ namespace Alembic.Plan.Volcano;
 public sealed class ExpandConversionRule : OpRule
 {
 
+    /// <summary>
+    /// The shared instance a planner registers. (Calcite's <c>INSTANCE = Config.DEFAULT.toRule()</c>;
+    /// Alembic has no <c>RelRule.Config</c> framework — see §1 — so the rule takes ctor args directly.)
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter.ExpandConversionRule", "INSTANCE")]
+    public static readonly ExpandConversionRule Instance = new ExpandConversionRule();
+
     public ExpandConversionRule()
         : base(Any<AbstractConverter>())
     {

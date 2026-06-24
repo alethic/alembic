@@ -49,7 +49,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     {
         _ruleDriver = new IterativeRuleDriver(this);
         AddTraitDef(ConventionTraitDef.Instance);
-        AddRule(new ExpandConversionRule());
+        AddRule(ExpandConversionRule.Instance);
     }
 
     /// <inheritdoc />

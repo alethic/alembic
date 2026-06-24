@@ -1,3 +1,4 @@
+using Alembic.Algebra;
 using Alembic.Plan;
 
 namespace Alembic.Tests.Languages.Image;
@@ -11,11 +12,11 @@ namespace Alembic.Tests.Languages.Image;
 static class ImageConventions
 {
 
-    public static readonly Convention Logical = new Convention("IMG-LOGICAL");
+    public static readonly Convention Logical = new Convention("IMG-LOGICAL", typeof(IOp));
 
-    public static readonly Convention Cpu = new Convention("IMG-CPU");
+    public static readonly Convention Cpu = new Convention("IMG-CPU", typeof(IOp));
 
-    public static readonly Convention Gpu = new Convention("IMG-GPU");
+    public static readonly Convention Gpu = new Convention("IMG-GPU", typeof(IOp));
 
     /// <summary>
     /// The cost of moving an image between the CPU and the GPU.

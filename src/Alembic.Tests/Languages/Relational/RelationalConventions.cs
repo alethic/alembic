@@ -1,3 +1,4 @@
+using Alembic.Algebra;
 using Alembic.Plan;
 
 namespace Alembic.Tests.Languages.Relational;
@@ -8,7 +9,7 @@ namespace Alembic.Tests.Languages.Relational;
 static class RelationalConventions
 {
 
-    public static readonly Convention Logical = new Convention("REL-LOGICAL");
+    public static readonly Convention Logical = new Convention("REL-LOGICAL", typeof(IOp));
 
     public static readonly Convention Physical = new RelationalPhysical();
 
