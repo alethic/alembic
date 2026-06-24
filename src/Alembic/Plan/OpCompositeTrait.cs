@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Alembic.Plan;
@@ -58,6 +59,21 @@ internal class OpCompositeTrait<T> : OpCompositeTrait
     {
         _def = def;
         _traits = traits;
+        Debug.Assert(IsStrictlyOrdered(traits), "[" + string.Join(", ", traits) + "]");
+        foreach (var trait in traits)
+            Debug.Assert(ReferenceEquals(trait.TraitDef, def));
+    }
+
+    // Whether the members are strictly increasing by natural ordering — Calcite asserts the composite's
+    // members are sorted and distinct via Ordering.natural().isStrictlyOrdered.
+    [Provenance(ProvenanceSource.Other, "com.google.common.collect.Ordering", "isStrictlyOrdered(Iterable)")]
+    static bool IsStrictlyOrdered(ImmutableArray<T> traits)
+    {
+        for (int i = 1; i < traits.Length; i++)
+            if (traits[i - 1].CompareTo(traits[i]) >= 0)
+                return false;
+
+        return true;
     }
 
     /// <summary>
@@ -109,7 +125,7 @@ internal class OpCompositeTrait<T> : OpCompositeTrait
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelCompositeTrait", "equals(Object)")]
     public override bool Equals(object? obj)
     {
-        return obj is OpCompositeTrait<T> other && _traits.SequenceEqual(other._traits);
+        return ReferenceEquals(this, obj) || (obj is OpCompositeTrait<T> other && _traits.SequenceEqual(other._traits));
     }
 
     /// <inheritdoc />

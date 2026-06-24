@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 using Alembic.Algebra;
@@ -67,7 +68,8 @@ public class ConventionTraitDef : OpTraitDef<IConvention>
         var conversionData = GetConversionData(planner);
         var inConvention = (IConvention)converterRule.Source;
         var outConvention = (IConvention)converterRule.Target;
-        conversionData.ConversionGraph.RemoveEdge(inConvention, outConvention);
+        var removed = conversionData.ConversionGraph.RemoveEdge(inConvention, outConvention);
+        Debug.Assert(removed);
         conversionData.MapArcToConverterRule.Remove(Pair.Of(inConvention, outConvention), converterRule);
     }
 
@@ -75,6 +77,7 @@ public class ConventionTraitDef : OpTraitDef<IConvention>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.ConventionTraitDef", "convert(RelOptPlanner, RelNode, Convention, boolean)")]
     public override IOp? Convert(IOpPlanner planner, IOp rel, IConvention toConvention, bool allowInfiniteCostConverters)
     {
+        var mq = rel.Cluster.GetMetadataQuery();
         var conversionData = GetConversionData(planner);
         var fromConvention = rel.Convention;
 
@@ -82,12 +85,15 @@ public class ConventionTraitDef : OpTraitDef<IConvention>
 
         foreach (var conversionPath in conversionPaths)
         {
+            Debug.Assert(ReferenceEquals(conversionPath[0], fromConvention));
+            Debug.Assert(ReferenceEquals(conversionPath[conversionPath.Count - 1], toConvention));
+
             var converted = rel;
             IConvention? previous = null;
             var failed = false;
             foreach (var arc in conversionPath)
             {
-                var cost = ((VolcanoPlanner)planner).GetCost(converted, converted.Cluster.GetMetadataQuery());
+                var cost = ((VolcanoPlanner)planner).GetCost(converted, mq);
                 if ((cost is null || cost.IsInfinite) && !allowInfiniteCostConverters)
                 {
                     failed = true;
