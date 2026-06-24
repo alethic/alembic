@@ -46,6 +46,58 @@ public static class BuiltInMetadata
     }
 
     /// <summary>
+    /// Metadata about the memory (in bytes) an op uses. Not relational — a physical-resource property.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Memory")]
+    public interface Memory : IMetadata
+    {
+        // Calcite also declares the accessor `memory()`; C# forbids a member named the same as its
+        // enclosing type, so it is omitted here. (These accessors are the old metadata-proxy API and are
+        // unused by the explicit-registry dispatch; the Handler below carries the real port.)
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Memory", "cumulativeMemoryWithinPhase()")]
+        double? CumulativeMemoryWithinPhase();
+
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Memory", "cumulativeMemoryWithinPhaseSplit()")]
+        double? CumulativeMemoryWithinPhaseSplit();
+
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Memory.Handler")]
+        public interface Handler : IMetadataHandler
+        {
+            [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Memory.Handler", "memory(RelNode, RelMetadataQuery)")]
+            double? Memory(IOp op, OpMetadataQuery mq);
+
+            [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Memory.Handler", "cumulativeMemoryWithinPhase(RelNode, RelMetadataQuery)")]
+            double? CumulativeMemoryWithinPhase(IOp op, OpMetadataQuery mq);
+
+            [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Memory.Handler", "cumulativeMemoryWithinPhaseSplit(RelNode, RelMetadataQuery)")]
+            double? CumulativeMemoryWithinPhaseSplit(IOp op, OpMetadataQuery mq);
+        }
+    }
+
+    /// <summary>
+    /// Metadata about the parallel execution of an op. Not relational — a physical-execution property.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Parallelism")]
+    public interface Parallelism : IMetadata
+    {
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Parallelism", "isPhaseTransition()")]
+        bool? IsPhaseTransition();
+
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Parallelism", "splitCount()")]
+        int? SplitCount();
+
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Parallelism.Handler")]
+        public interface Handler : IMetadataHandler
+        {
+            [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Parallelism.Handler", "isPhaseTransition(RelNode, RelMetadataQuery)")]
+            bool? IsPhaseTransition(IOp op, OpMetadataQuery mq);
+
+            [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Parallelism.Handler", "splitCount(RelNode, RelMetadataQuery)")]
+            int? SplitCount(IOp op, OpMetadataQuery mq);
+        }
+    }
+
+    /// <summary>
     /// The lower bound of the cost of an op, used by the cost-based planner to prune a group whose best
     /// possible cost already exceeds the incumbent.
     /// </summary>

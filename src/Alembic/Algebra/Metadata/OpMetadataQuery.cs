@@ -17,10 +17,17 @@ public class OpMetadataQuery : OpMetadataQueryBase
     static readonly object CumulativeCostKey = new object();
     static readonly object NonCumulativeCostKey = new object();
     static readonly object LowerBoundCostKey = new object();
+    static readonly object MemoryKey = new object();
+    static readonly object CumulativeMemoryWithinPhaseKey = new object();
+    static readonly object CumulativeMemoryWithinPhaseSplitKey = new object();
+    static readonly object IsPhaseTransitionKey = new object();
+    static readonly object SplitCountKey = new object();
 
     readonly BuiltInMetadata.CumulativeCost.Handler _cumulativeCost = new OpMdCumulativeCost();
     readonly BuiltInMetadata.NonCumulativeCost.Handler _nonCumulativeCost = new OpMdNonCumulativeCost();
     readonly BuiltInMetadata.LowerBoundCost.Handler _lowerBoundCost = new OpMdLowerBoundCost();
+    readonly BuiltInMetadata.Memory.Handler _memory = new OpMdMemory();
+    readonly BuiltInMetadata.Parallelism.Handler _parallelism = new OpMdParallelism();
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "getCumulativeCost(RelNode)")]
     public IOpCost? GetCumulativeCost(IOp op)
@@ -41,6 +48,41 @@ public class OpMetadataQuery : OpMetadataQueryBase
     {
         op = Delegate(op);
         return Cache(op, LowerBoundCostKey, () => _lowerBoundCost.GetLowerBoundCost(op, this, planner));
+    }
+
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "memory(RelNode)")]
+    public double? Memory(IOp op)
+    {
+        op = Delegate(op);
+        return Cache(op, MemoryKey, () => _memory.Memory(op, this));
+    }
+
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "cumulativeMemoryWithinPhase(RelNode)")]
+    public double? CumulativeMemoryWithinPhase(IOp op)
+    {
+        op = Delegate(op);
+        return Cache(op, CumulativeMemoryWithinPhaseKey, () => _memory.CumulativeMemoryWithinPhase(op, this));
+    }
+
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "cumulativeMemoryWithinPhaseSplit(RelNode)")]
+    public double? CumulativeMemoryWithinPhaseSplit(IOp op)
+    {
+        op = Delegate(op);
+        return Cache(op, CumulativeMemoryWithinPhaseSplitKey, () => _memory.CumulativeMemoryWithinPhaseSplit(op, this));
+    }
+
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "isPhaseTransition(RelNode)")]
+    public bool? IsPhaseTransition(IOp op)
+    {
+        op = Delegate(op);
+        return Cache(op, IsPhaseTransitionKey, () => _parallelism.IsPhaseTransition(op, this));
+    }
+
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "splitCount(RelNode)")]
+    public int? SplitCount(IOp op)
+    {
+        op = Delegate(op);
+        return Cache(op, SplitCountKey, () => _parallelism.SplitCount(op, this));
     }
 
 }

@@ -18,11 +18,11 @@ public abstract class OpMetadataQueryBase
     protected readonly Dictionary<IOp, Dictionary<object, object?>> Map = new Dictionary<IOp, Dictionary<object, object?>>();
 
     /// <summary>
-    /// Returns the cached cost for <paramref name="op"/> and <paramref name="key"/>, or computes it via
+    /// Returns the cached value for <paramref name="op"/> and <paramref name="key"/>, or computes it via
     /// <paramref name="compute"/> and caches it. While a value is being computed it is marked active, so
     /// a recursive request for the same value throws <see cref="CyclicMetadataException"/>.
     /// </summary>
-    protected IOpCost? Cache(IOp op, object key, Func<IOpCost?> compute)
+    protected T Cache<T>(IOp op, object key, Func<T> compute)
     {
         if (!Map.TryGetValue(op, out var row))
             Map[op] = row = new Dictionary<object, object?>();
@@ -32,7 +32,7 @@ public abstract class OpMetadataQueryBase
             if (ReferenceEquals(cached, NullSentinel.Active))
                 throw CyclicMetadataException.Instance;
 
-            return ReferenceEquals(cached, NullSentinel.Instance) ? null : (IOpCost?)cached;
+            return ReferenceEquals(cached, NullSentinel.Instance) ? default! : (T)cached!;
         }
 
         row[key] = NullSentinel.Active;

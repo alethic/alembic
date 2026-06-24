@@ -66,6 +66,36 @@ public class MetadataTests
     }
 
     [Fact]
+    public void Parallelism_has_generic_defaults()
+    {
+        var planner = new HepPlanner(HepProgram.Builder().Build());
+        var cluster = new OpCluster(planner);
+        var traits = cluster.TraitSetOf(RelationalConventions.Physical);
+        var source = new PhysicalSource(cluster, traits, "t");
+
+        var mq = cluster.GetMetadataQuery();
+
+        Assert.False(mq.IsPhaseTransition(source));
+        Assert.Equal(1, mq.SplitCount(source));
+    }
+
+    [Fact]
+    public void Memory_is_unknown_by_default()
+    {
+        var planner = new HepPlanner(HepProgram.Builder().Build());
+        var cluster = new OpCluster(planner);
+        var traits = cluster.TraitSetOf(RelationalConventions.Physical);
+        var source = new PhysicalSource(cluster, traits, "t");
+
+        var mq = cluster.GetMetadataQuery();
+
+        // No op reports its memory, so the cumulative figures are unknown too.
+        Assert.Null(mq.Memory(source));
+        Assert.Null(mq.CumulativeMemoryWithinPhase(source));
+        Assert.Null(mq.CumulativeMemoryWithinPhaseSplit(source));
+    }
+
+    [Fact]
     public void Lower_bound_cost_sums_self_and_inputs()
     {
         var planner = new VolcanoPlanner();
