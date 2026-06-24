@@ -8,13 +8,13 @@ using Alembic.Tests.Languages.Relational.Physical;
 
 using Xunit;
 
-namespace Alembic.Tests;
+namespace Alembic.Tests.Algebra.Metadata;
 
 /// <summary>
-/// Exercises the cost metadata subsystem: the cumulative/non-cumulative cost handlers, the per-query
-/// cache on the cluster, and the lower-bound cost used for top-down pruning.
+/// Exercises the cost metadata subsystem through the query: the cumulative/non-cumulative cost handlers,
+/// memory and parallelism, and the lower-bound cost used for top-down pruning.
 /// </summary>
-public class MetadataTests
+public class OpMetadataQueryTests
 {
 
     static bool CostEquals(IOpCost a, IOpCost b) => !a.IsLessThan(b) && !b.IsLessThan(a);
@@ -48,21 +48,6 @@ public class MetadataTests
         Assert.True(CostEquals(mq.GetCumulativeCost(filter)!, expected));
         // The cumulative cost strictly exceeds the filter's own cost, since it folds in the source.
         Assert.True(mq.GetNonCumulativeCost(filter)!.IsLessThan(mq.GetCumulativeCost(filter)!));
-    }
-
-    [Fact]
-    public void Metadata_query_is_cached_until_invalidated()
-    {
-        var planner = new HepPlanner(HepProgram.Builder().Build());
-        var cluster = new OpCluster(planner);
-
-        var first = cluster.GetMetadataQuery();
-
-        Assert.Same(first, cluster.GetMetadataQuery());
-
-        cluster.InvalidateMetadataQuery();
-
-        Assert.NotSame(first, cluster.GetMetadataQuery());
     }
 
     [Fact]

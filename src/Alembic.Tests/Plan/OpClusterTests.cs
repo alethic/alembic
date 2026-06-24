@@ -5,9 +5,9 @@ using Alembic.Tests.Languages.Relational;
 
 using Xunit;
 
-namespace Alembic.Tests;
+namespace Alembic.Tests.Plan;
 
-public class ClusterTests
+public class OpClusterTests
 {
 
     [Fact]
@@ -28,6 +28,21 @@ public class ClusterTests
         var traits = cluster.TraitSetOf(RelationalConventions.Physical);
 
         Assert.Equal(RelationalConventions.Physical, traits.Convention);
+    }
+
+    [Fact]
+    public void Metadata_query_is_cached_until_invalidated()
+    {
+        var planner = new HepPlanner(HepProgram.Builder().Build());
+        var cluster = new OpCluster(planner);
+
+        var first = cluster.GetMetadataQuery();
+
+        Assert.Same(first, cluster.GetMetadataQuery());
+
+        cluster.InvalidateMetadataQuery();
+
+        Assert.NotSame(first, cluster.GetMetadataQuery());
     }
 
 }

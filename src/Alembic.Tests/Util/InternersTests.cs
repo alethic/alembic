@@ -2,7 +2,7 @@ using Alembic.Util;
 
 using Xunit;
 
-namespace Alembic.Tests;
+namespace Alembic.Tests.Util;
 
 /// <summary>
 /// Exercises the <see cref="Interners"/> port: an interner answers equal-but-distinct samples with one

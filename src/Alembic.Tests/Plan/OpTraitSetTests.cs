@@ -2,9 +2,9 @@ using Alembic.Plan;
 
 using Xunit;
 
-namespace Alembic.Tests;
+namespace Alembic.Tests.Plan;
 
-public class CompositeTraitTests
+public class OpTraitSetTests
 {
 
     [Fact]
@@ -71,6 +71,21 @@ public class CompositeTraitTests
         // Once present, Replace substitutes the value.
         var present = empty.Plus(new SortKey("a"));
         Assert.Equal(new SortKey("b"), present.Replace(new SortKey("b")).Get(SortKeyTraitDef.Instance));
+    }
+
+    [Fact]
+    public void Second_dimension_reads_and_interns()
+    {
+        var empty = OpTraitSet.CreateEmpty().Plus(Convention.None).Plus(Sortedness.Unsorted);
+        var sorted = empty.Replace(SortednessTraitDef.Instance, Sortedness.Sorted);
+
+        Assert.Equal(Sortedness.Unsorted, empty.Get(SortednessTraitDef.Instance));
+        Assert.Equal(Sortedness.Sorted, sorted.Get(SortednessTraitDef.Instance));
+
+        Assert.Equal(Convention.None, sorted.Convention);
+
+        var sortedAgain = empty.Replace(SortednessTraitDef.Instance, Sortedness.Sorted);
+        Assert.Same(sorted, sortedAgain);
     }
 
 }

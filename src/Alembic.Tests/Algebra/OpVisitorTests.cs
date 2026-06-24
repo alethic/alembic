@@ -10,7 +10,7 @@ using Alembic.Tests.Languages.Expression.Logical;
 
 using Xunit;
 
-namespace Alembic.Tests;
+namespace Alembic.Tests.Algebra;
 
 /// <summary>
 /// Exercises <see cref="OpVisitor"/>: depth-first descent via <see cref="IOp.ChildrenAccept"/>, the root

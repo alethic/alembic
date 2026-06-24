@@ -11,19 +11,27 @@ using Alembic.Tests.Languages.Relational;
 using Alembic.Tests.Languages.Relational.Logical;
 
 using Xunit;
+using Xunit.Abstractions;
 
-namespace Alembic.Tests;
+namespace Alembic.Tests.Plan;
 
 /// <summary>
-/// Exercises the operand child policies (<see cref="RuleOperandChildPolicy"/>) through the planner that
-/// consumes them: a spy rule is run over an op tree by a <see cref="HepPlanner"/>, and the test asserts
-/// whether — and how — the operand bound.
+/// Exercises operand matching — the child policies (<see cref="RuleOperandChildPolicy"/>) and nested
+/// operand patterns — through the planner that consumes them: a rule is run over an op tree by a
+/// <see cref="HepPlanner"/>, and the test asserts whether, and how, the operand bound.
 /// </summary>
-public class OperandPolicyTests
+public class OpRuleOperandTests
 {
 
     static readonly OpTraitSet Expr = OpTraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
     static readonly OpTraitSet Rel = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
+
+    readonly ITestOutputHelper _output;
+
+    public OpRuleOperandTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
 
     [Fact]
     public void Leaf_matches_regardless_of_children()
@@ -78,6 +86,33 @@ public class OperandPolicyTests
         Assert.True(spy.Fired);
         Assert.IsType<Add>(spy.Binding[0]);
         Assert.IsType<Literal>(spy.Binding[1]);
+    }
+
+    [Fact]
+    public void Operand_rule_matches_only_the_nested_pattern()
+    {
+        var logical = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
+
+        var program = HepProgram.Builder()
+            .AddRuleInstance(new TagFilterOverSource())
+            .Build();
+
+        var planner = new HepPlanner(program);
+        var cluster = new OpCluster(planner);
+
+        IOp root = new LogicalFilter(
+            logical,
+            new LogicalFilter(logical, new LogicalSource(cluster, logical, "t"), "inner"),
+            "outer");
+
+        planner.SetRoot(root);
+        var best = Assert.IsType<LogicalFilter>(planner.FindBestPlan());
+        _output.WriteLine(PlanUtil.ToString(best));
+
+        Assert.Equal("outer", best.Predicate);
+
+        var inner = Assert.IsType<LogicalFilter>(best.Input);
+        Assert.Equal("tagged", inner.Predicate);
     }
 
     static SpyRule Run(OpRuleOperand operand, Func<OpCluster, IOp> build)

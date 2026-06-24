@@ -7,7 +7,7 @@ using Alembic.Tests.Languages.Relational.Logical;
 
 using Xunit;
 
-namespace Alembic.Tests;
+namespace Alembic.Tests.Plan.Hep;
 
 /// <summary>
 /// Exercises the heuristic planner's instruction model — match orders, match limit, subprograms, and

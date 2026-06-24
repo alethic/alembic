@@ -8,9 +8,9 @@ using Alembic.Tests.Languages.Relational.Physical;
 
 using Xunit;
 
-namespace Alembic.Tests;
+namespace Alembic.Tests.Plan;
 
-public class ConventionInterfaceTests
+public class ConventionTests
 {
 
     interface IMarked
