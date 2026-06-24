@@ -28,21 +28,28 @@ public abstract class OpRuleCall
     /// is taken from the seed operand.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "RelOptRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>, List<RelNode>)")]
-    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops, IReadOnlyList<IOp>? parents)
+    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs, IReadOnlyList<IOp>? parents)
     {
         Id = _nextId++;
         Planner = planner;
         Operand0 = operand0;
         Rule = operand0.Rule;
         Ops = ops;
+        _nodeInputs = nodeInputs;
         Parents = parents;
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "RelOptRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops)
-        : this(planner, operand0, ops, null)
+    protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs)
+        : this(planner, operand0, ops, nodeInputs, null)
     {
     }
+
+    // For each node matched with matchAnyChildren=true (an UNORDERED operand), the node's inputs as
+    // seen by this call. This is the only way a rule can retrieve those children, since an unordered
+    // operand does not bind them to numbered operands. Reassigned by SetChildRels on first write (the
+    // ctor may have been handed an immutable empty map).
+    IDictionary<IOp, IReadOnlyList<IOp>> _nodeInputs;
 
     /// <summary>
     /// This call's stable identity, assigned in creation order.
@@ -87,6 +94,31 @@ public abstract class OpRuleCall
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "rel(int)")]
     public IOp Op(int ordinal) => Ops[ordinal];
+
+    /// <summary>
+    /// The inputs of an op matched by an operand whose child policy is <see cref="RuleOperandChildPolicy.Unordered"/>,
+    /// or <c>null</c> for any other op. An unordered operand does not bind a node's children to numbered
+    /// operands, so this is the only way a rule can reach them.
+    /// </summary>
+    /// <remarks>
+    /// Produces a wrong result for the <c>Unordered</c> case under the cost-based planner (the inputs
+    /// are equivalence subsets, not the matched ops); the heuristic planner records the concrete inputs.
+    /// </remarks>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "getChildRels(RelNode)")]
+    public IReadOnlyList<IOp>? GetChildRels(IOp op) => _nodeInputs.TryGetValue(op, out var inputs) ? inputs : null;
+
+    /// <summary>
+    /// Records the inputs of <paramref name="op"/> as seen by this call. Only called for an operand
+    /// whose child policy is any/unordered.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "setChildRels(RelNode, List<RelNode>)")]
+    protected void SetChildRels(IOp op, IReadOnlyList<IOp> inputs)
+    {
+        if (_nodeInputs.Count == 0)
+            _nodeInputs = new Dictionary<IOp, IReadOnlyList<IOp>>();
+
+        _nodeInputs[op] = inputs;
+    }
 
     /// <summary>
     /// Registers an equivalent for the matched op, with no other equivalences.

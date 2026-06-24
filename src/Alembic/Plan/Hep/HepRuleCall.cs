@@ -19,8 +19,8 @@ public class HepRuleCall : OpRuleCall
     /// Creates a call seeded at <paramref name="operand0"/> over the operand-bound ops.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRuleCall", "HepRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>, List<RelNode>)")]
-    public HepRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops, IReadOnlyList<IOp>? parents)
-        : base(planner, operand0, ops, parents)
+    public HepRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs, IReadOnlyList<IOp>? parents)
+        : base(planner, operand0, ops, nodeInputs, parents)
     {
 
     }

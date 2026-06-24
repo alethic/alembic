@@ -26,10 +26,13 @@ public class OperandPolicyTests
     static readonly OpTraitSet Rel = OpTraitSet.CreateEmpty().Plus(RelationalConventions.Logical);
 
     [Fact]
-    public void Leaf_matches_only_childless_ops()
+    public void Leaf_matches_regardless_of_children()
     {
+        // LEAF (none()) only constrains the operand to have no child operands; like Calcite, it does
+        // not require the matched op to be childless. It binds a childless op and an op with children
+        // alike.
         Assert.True(Run(SpyRule.LeafOf<LogicalSource>(), c => new LogicalSource(c, Rel, "t")).Fired);
-        Assert.False(Run(SpyRule.LeafOf<LogicalFilter>(), c => new LogicalFilter(Rel, new LogicalSource(c, Rel, "t"), "p")).Fired);
+        Assert.True(Run(SpyRule.LeafOf<LogicalFilter>(), c => new LogicalFilter(Rel, new LogicalSource(c, Rel, "t"), "p")).Fired);
     }
 
     [Fact]
@@ -37,9 +40,8 @@ public class OperandPolicyTests
     {
         IOp Filter(OpCluster c) => new LogicalFilter(Rel, new LogicalSource(c, Rel, "t"), "p");
 
-        // Any matches the filter even though it has a child; Leaf would not.
+        // Any matches the filter even though it has a child.
         Assert.True(Run(SpyRule.AnyOf<LogicalFilter>(), Filter).Fired);
-        Assert.False(Run(SpyRule.LeafOf<LogicalFilter>(), Filter).Fired);
     }
 
     [Fact]

@@ -81,6 +81,15 @@ public abstract class OpRule
     }
 
     /// <summary>
+    /// A rule is identified by its <see cref="Description"/>.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "toString()")]
+    public sealed override string ToString()
+    {
+        return Description;
+    }
+
+    /// <summary>
     /// Two rules are equal when they are the same type, carry the same <see cref="Description"/>, and have
     /// equal root operands. The class and operand are included so that a poorly chosen (colliding)
     /// description does not make distinct rules compare equal.

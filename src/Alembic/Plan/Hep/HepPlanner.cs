@@ -475,19 +475,22 @@ public class HepPlanner : AbstractOpPlanner
                 parents.Add(pVertex.CurrentOp);
         }
 
-        var bindings = Match(rule.Operand, vertex.CurrentOp);
-        if (bindings is null)
+        var bindings = new List<IOp>();
+        var nodeChildren = new Dictionary<IOp, IReadOnlyList<IOp>>();
+        if (!MatchOperand(rule.Operand, vertex.CurrentOp, bindings, nodeChildren))
             return null;
+
+        var boundOps = bindings.ToImmutableArray();
 
         FiredKey? key = null;
         if (_enableFiredRulesCache)
         {
-            key = new FiredKey(bindings.Value);
+            key = new FiredKey(boundOps);
             if (_firedRulesCache.TryGetValue(key, out var fired) && fired.Contains(rule))
                 return null;
         }
 
-        var call = new HepRuleCall(this, rule.Operand, bindings.Value, parents);
+        var call = new HepRuleCall(this, rule.Operand, boundOps, nodeChildren, parents);
 
         // Let the rule apply its own side-condition.
         if (!rule.Matches(call))
@@ -503,7 +506,7 @@ public class HepPlanner : AbstractOpPlanner
                 _firedRulesCache[key] = fired = new HashSet<OpRule>();
             fired.Add(rule);
 
-            foreach (var op in bindings.Value)
+            foreach (var op in boundOps)
             {
                 if (!_firedRulesCacheIndex.TryGetValue(op, out var keys))
                     _firedRulesCacheIndex[op] = keys = new HashSet<FiredKey>();
@@ -887,71 +890,59 @@ public class HepPlanner : AbstractOpPlanner
 
     // ~ RuleOperand matching (sees through vertices) -----------------------------
 
-    static ImmutableArray<IOp>? Match(OpRuleOperand operand, IOp op)
-    {
-        var bound = new List<IOp>();
-        return MatchOperand(operand, op, bound) ? bound.ToImmutableArray() : null;
-    }
-
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "matchOperands(RelOptRuleOperand, RelNode, List<RelNode>, Map<RelNode, List<RelNode>>)")]
-    static bool MatchOperand(OpRuleOperand operand, IOp op, List<IOp> bound)
+    static bool MatchOperand(OpRuleOperand operand, IOp op, List<IOp> bindings, Dictionary<IOp, IReadOnlyList<IOp>> nodeChildren)
     {
-        while (op is HepOpVertex vertex)
-            op = vertex.CurrentOp;
-
         if (!operand.Matches(op))
             return false;
+
+        foreach (var input in op.Children)
+            if (input is not HepOpVertex)
+                // The graph could be partially optimized (e.g. for a materialized view). In that case the
+                // input is a real op, not a vertex, and should not be matched again here.
+                return false;
+
+        bindings.Add(op);
+        var childRels = op.Children;
 
         switch (operand.ChildPolicy)
         {
             case RuleOperandChildPolicy.Any:
-                bound.Add(op);
-                return true;
-
-            case RuleOperandChildPolicy.Leaf:
-                if (!op.Children.IsEmpty)
-                    return false;
-                bound.Add(op);
-                return true;
-
-            case RuleOperandChildPolicy.Some:
-                // The op must have at least as many children as the operand; the operand binds the
-                // first n positionally (an op may have more children than the pattern names).
-                if (op.Children.Length < operand.Children.Length)
-                    return false;
-                bound.Add(op);
-                for (int i = 0; i < operand.Children.Length; i++)
-                    if (!MatchOperand(operand.Children[i], op.Children[i], bound))
-                        return false;
                 return true;
 
             case RuleOperandChildPolicy.Unordered:
-                // Each child operand matches any one of the op's children; the op's child count is
-                // unconstrained (a parent may have more children than the pattern names).
-                bound.Add(op);
+                // For each operand, at least one child must match. If matchAnyChildren, usually there's
+                // just one operand.
                 foreach (var childOperand in operand.Children)
                 {
-                    var matched = false;
-                    foreach (var child in op.Children)
+                    var match = false;
+                    foreach (var childRel in childRels)
                     {
-                        var mark = bound.Count;
-                        if (MatchOperand(childOperand, child, bound))
-                        {
-                            matched = true;
+                        match = MatchOperand(childOperand, ((HepOpVertex)childRel).CurrentOp, bindings, nodeChildren);
+                        if (match)
                             break;
-                        }
-
-                        bound.RemoveRange(mark, bound.Count - mark);
                     }
 
-                    if (!matched)
+                    if (!match)
                         return false;
                 }
 
+                var children = new List<IOp>(childRels.Length);
+                foreach (var childRel in childRels)
+                    children.Add(((HepOpVertex)childRel).CurrentOp);
+                nodeChildren[op] = children;
                 return true;
 
             default:
-                return false;
+                int n = operand.Children.Length;
+                if (childRels.Length < n)
+                    return false;
+
+                for (int i = 0; i < n; i++)
+                    if (!MatchOperand(operand.Children[i], ((HepOpVertex)childRels[i]).CurrentOp, bindings, nodeChildren))
+                        return false;
+
+                return true;
         }
     }
 

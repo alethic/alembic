@@ -31,7 +31,7 @@ public class VolcanoRuleCall : OpRuleCall
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand)")]
     internal VolcanoRuleCall(VolcanoPlanner planner, OpRuleOperand operand0)
-        : base(planner, operand0, ImmutableArray<IOp>.Empty)
+        : base(planner, operand0, ImmutableArray<IOp>.Empty, ImmutableDictionary<IOp, IReadOnlyList<IOp>>.Empty)
     {
         _planner = planner;
         Rels = new IOp?[operand0.Rule.Operands.Length];
@@ -43,7 +43,7 @@ public class VolcanoRuleCall : OpRuleCall
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
     internal VolcanoRuleCall(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops)
-        : base(planner, operand0, ops)
+        : base(planner, operand0, ops, ImmutableDictionary<IOp, IReadOnlyList<IOp>>.Empty)
     {
         _planner = planner;
         Rels = new IOp?[operand0.Rule.Operands.Length];
@@ -58,37 +58,49 @@ public class VolcanoRuleCall : OpRuleCall
     public virtual void OnMatch()
     {
         // The match was already validated in MatchRecurse before being queued; Calcite only asserts it
-        // here (it does not re-gate). (Calcite also pushes/pops a ruleCallStack for provenance, which
-        // Alembic does not track.)
+        // here (it does not re-gate).
         Debug.Assert(Rule.Matches(this), "rule should still match its bound operands");
 
         // Abort the plan if cancellation (e.g. a timeout) was requested; a rule driver catches this.
+        // Checked before the try below so it propagates unwrapped, exactly as Calcite checks cancel
+        // before its try/catch.
         _planner.CheckCancel();
 
-        if (_planner.IsRuleExcluded(Rule))
-            return;
-
-        // Skip the match if any bound op has gone stale since it was queued: its set was merged away, it
-        // was removed from its subset (during a rename), or it has been pruned.
-        foreach (var rel in Rels)
+        try
         {
-            if (rel is null)
-                continue;
-
-            var subset = _planner.GetSubset(rel);
-            if (subset is null)
+            if (_planner.IsRuleExcluded(Rule))
                 return;
 
-            if (subset.Set.EquivalentSet is not null || (!ReferenceEquals(subset, rel) && !subset.Contains(rel)))
-                return;
+            // (Calcite also checks isRuleExcluded() for root-node hints, and pushes/pops a ruleCallStack
+            // to record each result's rule provenance. Alembic ports neither the hint nor the provenance
+            // subsystem.)
 
-            if (_planner.IsPruned(rel))
-                return;
+            // Skip the match if any bound op has gone stale since it was queued: its set was merged away,
+            // it was removed from its subset (during a rename), or it has been pruned.
+            foreach (var rel in Rels)
+            {
+                if (rel is null)
+                    continue;
+
+                var subset = _planner.GetSubset(rel);
+                if (subset is null)
+                    return;
+
+                if (subset.Set.EquivalentSet is not null || (!ReferenceEquals(subset, rel) && !subset.Contains(rel)))
+                    return;
+
+                if (_planner.IsPruned(rel))
+                    return;
+            }
+
+            _planner.FireRuleAttempted(this, true);
+            Rule.OnMatch(this);
+            _planner.FireRuleAttempted(this, false);
         }
-
-        _planner.FireRuleAttempted(this, true);
-        Rule.OnMatch(this);
-        _planner.FireRuleAttempted(this, false);
+        catch (Exception e)
+        {
+            throw new InvalidOperationException($"Error while applying rule {Rule}, args [{string.Join(", ", (object?[])Rels)}]", e);
+        }
     }
 
     /// <summary>
@@ -207,6 +219,28 @@ public class VolcanoRuleCall : OpRuleCall
                 var input = (OpSubset)rel.Children[previousOperand.OrdinalInParent];
                 if (!input.Contains(previous))
                     continue;
+            }
+
+            // Assign "childRels" if the operand is UNORDERED.
+            if (parentOperand.ChildPolicy == RuleOperandChildPolicy.Unordered)
+            {
+                // Note: this is ill-defined. Suppose there's a union with 3 inputs, and the rule is
+                // written as Union.class, unordered(...). What should be provided for the other 2
+                // arguments? Subsets? Random relations from those subsets? For now, no Alembic-bundled
+                // rule reads getChildRels (it is public API for downstream rules), so the bug just waits.
+                if (ascending)
+                {
+                    var inputs = new List<IOp>(rel.Children);
+                    inputs[previousOperand.OrdinalInParent] = previous;
+                    SetChildRels(rel, inputs);
+                }
+                else
+                {
+                    var existing = GetChildRels(previous);
+                    var inputs = existing is not null ? new List<IOp>(existing) : new List<IOp>(previous.Children);
+                    inputs[operand.OrdinalInParent] = rel;
+                    SetChildRels(previous, inputs);
+                }
             }
 
             Rels[operandOrdinal] = rel;
