@@ -25,6 +25,9 @@ public class HepProgram : HepInstruction
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgram.instructions")]
     internal readonly ImmutableArray<HepInstruction> Instructions;
 
+    /// <summary>
+    /// Creates a program from <paramref name="instructions"/>. Use <see cref="Builder"/> to build one.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgram", "HepProgram(List<HepInstruction>)")]
     internal HepProgram(IEnumerable<HepInstruction> instructions)
     {
@@ -41,6 +44,7 @@ public class HepProgram : HepInstruction
         return new HepProgramBuilder();
     }
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgram", "prepare(PrepareContext)")]
     internal override HepState Prepare(PrepareContext px)
     {
@@ -68,6 +72,9 @@ public class HepProgram : HepInstruction
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgram.State.group")]
         internal EndGroup.State? Group;
 
+        /// <summary>
+        /// Creates the state for <paramref name="program"/>, preparing a child state for each instruction.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgram.State", "State(PrepareContext, List<HepInstruction>)")]
         internal State(PrepareContext px, HepProgram program) : base(px)
         {
@@ -102,6 +109,7 @@ public class HepProgram : HepInstruction
             InstructionStates = states.ToImmutableArray();
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgram.State", "init()")]
         internal override void Init()
         {
@@ -110,12 +118,17 @@ public class HepProgram : HepInstruction
             Group = null;
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgram.State", "execute()")]
         internal override void Execute()
         {
             Planner.ExecuteProgram(_program, this);
         }
 
+        /// <summary>
+        /// Whether execution is inside a group whose rule set has already been collected (so further
+        /// matches are skipped).
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepProgram.State", "skippingGroup()")]
         internal bool SkippingGroup()
         {

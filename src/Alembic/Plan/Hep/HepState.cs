@@ -18,6 +18,9 @@ abstract class HepState
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepState.programState")]
     internal readonly HepProgram.State? ProgramState;
 
+    /// <summary>
+    /// Initializes the shared planner and program state from <paramref name="px"/>.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepState", "HepState(HepInstruction.PrepareContext)")]
     protected HepState(HepInstruction.PrepareContext px)
     {

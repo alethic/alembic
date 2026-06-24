@@ -17,6 +17,9 @@ public sealed class ExpandConversionRule : OpRule
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter.ExpandConversionRule", "INSTANCE")]
     public static readonly ExpandConversionRule Instance = new ExpandConversionRule();
 
+    /// <summary>
+    /// Creates a rule that matches any <see cref="AbstractConverter"/>.
+    /// </summary>
     public ExpandConversionRule()
         : base(Any<AbstractConverter>())
     {

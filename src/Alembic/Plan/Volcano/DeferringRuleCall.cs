@@ -15,6 +15,9 @@ internal class DeferringRuleCall : VolcanoRuleCall
 
     readonly VolcanoPlanner _planner;
 
+    /// <summary>
+    /// Creates a deferring call for <paramref name="planner"/> rooted at <paramref name="operand0"/>.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall.DeferringRuleCall", "DeferringRuleCall(VolcanoPlanner, RelOptRuleOperand)")]
     internal DeferringRuleCall(VolcanoPlanner planner, OpRuleOperand operand0)
         : base(planner, operand0)

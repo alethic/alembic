@@ -18,6 +18,10 @@ internal class VolcanoRuleMatch : VolcanoRuleCall
 
     string _digest;
 
+    /// <summary>
+    /// Creates a completed match binding <paramref name="ops"/> to the operands rooted at
+    /// <paramref name="operand0"/>; throws if any operand is unbound.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "VolcanoRuleMatch(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
     internal VolcanoRuleMatch(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops)
         : base(planner, operand0, ops)

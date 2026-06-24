@@ -20,6 +20,9 @@ sealed class HepOpVertex : AbstractOp, IDelegatingMetadataOp
 
     IOp _currentOp;
 
+    /// <summary>
+    /// Wraps <paramref name="currentOp"/> as a vertex.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "HepRelVertex(RelNode)")]
     public HepOpVertex(IOp currentOp)
         : base(currentOp.Cluster, currentOp.Traits)

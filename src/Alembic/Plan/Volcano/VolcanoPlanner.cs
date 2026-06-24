@@ -280,6 +280,7 @@ public class VolcanoPlanner : AbstractOpPlanner
         return RegisterImpl(op, set);
     }
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "ensureRegistered(RelNode, RelNode)")]
     public override OpSubset EnsureRegistered(IOp op, IOp? equivalent)
     {
@@ -461,6 +462,10 @@ public class VolcanoPlanner : AbstractOpPlanner
             AddOpToSet(op, set);
     }
 
+    /// <summary>
+    /// Propagates an improved cost for <paramref name="op"/> to its parents, cheapest-first, updating the
+    /// best plan for each affected subset.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "propagateCostImprovements(RelNode)")]
     internal void PropagateCostImprovements(IOp op)
     {
@@ -514,6 +519,7 @@ public class VolcanoPlanner : AbstractOpPlanner
 
     static bool CostEquals(IOpCost a, IOpCost b) => !a.IsLessThan(b) && !b.IsLessThan(a);
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getCost(RelNode, RelMetadataQuery)")]
     public override IOpCost GetCost(IOp op, OpMetadataQuery mq)
     {

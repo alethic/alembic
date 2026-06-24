@@ -10,6 +10,9 @@ namespace Alembic.Plan.Volcano;
 public sealed class VolcanoTimeoutException : Exception
 {
 
+    /// <summary>
+    /// Creates the exception with a default message.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoTimeoutException", "VolcanoTimeoutException()")]
     public VolcanoTimeoutException()
         : base("Volcano timeout")

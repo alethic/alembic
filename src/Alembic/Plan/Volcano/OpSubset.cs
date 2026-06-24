@@ -17,6 +17,10 @@ namespace Alembic.Plan.Volcano;
 public class OpSubset : AbstractOp
 {
 
+    /// <summary>
+    /// Creates the subset of <paramref name="set"/> for <paramref name="traits"/> and computes its initial
+    /// best cost.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "RelSubset(RelOptCluster, RelSet, RelTraitSet)")]
     internal OpSubset(OpCluster cluster, OpSet set, OpTraitSet traits)
         : base(cluster, traits)
@@ -139,6 +143,9 @@ public class OpSubset : AbstractOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "isRequired()")]
     public bool IsRequired => _required;
 
+    /// <summary>
+    /// Marks this subset's traits as delivered, arming the rule trigger if it was not already delivered.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "setDelivered()")]
     internal void SetDelivered()
     {
@@ -146,6 +153,9 @@ public class OpSubset : AbstractOp
         _delivered = true;
     }
 
+    /// <summary>
+    /// Marks this subset's traits as required by a parent.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "setRequired()")]
     internal void SetRequired()
     {
@@ -153,9 +163,15 @@ public class OpSubset : AbstractOp
         _required = true;
     }
 
+    /// <summary>
+    /// Disables enforcer (converter) generation for this subset.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "disableEnforcing()")]
     internal void DisableEnforcing() => _enforceDisabled = true;
 
+    /// <summary>
+    /// Whether enforcer generation is disabled for this subset.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "isEnforceDisabled()")]
     internal bool IsEnforceDisabled => _enforceDisabled;
 
@@ -172,6 +188,10 @@ public class OpSubset : AbstractOp
         return null;
     }
 
+    /// <summary>
+    /// Begins optimizing this subset under <paramref name="upperBound"/>, tightening the bound toward the
+    /// best known cost.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "startOptimize(RelOptCost)")]
     internal void StartOptimize(IOpCost upperBound)
     {
@@ -185,9 +205,15 @@ public class OpSubset : AbstractOp
         TaskState = OptimizeState.Optimizing;
     }
 
+    /// <summary>
+    /// Marks this subset's optimization as complete.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "setOptimized()")]
     internal void SetOptimized() => TaskState = OptimizeState.Completed;
 
+    /// <summary>
+    /// Clears the optimization task state and resets the upper bound; returns whether it had been optimized.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "resetTaskState()")]
     internal bool ResetTaskState()
     {
@@ -228,9 +254,15 @@ public class OpSubset : AbstractOp
             _passThroughCache.UnionWith(other._passThroughCache);
     }
 
+    /// <summary>
+    /// Whether this subset's set has been fully explored.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "isExplored()")]
     internal bool IsExplored => Set.Exploring == OpSet.ExploringState.Explored;
 
+    /// <summary>
+    /// Begins exploring this subset's set; returns <c>false</c> if exploration is already underway or done.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "explore()")]
     internal bool Explore()
     {
@@ -241,6 +273,9 @@ public class OpSubset : AbstractOp
         return true;
     }
 
+    /// <summary>
+    /// Marks this subset's set as fully explored.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "setExplored()")]
     internal void SetExplored() => Set.Exploring = OpSet.ExploringState.Explored;
 
@@ -422,12 +457,19 @@ public class OpSubset : AbstractOp
 
         readonly Dictionary<IOp, IOp> _visited = new Dictionary<IOp, IOp>(ReferenceEqualityComparer.Instance);
 
+        /// <summary>
+        /// Creates a replacer that fires "op chosen" events on <paramref name="planner"/> as it builds.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset.CheapestPlanReplacer", "CheapestPlanReplacer(VolcanoPlanner)")]
         public CheapestPlanReplacer(VolcanoPlanner planner)
         {
             _planner = planner;
         }
 
+        /// <summary>
+        /// Returns the cheapest concrete plan rooted at <paramref name="p"/>, replacing each subset with its
+        /// best member and recursing into inputs (memoized).
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset.CheapestPlanReplacer", "visit(RelNode, int, RelNode)")]
         public IOp Visit(IOp p, int ordinal, IOp? parent)
         {

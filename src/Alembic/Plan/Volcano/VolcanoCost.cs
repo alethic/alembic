@@ -153,22 +153,30 @@ internal class VolcanoCost : IOpCost
         return $"{{{_cpu} cpu, {_io} io}}";
     }
 
+    /// <summary>
+    /// The factory for <see cref="VolcanoCost"/> instances.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost.Factory")]
     sealed class VolcanoCostFactory : IOpCostFactory
     {
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost.Factory", "makeCost(double, double, double)")]
         public IOpCost MakeCost(double cpu, double io) => new VolcanoCost(cpu, io);
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost.Factory", "makeZeroCost()")]
         public IOpCost MakeZeroCost() => ZeroCost;
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost.Factory", "makeInfiniteCost()")]
         public IOpCost MakeInfiniteCost() => InfinityCost;
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost.Factory", "makeHugeCost()")]
         public IOpCost MakeHugeCost() => HugeCost;
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoCost.Factory", "makeTinyCost()")]
         public IOpCost MakeTinyCost() => TinyCost;
 

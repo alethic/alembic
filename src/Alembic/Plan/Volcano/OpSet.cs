@@ -20,6 +20,9 @@ internal class OpSet
     // NOTE: Calcite's RelSet(int, Set<CorrelationId>, Set<CorrelationId>) also records the correlation
     // variables propagated/used by the set; those parameters are omitted here until correlation (Rex) is
     // ported.
+    /// <summary>
+    /// Creates an empty set with the given <paramref name="id"/>.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "RelSet(int, Set<CorrelationId>, Set<CorrelationId>)")]
     internal OpSet(int id)
     {
@@ -103,6 +106,9 @@ internal class OpSet
         return null;
     }
 
+    /// <summary>
+    /// Returns the subset for <paramref name="traits"/>, creating and registering it if absent.
+    /// </summary>
     internal OpSubset GetOrCreateSubset(OpCluster cluster, OpTraitSet traits)
     {
         var subset = GetSubset(traits);

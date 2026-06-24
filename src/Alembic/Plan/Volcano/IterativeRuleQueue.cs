@@ -94,6 +94,10 @@ internal class IterativeRuleQueue : RuleQueue
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue.MatchList", "matchMap")]
         internal readonly Multimap<OpSubset, VolcanoRuleMatch> MatchMap = new Multimap<OpSubset, VolcanoRuleMatch>();
 
+        /// <summary>
+        /// Enqueues <paramref name="match"/>: substitutions go to the high-priority pre-queue, others to
+        /// the main queue.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue.MatchList", "offer(VolcanoRuleMatch)")]
         internal void Offer(VolcanoRuleMatch match, bool isSubstitution)
         {
@@ -103,6 +107,9 @@ internal class IterativeRuleQueue : RuleQueue
                 Queue.Enqueue(match);
         }
 
+        /// <summary>
+        /// Empties the queues and the duplicate-detection sets.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue.MatchList", "clear()")]
         internal void Clear()
         {

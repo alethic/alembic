@@ -184,6 +184,10 @@ public class HepPlanner : AbstractOpPlanner
         state.Execute();
     }
 
+    /// <summary>
+    /// Runs each instruction of <paramref name="program"/> in turn, collecting garbage between
+    /// instructions once enough has changed.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "executeProgram(HepProgram, HepProgram.State)")]
     internal void ExecuteProgram(HepProgram program, HepProgram.State state)
     {
@@ -202,18 +206,27 @@ public class HepPlanner : AbstractOpPlanner
         }
     }
 
+    /// <summary>
+    /// Executes a <see cref="HepInstruction.MatchLimit"/> instruction.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "executeMatchLimit(HepInstruction.MatchLimit, HepInstruction.MatchLimit.State)")]
     internal void ExecuteMatchLimit(HepInstruction.MatchLimit instruction, HepInstruction.MatchLimit.State state)
     {
         state.ProgramState!.MatchLimit = instruction.Limit;
     }
 
+    /// <summary>
+    /// Executes a <see cref="HepInstruction.MatchOrder"/> instruction.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "executeMatchOrder(HepInstruction.MatchOrder, HepInstruction.MatchOrder.State)")]
     internal void ExecuteMatchOrder(HepInstruction.MatchOrder instruction, HepInstruction.MatchOrder.State state)
     {
         state.ProgramState!.MatchOrder = instruction.Order;
     }
 
+    /// <summary>
+    /// Executes a <see cref="HepInstruction.RuleInstance"/> instruction.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "executeRuleInstance(HepInstruction.RuleInstance, HepInstruction.RuleInstance.State)")]
     internal void ExecuteRuleInstance(HepInstruction.RuleInstance instruction, HepInstruction.RuleInstance.State state)
     {
@@ -223,6 +236,9 @@ public class HepPlanner : AbstractOpPlanner
         ApplyRules(state.ProgramState, new[] { instruction.Rule }, true);
     }
 
+    /// <summary>
+    /// Executes a <see cref="HepInstruction.RuleLookup"/> instruction.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "executeRuleLookup(HepInstruction.RuleLookup, HepInstruction.RuleLookup.State)")]
     internal void ExecuteRuleLookup(HepInstruction.RuleLookup instruction, HepInstruction.RuleLookup.State state)
     {
@@ -234,6 +250,9 @@ public class HepPlanner : AbstractOpPlanner
             ApplyRules(state.ProgramState, new[] { state.Rule }, true);
     }
 
+    /// <summary>
+    /// Executes a <see cref="HepInstruction.RuleClass"/> instruction.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "executeRuleClass(HepInstruction.RuleClass, HepInstruction.RuleClass.State)")]
     internal void ExecuteRuleClass(HepInstruction.RuleClass instruction, HepInstruction.RuleClass.State state)
     {
@@ -251,6 +270,9 @@ public class HepPlanner : AbstractOpPlanner
         ApplyRules(state.ProgramState, state.RuleSet, true);
     }
 
+    /// <summary>
+    /// Executes a <see cref="HepInstruction.RuleCollection"/> instruction.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "executeRuleCollection(HepInstruction.RuleCollection, HepInstruction.RuleCollection.State)")]
     internal void ExecuteRuleCollection(HepInstruction.RuleCollection instruction, HepInstruction.RuleCollection.State state)
     {
@@ -260,6 +282,9 @@ public class HepPlanner : AbstractOpPlanner
         ApplyRules(state.ProgramState, instruction.Rules, true);
     }
 
+    /// <summary>
+    /// Executes a <see cref="HepInstruction.ConverterRules"/> instruction.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "executeConverterRules(HepInstruction.ConverterRules, HepInstruction.ConverterRules.State)")]
     internal void ExecuteConverterRules(HepInstruction.ConverterRules instruction, HepInstruction.ConverterRules.State state)
     {
@@ -283,6 +308,9 @@ public class HepPlanner : AbstractOpPlanner
         ApplyRules(state.ProgramState!, state.RuleSet, instruction.Guaranteed);
     }
 
+    /// <summary>
+    /// Executes a <see cref="HepInstruction.CommonRelSubExprRules"/> instruction.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "executeCommonRelSubExprRules(HepInstruction.CommonRelSubExprRules, HepInstruction.CommonRelSubExprRules.State)")]
     internal void ExecuteCommonRelSubExprRules(HepInstruction.CommonRelSubExprRules instruction, HepInstruction.CommonRelSubExprRules.State state)
     {
@@ -297,6 +325,9 @@ public class HepPlanner : AbstractOpPlanner
         ApplyRules(state.ProgramState!, state.RuleSet, true);
     }
 
+    /// <summary>
+    /// Executes a <see cref="HepInstruction.SubProgram"/> instruction.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "executeSubProgram(HepInstruction.SubProgram, HepInstruction.SubProgram.State)")]
     internal void ExecuteSubProgram(HepInstruction.SubProgram instruction, HepInstruction.SubProgram.State state)
     {
@@ -309,12 +340,18 @@ public class HepPlanner : AbstractOpPlanner
         }
     }
 
+    /// <summary>
+    /// Executes a <see cref="HepInstruction.BeginGroup"/> instruction.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "executeBeginGroup(HepInstruction.BeginGroup, HepInstruction.BeginGroup.State)")]
     internal void ExecuteBeginGroup(HepInstruction.BeginGroup instruction, HepInstruction.BeginGroup.State state)
     {
         state.ProgramState!.Group = state.EndGroup;
     }
 
+    /// <summary>
+    /// Executes a <see cref="HepInstruction.EndGroup"/> instruction.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "executeEndGroup(HepInstruction.EndGroup, HepInstruction.EndGroup.State)")]
     internal void ExecuteEndGroup(HepInstruction.EndGroup instruction, HepInstruction.EndGroup.State state)
     {
@@ -946,6 +983,9 @@ public class HepPlanner : AbstractOpPlanner
         readonly ImmutableArray<IOp> _ops;
         readonly int _hash;
 
+        /// <summary>
+        /// Creates a key over the matched <paramref name="ops"/> (compared by reference identity).
+        /// </summary>
         public FiredKey(ImmutableArray<IOp> ops)
         {
             _ops = ops;
@@ -955,6 +995,7 @@ public class HepPlanner : AbstractOpPlanner
             _hash = hash.ToHashCode();
         }
 
+        /// <inheritdoc/>
         public bool Equals(FiredKey? other)
         {
             if (other is null || other._ops.Length != _ops.Length)
@@ -967,8 +1008,10 @@ public class HepPlanner : AbstractOpPlanner
             return true;
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object? obj) => Equals(obj as FiredKey);
 
+        /// <inheritdoc/>
         public override int GetHashCode() => _hash;
 
     }

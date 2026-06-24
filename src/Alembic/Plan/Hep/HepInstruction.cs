@@ -14,6 +14,9 @@ namespace Alembic.Plan.Hep;
 public abstract class HepInstruction
 {
 
+    /// <summary>
+    /// Restricts construction to the instruction types declared here.
+    /// </summary>
     private protected HepInstruction()
     {
 

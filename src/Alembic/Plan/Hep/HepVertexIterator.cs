@@ -18,6 +18,9 @@ sealed class HepVertexIterator : IEnumerator<HepOpVertex>
     readonly HashSet<HepOpVertex> _visited;
     HepOpVertex _current = default!;
 
+    /// <summary>
+    /// Creates an iterator from <paramref name="root"/>, sharing the <paramref name="visited"/> set.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepVertexIterator", "HepVertexIterator(V, Set<Integer>)")]
     internal HepVertexIterator(HepOpVertex root, HashSet<HepOpVertex> visited)
     {
@@ -47,10 +50,12 @@ sealed class HepVertexIterator : IEnumerator<HepOpVertex>
         return this;
     }
 
+    /// <inheritdoc/>
     public HepOpVertex Current => _current;
 
     object IEnumerator.Current => Current;
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepVertexIterator", "next()")]
     public bool MoveNext()
     {
@@ -79,9 +84,11 @@ sealed class HepVertexIterator : IEnumerator<HepOpVertex>
         return true;
     }
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepVertexIterator", "remove()")]
     public void Reset() => throw new System.NotSupportedException();
 
+    /// <inheritdoc/>
     public void Dispose()
     {
     }
