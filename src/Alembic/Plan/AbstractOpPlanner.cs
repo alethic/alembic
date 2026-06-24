@@ -39,8 +39,10 @@ public abstract class AbstractOpPlanner : IOpPlanner
         CancellationToken = Context.MaybeUnwrap<CancellationToken>();
 
         // Add the abstract op class. No op is ever registered with this type, but some operands may match
-        // it. (Calcite also adds RelSubset here, but Alembic deliberately has no subset-matching operands
-        // — see §1 — and adding OpSubset would route operands to fire on subsets, which it cannot do.)
+        // it. (Calcite also adds RelSubset, for rules whose operands match a subset. Alembic ships no such
+        // rules, and adding OpSubset routes ordinary operands to fire on subsets — which the cost-based
+        // planner's rule-firing does not currently handle (GetSubsetNonNull has no entry for a subset). So
+        // it is left out until subset-matching is supported. TODO: revisit if subset operands are added.)
         _classes.Add(typeof(IOp));
     }
 
