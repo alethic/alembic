@@ -48,8 +48,16 @@ internal class TopDownRuleDriver : IRuleDriver
         var root = _planner.RootSubset ?? throw new InvalidOperationException("No root has been set.");
         _tasks.Push(new OptimizeGroup(this, root, _planner.InfiniteCost));
 
-        while (_tasks.Count > 0)
-            _tasks.Pop().Perform();
+        try
+        {
+            // Iterate until the root is fully optimized.
+            while (_tasks.Count > 0)
+                _tasks.Pop().Perform();
+        }
+        catch (VolcanoTimeoutException)
+        {
+            // Planning timed out; cancel the subsequent optimization, keeping the best plan so far.
+        }
     }
 
     /// <inheritdoc />

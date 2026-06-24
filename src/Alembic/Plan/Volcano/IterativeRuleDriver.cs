@@ -43,7 +43,16 @@ internal class IterativeRuleDriver : IRuleDriver
             if (match is null)
                 break;
 
-            match.OnMatch();
+            try
+            {
+                match.OnMatch();
+            }
+            catch (VolcanoTimeoutException)
+            {
+                // Planning timed out; cancel the subsequent optimization, keeping the best plan so far.
+                _planner.Canonize();
+                break;
+            }
 
             // The root may have been merged with another
             // subset. Find the new root subset.

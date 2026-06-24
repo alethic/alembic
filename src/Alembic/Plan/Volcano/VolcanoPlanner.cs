@@ -127,6 +127,14 @@ public class VolcanoPlanner : AbstractOpPlanner
     public void SetNoneConventionHasInfiniteCost(bool infinite) => _noneConventionHasInfiniteCost = infinite;
 
     /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "checkCancel()")]
+    public override void CheckCancel()
+    {
+        if (CancelFlag.IsCancelRequested)
+            throw new VolcanoTimeoutException();
+    }
+
+    /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "addRule(RelOptRule)")]
     public override bool AddRule(OpRule rule)
     {

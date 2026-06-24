@@ -42,6 +42,25 @@ public abstract class AbstractOpPlanner : IOpPlanner
     public IOpCostFactory CostFactory => _costFactory;
 
     /// <summary>
+    /// The flag a caller uses to cooperatively cancel a running plan (e.g. to impose a timeout). Calcite
+    /// takes this from the planner's <c>Context</c>; Alembic, having no context, owns one per planner.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "cancelFlag")]
+    public CancelFlag CancelFlag { get; } = new CancelFlag();
+
+    /// <summary>
+    /// Throws if cancellation has been requested. Called at each rule firing so a plan can be aborted.
+    /// The base throws <see cref="OperationCanceledException"/>; the cost-based planner overrides it to
+    /// throw <see cref="Volcano.VolcanoTimeoutException"/>, which its drivers catch.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "checkCancel()")]
+    public virtual void CheckCancel()
+    {
+        if (CancelFlag.IsCancelRequested)
+            throw new OperationCanceledException();
+    }
+
+    /// <summary>
     /// The rules registered with this planner.
     /// </summary>
     protected IReadOnlyList<OpRule> Rules => _rules;

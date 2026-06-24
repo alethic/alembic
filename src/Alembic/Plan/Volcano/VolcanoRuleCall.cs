@@ -58,10 +58,12 @@ public class VolcanoRuleCall : OpRuleCall
     public virtual void OnMatch()
     {
         // The match was already validated in MatchRecurse before being queued; Calcite only asserts it
-        // here (it does not re-gate). (Calcite also calls checkCancel() here — Alembic has no
-        // cooperative-cancellation subsystem yet — and pushes/pops a ruleCallStack for provenance, which
+        // here (it does not re-gate). (Calcite also pushes/pops a ruleCallStack for provenance, which
         // Alembic does not track.)
         Debug.Assert(Rule.Matches(this), "rule should still match its bound operands");
+
+        // Abort the plan if cancellation (e.g. a timeout) was requested; a rule driver catches this.
+        _planner.CheckCancel();
 
         if (_planner.IsRuleExcluded(Rule))
             return;
