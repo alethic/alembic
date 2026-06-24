@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 using Alembic.Algebra;
 using Alembic.Algebra.Convert;
@@ -75,6 +76,12 @@ public abstract class OpRule
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "getOutConvention()")]
     public virtual IConvention? OutConvention => null;
+
+    /// <summary>
+    /// The trait of the result of firing this rule, null if not known.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "getOutTrait()")]
+    public virtual IOpTrait? OutTrait => null;
 
     /// <summary>
     /// Invoked for a matched op; the rule registers equivalents on the call.
@@ -294,6 +301,9 @@ public abstract class OpRule
                 if (!exists)
                     operand.SolveOrder[m++] = k;
             }
+
+            // Assert: operand appears once in the sort-order.
+            Debug.Assert(m == operands.Count);
         }
     }
 
