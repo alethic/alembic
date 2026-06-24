@@ -110,19 +110,31 @@ public class HandlerDispatchProxy : DispatchProxy
     }
 
     /// <summary>
-    /// Finds the method registered for the most-specific supertype of <paramref name="opType"/>: its own
-    /// type, then its base classes, then its interfaces (the catch-all is registered against IOp).
+    /// Finds the method registered for the most-specific supertype of <paramref name="opType"/>. At each
+    /// level of the class chain it checks the class itself, then the interfaces introduced at that level,
+    /// before ascending — so an interface handler on a mid-chain supertype wins over a higher base class
+    /// (matching Calcite, which checks each class's own interfaces before its superclass).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.ReflectiveRelMetadataProvider.Space", "find(Class, Method)")]
     (object Target, MethodInfo Method) Resolve(string name, Type opType)
     {
-        for (var t = opType; t is not null; t = t.BaseType)
-            if (_map.TryGetValue((name, t), out var found))
+        for (var r = opType; r is not null; r = r.BaseType)
+        {
+            if (_map.TryGetValue((name, r), out var found))
                 return found;
 
-        foreach (var i in opType.GetInterfaces())
-            if (_map.TryGetValue((name, i), out var found))
-                return found;
+            // Java's getInterfaces() returns the interfaces declared on r; C#'s is flattened, so consider
+            // only those introduced at this level (not already on the base), to preserve the per-level order.
+            var baseInterfaces = r.BaseType?.GetInterfaces();
+            foreach (var i in r.GetInterfaces())
+            {
+                if (baseInterfaces is not null && Array.IndexOf(baseInterfaces, i) >= 0)
+                    continue;
+
+                if (_map.TryGetValue((name, i), out var foundInterface))
+                    return foundInterface;
+            }
+        }
 
         throw new NoHandlerException(opType);
     }
