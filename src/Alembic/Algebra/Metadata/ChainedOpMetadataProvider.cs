@@ -11,15 +11,22 @@ public class ChainedOpMetadataProvider : IOpMetadataProvider
 {
     readonly IReadOnlyList<IOpMetadataProvider> _providers;
 
+    /// <summary>
+    /// Creates a provider that chains <paramref name="providers"/> in order.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.ChainedRelMetadataProvider", "ChainedRelMetadataProvider(ImmutableList)")]
     protected ChainedOpMetadataProvider(IReadOnlyList<IOpMetadataProvider> providers)
     {
         _providers = providers;
     }
 
+    /// <summary>
+    /// Creates a provider that chains <paramref name="providers"/> in order.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.ChainedRelMetadataProvider", "of(List)")]
     public static IOpMetadataProvider Of(IReadOnlyList<IOpMetadataProvider> providers) => new ChainedOpMetadataProvider(providers);
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.ChainedRelMetadataProvider", "handlers(Class)")]
     public IReadOnlyList<IMetadataHandler> Handlers(Type handlerClass)
     {

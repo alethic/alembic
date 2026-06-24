@@ -87,8 +87,12 @@ public static class Contexts
 
         readonly object _target;
 
+        /// <summary>
+        /// Wraps <paramref name="target"/>.
+        /// </summary>
         public WrapContext(object target) => _target = target ?? throw new ArgumentNullException(nameof(target));
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Contexts.WrapContext", "unwrap(Class)")]
         public C? Unwrap<C>() => _target is C c ? c : default;
 
@@ -99,6 +103,7 @@ public static class Contexts
     sealed class EmptyContext : IContext
     {
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Contexts.EmptyContext", "unwrap(Class)")]
         public C? Unwrap<C>() => default;
 
@@ -112,8 +117,12 @@ public static class Contexts
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Contexts.ChainContext", "contexts")]
         internal readonly ImmutableArray<IContext> Contexts;
 
+        /// <summary>
+        /// Wraps the flat chain <paramref name="contexts"/>.
+        /// </summary>
         public ChainContext(ImmutableArray<IContext> contexts) => Contexts = contexts;
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.Contexts.ChainContext", "unwrap(Class)")]
         public C? Unwrap<C>()
         {

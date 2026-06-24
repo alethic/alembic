@@ -36,15 +36,22 @@ public abstract class HepInstruction
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleClass.ruleClass")]
         internal readonly Type RuleType;
 
+        /// <summary>
+        /// Creates the instruction.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleClass", "RuleClass(Class<R>)")]
         internal RuleClass(Type ruleType)
         {
             RuleType = ruleType;
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleClass", "prepare(PrepareContext)")]
         internal override HepState Prepare(PrepareContext px) => new State(px, this);
 
+        /// <summary>
+        /// Runtime state for <see cref="RuleClass"/>.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleClass.State")]
         internal sealed class State : HepState
         {
@@ -55,9 +62,13 @@ public abstract class HepInstruction
             // deterministic; the source `Rules` is already ordered and duplicate-free.
             internal List<OpRule>? RuleSet;
 
+            /// <summary>
+            /// Creates the state for <paramref name="instruction"/>.
+            /// </summary>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleClass.State", "State(PrepareContext)")]
             internal State(PrepareContext px, RuleClass instruction) : base(px) => Instruction = instruction;
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleClass.State", "execute()")]
             internal override void Execute() => Planner.ExecuteRuleClass(Instruction, this);
         }
@@ -74,23 +85,34 @@ public abstract class HepInstruction
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleCollection.rules")]
         internal readonly ImmutableArray<OpRule> Rules;
 
+        /// <summary>
+        /// Creates the instruction.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleCollection", "RuleCollection(Collection<RelOptRule>)")]
         internal RuleCollection(IEnumerable<OpRule> rules)
         {
             Rules = rules.ToImmutableArray();
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleCollection", "prepare(PrepareContext)")]
         internal override HepState Prepare(PrepareContext px) => new State(px, this);
 
+        /// <summary>
+        /// Runtime state for <see cref="RuleCollection"/>.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleCollection.State")]
         internal sealed class State : HepState
         {
             internal readonly RuleCollection Instruction;
 
+            /// <summary>
+            /// Creates the state for <paramref name="instruction"/>.
+            /// </summary>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleCollection.State", "State(PrepareContext)")]
             internal State(PrepareContext px, RuleCollection instruction) : base(px) => Instruction = instruction;
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleCollection.State", "execute()")]
             internal override void Execute() => Planner.ExecuteRuleCollection(Instruction, this);
         }
@@ -107,15 +129,22 @@ public abstract class HepInstruction
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.ConverterRules.guaranteed")]
         internal readonly bool Guaranteed;
 
+        /// <summary>
+        /// Creates the instruction.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.ConverterRules", "ConverterRules(boolean)")]
         internal ConverterRules(bool guaranteed)
         {
             Guaranteed = guaranteed;
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.ConverterRules", "prepare(PrepareContext)")]
         internal override HepState Prepare(PrepareContext px) => new State(px, this);
 
+        /// <summary>
+        /// Runtime state for <see cref="ConverterRules"/>.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.ConverterRules.State")]
         internal sealed class State : HepState
         {
@@ -126,9 +155,13 @@ public abstract class HepInstruction
             // deterministic; the source `Rules` is already ordered and duplicate-free.
             internal List<OpRule>? RuleSet;
 
+            /// <summary>
+            /// Creates the state for <paramref name="instruction"/>.
+            /// </summary>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.ConverterRules.State", "State(PrepareContext)")]
             internal State(PrepareContext px, ConverterRules instruction) : base(px) => Instruction = instruction;
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.ConverterRules.State", "execute()")]
             internal override void Execute() => Planner.ExecuteConverterRules(Instruction, this);
         }
@@ -143,9 +176,13 @@ public abstract class HepInstruction
     internal sealed class CommonRelSubExprRules : HepInstruction
     {
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules", "prepare(PrepareContext)")]
         internal override HepState Prepare(PrepareContext px) => new State(px, this);
 
+        /// <summary>
+        /// Runtime state for <see cref="CommonRelSubExprRules"/>.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules.State")]
         internal sealed class State : HepState
         {
@@ -156,9 +193,13 @@ public abstract class HepInstruction
             // deterministic; the source `Rules` is already ordered and duplicate-free.
             internal List<OpRule>? RuleSet;
 
+            /// <summary>
+            /// Creates the state for <paramref name="instruction"/>.
+            /// </summary>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules.State", "State(PrepareContext)")]
             internal State(PrepareContext px, CommonRelSubExprRules instruction) : base(px) => Instruction = instruction;
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules.State", "execute()")]
             internal override void Execute() => Planner.ExecuteCommonRelSubExprRules(Instruction, this);
         }
@@ -175,23 +216,34 @@ public abstract class HepInstruction
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleInstance.rule")]
         internal readonly OpRule Rule;
 
+        /// <summary>
+        /// Creates the instruction.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleInstance", "RuleInstance(RelOptRule)")]
         internal RuleInstance(OpRule rule)
         {
             Rule = rule;
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleInstance", "prepare(PrepareContext)")]
         internal override HepState Prepare(PrepareContext px) => new State(px, this);
 
+        /// <summary>
+        /// Runtime state for <see cref="RuleInstance"/>.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleInstance.State")]
         internal sealed class State : HepState
         {
             internal readonly RuleInstance Instruction;
 
+            /// <summary>
+            /// Creates the state for <paramref name="instruction"/>.
+            /// </summary>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleInstance.State", "State(PrepareContext)")]
             internal State(PrepareContext px, RuleInstance instruction) : base(px) => Instruction = instruction;
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleInstance.State", "execute()")]
             internal override void Execute() => Planner.ExecuteRuleInstance(Instruction, this);
         }
@@ -208,15 +260,22 @@ public abstract class HepInstruction
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleLookup.ruleDescription")]
         internal readonly string RuleDescription;
 
+        /// <summary>
+        /// Creates the instruction.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleLookup", "RuleLookup(String)")]
         internal RuleLookup(string ruleDescription)
         {
             RuleDescription = ruleDescription;
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleLookup", "prepare(PrepareContext)")]
         internal override HepState Prepare(PrepareContext px) => new State(px, this);
 
+        /// <summary>
+        /// Runtime state for <see cref="RuleLookup"/>.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleLookup.State")]
         internal sealed class State : HepState
         {
@@ -225,12 +284,17 @@ public abstract class HepInstruction
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleLookup.State.rule")]
             internal OpRule? Rule;
 
+            /// <summary>
+            /// Creates the state for <paramref name="instruction"/>.
+            /// </summary>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleLookup.State", "State(PrepareContext)")]
             internal State(PrepareContext px, RuleLookup instruction) : base(px) => Instruction = instruction;
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleLookup.State", "init()")]
             internal override void Init() => Rule = null;
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.RuleLookup.State", "execute()")]
             internal override void Execute() => Planner.ExecuteRuleLookup(Instruction, this);
         }
@@ -247,23 +311,34 @@ public abstract class HepInstruction
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.MatchOrder.order")]
         internal readonly HepMatchOrder Order;
 
+        /// <summary>
+        /// Creates the instruction.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.MatchOrder", "MatchOrder(HepMatchOrder)")]
         internal MatchOrder(HepMatchOrder order)
         {
             Order = order;
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.MatchOrder", "prepare(PrepareContext)")]
         internal override HepState Prepare(PrepareContext px) => new State(px, this);
 
+        /// <summary>
+        /// Runtime state for <see cref="MatchOrder"/>.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.MatchOrder.State")]
         internal sealed class State : HepState
         {
             internal readonly MatchOrder Instruction;
 
+            /// <summary>
+            /// Creates the state for <paramref name="instruction"/>.
+            /// </summary>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.MatchOrder.State", "State(PrepareContext)")]
             internal State(PrepareContext px, MatchOrder instruction) : base(px) => Instruction = instruction;
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.MatchOrder.State", "execute()")]
             internal override void Execute() => Planner.ExecuteMatchOrder(Instruction, this);
         }
@@ -280,23 +355,34 @@ public abstract class HepInstruction
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.MatchLimit.limit")]
         internal readonly int Limit;
 
+        /// <summary>
+        /// Creates the instruction.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.MatchLimit", "MatchLimit(int)")]
         internal MatchLimit(int limit)
         {
             Limit = limit;
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.MatchLimit", "prepare(PrepareContext)")]
         internal override HepState Prepare(PrepareContext px) => new State(px, this);
 
+        /// <summary>
+        /// Runtime state for <see cref="MatchLimit"/>.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.MatchLimit.State")]
         internal sealed class State : HepState
         {
             internal readonly MatchLimit Instruction;
 
+            /// <summary>
+            /// Creates the state for <paramref name="instruction"/>.
+            /// </summary>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.MatchLimit.State", "State(PrepareContext)")]
             internal State(PrepareContext px, MatchLimit instruction) : base(px) => Instruction = instruction;
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.MatchLimit.State", "execute()")]
             internal override void Execute() => Planner.ExecuteMatchLimit(Instruction, this);
         }
@@ -313,15 +399,22 @@ public abstract class HepInstruction
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.SubProgram.subProgram")]
         internal readonly HepProgram Program;
 
+        /// <summary>
+        /// Creates the instruction.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.SubProgram", "SubProgram(HepProgram)")]
         internal SubProgram(HepProgram program)
         {
             Program = program;
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.SubProgram", "prepare(PrepareContext)")]
         internal override HepState Prepare(PrepareContext px) => Program.Prepare(px);
 
+        /// <summary>
+        /// Runtime state for <see cref="SubProgram"/>.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.SubProgram.State")]
         internal sealed class State : HepState
         {
@@ -330,6 +423,9 @@ public abstract class HepInstruction
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.SubProgram.State.subProgramState")]
             internal readonly HepProgram.State SubProgramState;
 
+            /// <summary>
+            /// Creates the state for <paramref name="instruction"/>.
+            /// </summary>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.SubProgram.State", "State(PrepareContext)")]
             internal State(PrepareContext px, SubProgram instruction) : base(px)
             {
@@ -337,9 +433,11 @@ public abstract class HepInstruction
                 SubProgramState = (HepProgram.State)instruction.Program.Prepare(px);
             }
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.SubProgram.State", "init()")]
             internal override void Init() => SubProgramState.Init();
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.SubProgram.State", "execute()")]
             internal override void Execute() => Planner.ExecuteSubProgram(Instruction, this);
         }
@@ -356,15 +454,22 @@ public abstract class HepInstruction
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.BeginGroup.endGroup")]
         internal new readonly EndGroup EndGroup;
 
+        /// <summary>
+        /// Creates the instruction.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.BeginGroup", "BeginGroup(EndGroup)")]
         internal BeginGroup(EndGroup endGroup)
         {
             EndGroup = endGroup;
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.BeginGroup", "prepare(PrepareContext)")]
         internal override HepState Prepare(PrepareContext px) => new State(px, this);
 
+        /// <summary>
+        /// Runtime state for <see cref="BeginGroup"/>.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.BeginGroup.State")]
         internal sealed class State : HepState
         {
@@ -373,6 +478,9 @@ public abstract class HepInstruction
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.BeginGroup.State.endGroup")]
             internal readonly EndGroup.State EndGroup;
 
+            /// <summary>
+            /// Creates the state for <paramref name="instruction"/>.
+            /// </summary>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.BeginGroup.State", "State(PrepareContext)")]
             internal State(PrepareContext px, BeginGroup instruction) : base(px)
             {
@@ -380,6 +488,7 @@ public abstract class HepInstruction
                 EndGroup = px.EndGroupState ?? throw new InvalidOperationException("endGroupState");
             }
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.BeginGroup.State", "execute()")]
             internal override void Execute() => Planner.ExecuteBeginGroup(Instruction, this);
         }
@@ -393,6 +502,7 @@ public abstract class HepInstruction
     internal sealed class Placeholder : HepInstruction
     {
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.Placeholder", "prepare(PrepareContext)")]
         internal override HepState Prepare(PrepareContext px) => throw new NotSupportedException();
 
@@ -405,9 +515,13 @@ public abstract class HepInstruction
     internal sealed class EndGroup : HepInstruction
     {
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.EndGroup", "prepare(PrepareContext)")]
         internal override HepState Prepare(PrepareContext px) => new State(px, this);
 
+        /// <summary>
+        /// Runtime state for <see cref="EndGroup"/>.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.EndGroup.State")]
         internal sealed class State : HepState
         {
@@ -419,12 +533,17 @@ public abstract class HepInstruction
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.EndGroup.State.collecting")]
             internal bool Collecting = true;
 
+            /// <summary>
+            /// Creates the state for <paramref name="instruction"/>.
+            /// </summary>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.EndGroup.State", "State(PrepareContext)")]
             internal State(PrepareContext px, EndGroup instruction) : base(px) => Instruction = instruction;
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.EndGroup.State", "init()")]
             internal override void Init() => Collecting = true;
 
+            /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.EndGroup.State", "execute()")]
             internal override void Execute() => Planner.ExecuteEndGroup(Instruction, this);
         }
@@ -447,6 +566,9 @@ public abstract class HepInstruction
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.PrepareContext.endGroupState")]
         internal readonly EndGroup.State? EndGroupState;
 
+        /// <summary>
+        /// Use <see cref="Create"/> and the <c>With*</c> methods to build a context.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.PrepareContext", "PrepareContext(HepPlanner, HepProgram.State, EndGroup.State)")]
         PrepareContext(HepPlanner planner, HepProgram.State? programState, EndGroup.State? endGroupState)
         {
@@ -455,12 +577,21 @@ public abstract class HepInstruction
             EndGroupState = endGroupState;
         }
 
+        /// <summary>
+        /// Creates a root context for <paramref name="planner"/> with no program or group state.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.PrepareContext", "create(HepPlanner)")]
         internal static PrepareContext Create(HepPlanner planner) => new PrepareContext(planner, null, null);
 
+        /// <summary>
+        /// Returns a copy with <paramref name="programState"/> set.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.PrepareContext", "withProgramState(HepProgram.State)")]
         internal PrepareContext WithProgramState(HepProgram.State programState) => new PrepareContext(Planner, programState, EndGroupState);
 
+        /// <summary>
+        /// Returns a copy with <paramref name="endGroupState"/> set.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.PrepareContext", "withEndGroupState(EndGroup.State)")]
         internal PrepareContext WithEndGroupState(EndGroup.State endGroupState) => new PrepareContext(Planner, ProgramState, endGroupState);
 

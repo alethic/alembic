@@ -15,12 +15,19 @@ public sealed class ProxyingMetadataHandlerProvider : IMetadataHandlerProvider
 {
     readonly IOpMetadataProvider _provider;
 
+    /// <summary>
+    /// Creates a provider that reflects over the handlers supplied by <paramref name="provider"/>.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.ProxyingMetadataHandlerProvider", "ProxyingMetadataHandlerProvider(RelMetadataProvider)")]
     public ProxyingMetadataHandlerProvider(IOpMetadataProvider provider)
     {
         _provider = provider;
     }
 
+    /// <summary>
+    /// Builds and returns a dispatcher implementing the handler interface <typeparamref name="THandler"/>,
+    /// routing each call to the most-specific registered handler method for the op at hand.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.ProxyingMetadataHandlerProvider", "handler(Class)")]
     public THandler Handler<THandler>() where THandler : class
     {
@@ -77,8 +84,12 @@ public class HandlerDispatchProxy : DispatchProxy
 {
     Dictionary<(string, Type), (object Target, MethodInfo Method)> _map = null!;
 
+    /// <summary>
+    /// Installs the (interface-method name, op type) → handler-method dispatch map.
+    /// </summary>
     internal void Init(Dictionary<(string, Type), (object Target, MethodInfo Method)> map) => _map = map;
 
+    /// <inheritdoc/>
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
     {
         // Only the metadata methods (op first, then the query) are dispatched; anything else on the

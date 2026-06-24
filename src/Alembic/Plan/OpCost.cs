@@ -82,22 +82,30 @@ public class OpCost : IOpCost
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostImpl", "toString()")]
     public override string ToString() => IOpCost.ToString(_value);
 
+    /// <summary>
+    /// The factory for <see cref="OpCost"/> instances.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostImpl.Factory")]
     sealed class CostFactory : IOpCostFactory
     {
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostImpl.Factory", "makeCost(double, double, double)")]
         public IOpCost MakeCost(double cpu, double io) => new OpCost(cpu);
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostImpl.Factory", "makeZeroCost()")]
         public IOpCost MakeZeroCost() => new OpCost(0.0);
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostImpl.Factory", "makeInfiniteCost()")]
         public IOpCost MakeInfiniteCost() => new OpCost(double.PositiveInfinity);
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostImpl.Factory", "makeHugeCost()")]
         public IOpCost MakeHugeCost() => new OpCost(double.MaxValue);
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptCostImpl.Factory", "makeTinyCost()")]
         public IOpCost MakeTinyCost() => new OpCost(1.0);
 

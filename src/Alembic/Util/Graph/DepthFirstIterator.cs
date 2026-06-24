@@ -14,6 +14,10 @@ public class DepthFirstIterator<V, E> : IEnumerator<V>
 
     readonly IEnumerator<V> _iterator;
 
+    /// <summary>
+    /// Creates an iterator over the vertices of <paramref name="graph"/> reachable from <paramref name="start"/>,
+    /// in depth-first pre-order.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DepthFirstIterator", "DepthFirstIterator(DirectedGraph<V, E>, V)")]
     public DepthFirstIterator(DirectedGraph<V, E> graph, V start)
     {
@@ -62,16 +66,20 @@ public class DepthFirstIterator<V, E> : IEnumerator<V>
         active.Remove(start);
     }
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DepthFirstIterator", "next()")]
     public V Current => _iterator.Current;
 
     object IEnumerator.Current => Current!;
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DepthFirstIterator", "hasNext()")]
     public bool MoveNext() => _iterator.MoveNext();
 
+    /// <inheritdoc/>
     public void Reset() => throw new System.NotSupportedException();
 
+    /// <inheritdoc/>
     public void Dispose() => _iterator.Dispose();
 
 }

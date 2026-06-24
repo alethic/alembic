@@ -14,6 +14,9 @@ public class TraitMatchingRule : OpRule
 
     readonly ConverterRule _converterRule;
 
+    /// <summary>
+    /// Wraps <paramref name="converterRule"/> so it fires only once the input already carries the target trait.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.TraitMatchingRule", "TraitMatchingRule(ConverterRule)")]
     public TraitMatchingRule(ConverterRule converterRule)
         : base(BuildOperand(converterRule))

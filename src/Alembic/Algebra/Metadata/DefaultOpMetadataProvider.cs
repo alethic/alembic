@@ -7,6 +7,9 @@ namespace Alembic.Algebra.Metadata;
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.DefaultRelMetadataProvider")]
 public sealed class DefaultOpMetadataProvider : ChainedOpMetadataProvider
 {
+    /// <summary>
+    /// The shared instance.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.DefaultRelMetadataProvider", "INSTANCE")]
     public static readonly DefaultOpMetadataProvider Instance = new DefaultOpMetadataProvider();
 

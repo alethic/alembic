@@ -17,12 +17,22 @@ public class MetadataDef<M> where M : IMetadata
         HandlerClass = handlerClass;
     }
 
+    /// <summary>
+    /// The metadata interface this definition describes.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.MetadataDef", "metadataClass")]
     public Type MetadataClass { get; }
 
+    /// <summary>
+    /// The handler interface that computes this kind of metadata.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.MetadataDef", "handlerClass")]
     public Type HandlerClass { get; }
 
+    /// <summary>
+    /// Creates a definition for the metadata interface <paramref name="metadataClass"/> computed by
+    /// <paramref name="handlerClass"/>.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.MetadataDef", "of(Class, Class, Method...)")]
     public static MetadataDef<M> Of(Type metadataClass, Type handlerClass) => new MetadataDef<M>(metadataClass, handlerClass);
 }

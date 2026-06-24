@@ -556,6 +556,9 @@ public sealed class OpTraitSet : IEquatable<OpTraitSet>, IEnumerable<IOpTrait>
 
         readonly Dictionary<OpTraitSet, OpTraitSet> _map = new Dictionary<OpTraitSet, OpTraitSet>();
 
+        /// <summary>
+        /// Returns the cached trait set equal to <paramref name="set"/>, adding it if not yet present.
+        /// </summary>
         public OpTraitSet GetOrAdd(OpTraitSet set)
         {
             if (_map.TryGetValue(set, out var existing))

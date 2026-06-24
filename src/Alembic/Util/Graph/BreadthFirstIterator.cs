@@ -17,6 +17,9 @@ public class BreadthFirstIterator<V, E> : IEnumerator<V>
     readonly HashSet<V> _set = new HashSet<V>();
     V _current = default!;
 
+    /// <summary>
+    /// Creates an iterator over the vertices of <paramref name="graph"/> reachable from <paramref name="root"/>.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.BreadthFirstIterator", "BreadthFirstIterator(DirectedGraph<V, E>, V)")]
     public BreadthFirstIterator(DirectedGraph<V, E> graph, V root)
     {
@@ -57,11 +60,13 @@ public class BreadthFirstIterator<V, E> : IEnumerator<V>
         }
     }
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.BreadthFirstIterator", "next()")]
     public V Current => _current;
 
     object IEnumerator.Current => Current;
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.BreadthFirstIterator", "hasNext()")]
     public bool MoveNext()
     {
@@ -79,8 +84,10 @@ public class BreadthFirstIterator<V, E> : IEnumerator<V>
         return true;
     }
 
+    /// <inheritdoc/>
     public void Reset() => throw new System.NotSupportedException();
 
+    /// <inheritdoc/>
     public void Dispose()
     {
 

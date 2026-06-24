@@ -75,6 +75,9 @@ public interface DirectedGraph<V, E>
     interface EdgeFactory
     {
 
+        /// <summary>
+        /// Creates an edge from <paramref name="v0"/> to <paramref name="v1"/>.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DirectedGraph.EdgeFactory", "createEdge(V, V)")]
         E CreateEdge(V v0, V v1);
 

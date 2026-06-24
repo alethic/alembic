@@ -23,6 +23,9 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     readonly DirectedGraph<V, E>.EdgeFactory _edgeFactory;
     readonly VertexSetView _vertexSet;
 
+    /// <summary>
+    /// Creates an empty graph whose edges are produced by <paramref name="edgeFactory"/>.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultDirectedGraph", "DefaultDirectedGraph(EdgeFactory)")]
     public DefaultDirectedGraph(DirectedGraph<V, E>.EdgeFactory edgeFactory)
     {
@@ -196,6 +199,10 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultDirectedGraph", "edgeSet()")]
     public IReadOnlySet<E> EdgeSet => _edges;
 
+    /// <summary>
+    /// Returns the recorded <see cref="VertexInfo"/> for <paramref name="vertex"/>, throwing if it is not
+    /// a vertex of the graph.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultDirectedGraph", "getVertex(V)")]
     protected VertexInfo GetVertex(V vertex)
     {
@@ -230,30 +237,42 @@ public class DefaultDirectedGraph<V, E> : DirectedGraph<V, E>
         readonly List<V> _order;
         readonly Dictionary<V, VertexInfo> _map;
 
+        /// <summary>
+        /// Creates a view over the vertex <paramref name="order"/> list and membership <paramref name="map"/>.
+        /// </summary>
         public VertexSetView(List<V> order, Dictionary<V, VertexInfo> map)
         {
             _order = order;
             _map = map;
         }
 
+        /// <inheritdoc/>
         public int Count => _order.Count;
 
+        /// <inheritdoc/>
         public bool Contains(V item) => _map.ContainsKey(item);
 
+        /// <inheritdoc/>
         public IEnumerator<V> GetEnumerator() => _order.GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => _order.GetEnumerator();
 
+        /// <inheritdoc/>
         public bool IsProperSubsetOf(IEnumerable<V> other) => Snapshot().IsProperSubsetOf(other);
 
+        /// <inheritdoc/>
         public bool IsProperSupersetOf(IEnumerable<V> other) => Snapshot().IsProperSupersetOf(other);
 
+        /// <inheritdoc/>
         public bool IsSubsetOf(IEnumerable<V> other) => Snapshot().IsSubsetOf(other);
 
+        /// <inheritdoc/>
         public bool IsSupersetOf(IEnumerable<V> other) => Snapshot().IsSupersetOf(other);
 
+        /// <inheritdoc/>
         public bool Overlaps(IEnumerable<V> other) => Snapshot().Overlaps(other);
 
+        /// <inheritdoc/>
         public bool SetEquals(IEnumerable<V> other) => Snapshot().SetEquals(other);
 
         HashSet<V> Snapshot() => new HashSet<V>(_order);

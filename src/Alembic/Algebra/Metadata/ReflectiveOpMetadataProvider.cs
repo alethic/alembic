@@ -20,10 +20,15 @@ public sealed class ReflectiveOpMetadataProvider : IOpMetadataProvider
         _handlers = new[] { handler };
     }
 
+    /// <summary>
+    /// Creates a provider that holds <paramref name="handler"/> and supplies it for the handler interface
+    /// <paramref name="handlerClass"/>.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.ReflectiveRelMetadataProvider", "reflectiveSource(MetadataHandler, Class)")]
     public static IOpMetadataProvider ReflectiveSource(IMetadataHandler handler, Type handlerClass)
         => new ReflectiveOpMetadataProvider(handler, handlerClass);
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.ReflectiveRelMetadataProvider", "handlers(Class)")]
     public IReadOnlyList<IMetadataHandler> Handlers(Type handlerClass)
         => _handlerClass.IsAssignableFrom(handlerClass) ? _handlers : Array.Empty<IMetadataHandler>();

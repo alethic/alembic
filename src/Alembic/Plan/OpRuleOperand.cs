@@ -153,8 +153,11 @@ public sealed class OpRuleOperand
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "predicate")]
     internal readonly Func<IOp, bool> Predicate;
 
-    // Set by ConvertOperand: this operand carries the converter-on-converter guard that
-    // Calcite's ConverterRelOptRuleOperand.matches applies (so we don't get an n^2 effect).
+    /// <summary>
+    /// Whether this operand carries the converter-on-converter guard. Set by the converter operand factory,
+    /// it applies the same check as Calcite's <c>ConverterRelOptRuleOperand.matches</c> so a converter rule
+    /// does not match its own output (avoiding an n² effect).
+    /// </summary>
     internal bool IsConverterOperand { get; init; }
 
     /// <summary>

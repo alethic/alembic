@@ -40,6 +40,9 @@ public abstract class OpRuleCall
         Parents = parents;
     }
 
+    /// <summary>
+    /// Creates a call with no recorded parents (they default to <c>null</c>).
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "RelOptRuleCall(RelOptPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
     protected OpRuleCall(IOpPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs)
         : this(planner, operand0, ops, nodeInputs, null)

@@ -13,17 +13,28 @@ namespace Alembic.Algebra.Metadata;
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows")]
 public class OpMdCumulativeCost : IMetadataHandler<BuiltInMetadata.CumulativeCost>
 {
+    /// <summary>
+    /// The provider that exposes this handler to the metadata system.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows", "SOURCE")]
     public static readonly IOpMetadataProvider Source =
         ReflectiveOpMetadataProvider.ReflectiveSource(new OpMdCumulativeCost(), typeof(BuiltInMetadata.CumulativeCost.Handler));
 
+    /// <summary>
+    /// Initializes the handler. Use <see cref="Source"/> to obtain the provider.
+    /// </summary>
     protected OpMdCumulativeCost()
     {
     }
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows", "getDef()")]
     public MetadataDef<BuiltInMetadata.CumulativeCost> GetDef() => BuiltInMetadata.CumulativeCost.Def;
 
+    /// <summary>
+    /// Computes the cumulative cost of <paramref name="op"/>: its non-cumulative cost plus the cumulative
+    /// cost of each input. Returns <c>null</c> if any of those is unknown.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows", "getCumulativeCost(RelNode, RelMetadataQuery)")]
     public IOpCost? GetCumulativeCost(IOp op, OpMetadataQuery mq)
     {
@@ -51,17 +62,28 @@ public class OpMdCumulativeCost : IMetadataHandler<BuiltInMetadata.CumulativeCos
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows")]
 public class OpMdNonCumulativeCost : IMetadataHandler<BuiltInMetadata.NonCumulativeCost>
 {
+    /// <summary>
+    /// The provider that exposes this handler to the metadata system.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows", "SOURCE")]
     public static readonly IOpMetadataProvider Source =
         ReflectiveOpMetadataProvider.ReflectiveSource(new OpMdNonCumulativeCost(), typeof(BuiltInMetadata.NonCumulativeCost.Handler));
 
+    /// <summary>
+    /// Initializes the handler. Use <see cref="Source"/> to obtain the provider.
+    /// </summary>
     protected OpMdNonCumulativeCost()
     {
     }
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows", "getDef()")]
     public MetadataDef<BuiltInMetadata.NonCumulativeCost> GetDef() => BuiltInMetadata.NonCumulativeCost.Def;
 
+    /// <summary>
+    /// Computes the non-cumulative cost of <paramref name="op"/> by asking the op itself via
+    /// <see cref="IOp.ComputeSelfCost"/>.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdPercentageOriginalRows", "getNonCumulativeCost(RelNode, RelMetadataQuery)")]
     public IOpCost? GetNonCumulativeCost(IOp op, OpMetadataQuery mq)
         => op.ComputeSelfCost(op.Cluster.Planner, mq);

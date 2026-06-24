@@ -181,6 +181,10 @@ public abstract class OpRule
         return Convert(rel.Cluster.Planner, rel, toTrait);
     }
 
+    /// <summary>
+    /// Converts <paramref name="rel"/> so that its trait set includes <paramref name="toTrait"/>, asking
+    /// <paramref name="planner"/> to change traits if it does not already match.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "convert(RelOptPlanner, RelNode, RelTrait)")]
     public static IOp Convert(IOpPlanner planner, IOp rel, IOpTrait? toTrait)
     {

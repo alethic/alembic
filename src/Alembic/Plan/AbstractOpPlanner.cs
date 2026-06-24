@@ -25,6 +25,10 @@ public abstract class AbstractOpPlanner : IOpPlanner
     readonly IOpCostFactory _costFactory;
     Regex? _ruleDescExclusionFilter;
 
+    /// <summary>
+    /// The op types the planner has seen, tracked so rules that cannot match any registered op type can
+    /// be skipped.
+    /// </summary>
     protected readonly HashSet<Type> _classes = new HashSet<Type>();
     readonly HashSet<IConvention> _conventions = new HashSet<IConvention>();
 

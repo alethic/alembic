@@ -20,6 +20,7 @@ public sealed class NullSentinel
 
     NullSentinel(string name) => _name = name;
 
+    /// <inheritdoc/>
     public override string ToString() => _name;
 
     /// <summary>Returns <paramref name="value"/>, or <see cref="Instance"/> if it is <c>null</c>.</summary>

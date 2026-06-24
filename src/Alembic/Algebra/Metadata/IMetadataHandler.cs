@@ -20,6 +20,9 @@ public interface IMetadataHandler
 public interface IMetadataHandler<M> : IMetadataHandler where M : IMetadata
 {
 
+    /// <summary>
+    /// Returns the <see cref="MetadataDef{M}"/> that this handler deals with.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.MetadataHandler", "getDef()")]
     MetadataDef<M> GetDef();
 

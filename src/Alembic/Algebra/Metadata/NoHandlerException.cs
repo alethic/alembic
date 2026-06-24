@@ -8,11 +8,17 @@ namespace Alembic.Algebra.Metadata;
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.MetadataHandlerProvider.NoHandler")]
 public sealed class NoHandlerException : Exception
 {
+    /// <summary>
+    /// Creates the exception for the op type <paramref name="opType"/> that has no registered handler.
+    /// </summary>
     public NoHandlerException(Type opType)
         : base($"No metadata handler registered for op type {opType}")
     {
         OpType = opType;
     }
 
+    /// <summary>
+    /// The op type for which no handler was registered.
+    /// </summary>
     public Type OpType { get; }
 }

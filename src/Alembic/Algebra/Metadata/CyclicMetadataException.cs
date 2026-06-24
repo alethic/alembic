@@ -10,6 +10,9 @@ namespace Alembic.Algebra.Metadata;
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.CyclicMetadataException")]
 public sealed class CyclicMetadataException : Exception
 {
+    /// <summary>
+    /// The shared instance thrown on every cycle, to avoid building a stack trace each time.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.CyclicMetadataException", "INSTANCE")]
     public static readonly CyclicMetadataException Instance = new CyclicMetadataException();
 

@@ -160,9 +160,16 @@ public class ConventionTraitDef : OpTraitDef<IConvention>
 
         Graphs.FrozenGraph<IConvention, DefaultEdge>? _pathMap;
 
+        /// <summary>
+        /// All conversion paths from <paramref name="from"/> to <paramref name="to"/>, shortest first.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.ConventionTraitDef.ConversionData", "getPaths(Convention, Convention)")]
         public List<List<IConvention>> GetPaths(IConvention from, IConvention to) => GetPathMap().GetPaths(from, to);
 
+        /// <summary>
+        /// The length of the shortest conversion path from <paramref name="from"/> to <paramref name="to"/>,
+        /// or -1 if none exists.
+        /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.ConventionTraitDef.ConversionData", "getShortestDistance(Convention, Convention)")]
         public int GetShortestDistance(IConvention from, IConvention to) => GetPathMap().GetShortestDistance(from, to);
 

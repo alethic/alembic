@@ -22,12 +22,19 @@ public class TopologicalOrderIterator<V, E> : IEnumerator<V>
     readonly Queue<V> _empties = new Queue<V>();
     V _current = default!;
 
+    /// <summary>
+    /// Creates a top-down topological iterator over <paramref name="graph"/>.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator", "TopologicalOrderIterator(DirectedGraph<V, E>)")]
     public TopologicalOrderIterator(DirectedGraph<V, E> graph)
         : this(graph, HepMatchOrder.TopDown)
     {
     }
 
+    /// <summary>
+    /// Creates a topological iterator over <paramref name="graph"/> in the given <paramref name="order"/>
+    /// (<see cref="HepMatchOrder.TopDown"/> or <see cref="HepMatchOrder.BottomUp"/>).
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator", "TopologicalOrderIterator(DirectedGraph<V, E>, HepMatchOrder)")]
     public TopologicalOrderIterator(DirectedGraph<V, E> graph, HepMatchOrder order)
     {
@@ -84,11 +91,13 @@ public class TopologicalOrderIterator<V, E> : IEnumerator<V>
         }
     }
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator", "next()")]
     public V Current => _current;
 
     object IEnumerator.Current => Current!;
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.TopologicalOrderIterator", "hasNext()")]
     public bool MoveNext()
     {
@@ -132,8 +141,10 @@ public class TopologicalOrderIterator<V, E> : IEnumerator<V>
         return new HashSet<V>(_count.Keys);
     }
 
+    /// <inheritdoc/>
     public void Reset() => throw new System.NotSupportedException();
 
+    /// <inheritdoc/>
     public void Dispose()
     {
     }

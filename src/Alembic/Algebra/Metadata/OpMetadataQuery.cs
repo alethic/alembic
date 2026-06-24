@@ -32,12 +32,18 @@ public class OpMetadataQuery : OpMetadataQueryBase
     readonly BuiltInMetadata.Memory.Handler _memory;
     readonly BuiltInMetadata.Parallelism.Handler _parallelism;
 
+    /// <summary>
+    /// Creates a query backed by the default handler provider over the central handler list.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "RelMetadataQuery()")]
     public OpMetadataQuery()
         : this(DefaultProvider)
     {
     }
 
+    /// <summary>
+    /// Creates a query whose handlers are obtained from <paramref name="provider"/>.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "RelMetadataQuery(MetadataHandlerProvider)")]
     public OpMetadataQuery(IMetadataHandlerProvider provider)
     {
@@ -48,6 +54,9 @@ public class OpMetadataQuery : OpMetadataQueryBase
         _parallelism = provider.Handler<BuiltInMetadata.Parallelism.Handler>();
     }
 
+    /// <summary>
+    /// Returns the cumulative cost of <paramref name="op"/> (its cost including all of its inputs).
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "getCumulativeCost(RelNode)")]
     public IOpCost? GetCumulativeCost(IOp op)
     {
@@ -55,6 +64,9 @@ public class OpMetadataQuery : OpMetadataQueryBase
         return Cache(op, CumulativeCostKey, () => _cumulativeCost.GetCumulativeCost(op, this));
     }
 
+    /// <summary>
+    /// Returns the non-cumulative cost of <paramref name="op"/> (its own cost, not counting its inputs).
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "getNonCumulativeCost(RelNode)")]
     public IOpCost? GetNonCumulativeCost(IOp op)
     {
@@ -62,6 +74,9 @@ public class OpMetadataQuery : OpMetadataQueryBase
         return Cache(op, NonCumulativeCostKey, () => _nonCumulativeCost.GetNonCumulativeCost(op, this));
     }
 
+    /// <summary>
+    /// Returns the lower bound cost of <paramref name="op"/> under <paramref name="planner"/>.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "getLowerBoundCost(RelNode, VolcanoPlanner)")]
     public IOpCost? GetLowerBoundCost(IOp op, VolcanoPlanner planner)
     {
@@ -69,6 +84,9 @@ public class OpMetadataQuery : OpMetadataQueryBase
         return Cache(op, LowerBoundCostKey, () => _lowerBoundCost.GetLowerBoundCost(op, this, planner));
     }
 
+    /// <summary>
+    /// Returns the memory, in bytes, used by <paramref name="op"/>.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "memory(RelNode)")]
     public double? Memory(IOp op)
     {
@@ -76,6 +94,9 @@ public class OpMetadataQuery : OpMetadataQueryBase
         return Cache(op, MemoryKey, () => _memory.Memory(op, this));
     }
 
+    /// <summary>
+    /// Returns the cumulative memory of <paramref name="op"/> within its phase, across all splits.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "cumulativeMemoryWithinPhase(RelNode)")]
     public double? CumulativeMemoryWithinPhase(IOp op)
     {
@@ -83,6 +104,9 @@ public class OpMetadataQuery : OpMetadataQueryBase
         return Cache(op, CumulativeMemoryWithinPhaseKey, () => _memory.CumulativeMemoryWithinPhase(op, this));
     }
 
+    /// <summary>
+    /// Returns the cumulative memory of <paramref name="op"/> within its phase, within each split.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "cumulativeMemoryWithinPhaseSplit(RelNode)")]
     public double? CumulativeMemoryWithinPhaseSplit(IOp op)
     {
@@ -90,6 +114,9 @@ public class OpMetadataQuery : OpMetadataQueryBase
         return Cache(op, CumulativeMemoryWithinPhaseSplitKey, () => _memory.CumulativeMemoryWithinPhaseSplit(op, this));
     }
 
+    /// <summary>
+    /// Returns whether <paramref name="op"/> is a phase transition.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "isPhaseTransition(RelNode)")]
     public bool? IsPhaseTransition(IOp op)
     {
@@ -97,6 +124,9 @@ public class OpMetadataQuery : OpMetadataQueryBase
         return Cache(op, IsPhaseTransitionKey, () => _parallelism.IsPhaseTransition(op, this));
     }
 
+    /// <summary>
+    /// Returns the number of distinct splits of <paramref name="op"/>'s data.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMetadataQuery", "splitCount(RelNode)")]
     public int? SplitCount(IOp op)
     {

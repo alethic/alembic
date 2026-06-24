@@ -21,12 +21,13 @@ public abstract class AbstractOp : IOp
 
     readonly InnerOpDigest _digest;
 
-    /// <summary>
-    /// Initializes the op with its cluster, traits, and children.
-    /// </summary>
     // The source of op ids, handed out in creation order. Atomic, as in Calcite's NEXT_ID.
     static int _nextId;
 
+    /// <summary>
+    /// Initializes the op with its <paramref name="cluster"/> and <paramref name="traits"/>, assigning it
+    /// the next op id.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "AbstractRelNode(RelOptCluster, RelTraitSet)")]
     protected AbstractOp(OpCluster cluster, OpTraitSet traits)
     {
@@ -215,23 +216,30 @@ public abstract class AbstractOp : IOp
         readonly AbstractOp _op;
         int _hash;
 
+        /// <summary>
+        /// Creates the digest kept by <paramref name="op"/>.
+        /// </summary>
         public InnerOpDigest(AbstractOp op)
         {
             _op = op;
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "getRel()")]
         public IOp Op => _op;
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "clear()")]
         public void Clear() => _hash = 0;
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "equals(Object)")]
         public override bool Equals(object? obj)
         {
             return obj is IOpDigest other && _op.DeepEquals(other.Op);
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.InnerRelDigest", "hashCode()")]
         public override int GetHashCode()
         {
@@ -244,6 +252,7 @@ public abstract class AbstractOp : IOp
             return _hash;
         }
 
+        /// <inheritdoc/>
         public override string ToString()
         {
             var writer = new DigestWriter();
@@ -271,6 +280,7 @@ public abstract class AbstractOp : IOp
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "digest")]
         internal string Digest = "";
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "item(String, Object)")]
         public IOpWriter Item(string name, object? value)
         {
@@ -283,6 +293,7 @@ public abstract class AbstractOp : IOp
             return this;
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "done(RelNode)")]
         public IOpWriter Done(IOp op)
         {

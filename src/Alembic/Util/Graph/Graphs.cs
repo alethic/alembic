@@ -79,6 +79,9 @@ public static class Graphs
         readonly DefaultDirectedGraph<V, E> _graph;
         readonly Dictionary<Pair<V, V>, int> _shortestDistances;
 
+        /// <summary>
+        /// Created by <see cref="Graphs.MakeImmutable"/> from a graph and its precomputed shortest distances.
+        /// </summary>
         internal FrozenGraph(DefaultDirectedGraph<V, E> graph, Dictionary<Pair<V, V>, int> shortestDistances)
         {
             _graph = graph;

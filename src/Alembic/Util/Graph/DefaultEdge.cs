@@ -8,6 +8,9 @@ namespace Alembic.Util.Graph;
 public class DefaultEdge
 {
 
+    /// <summary>
+    /// Creates an edge from <paramref name="source"/> (the tail) to <paramref name="target"/> (the head).
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultEdge", "DefaultEdge(Object, Object)")]
     public DefaultEdge(object source, object target)
     {
@@ -27,12 +30,14 @@ public class DefaultEdge
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultEdge", "target")]
     public readonly object Target;
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultEdge", "hashCode()")]
     public override int GetHashCode()
     {
         return Source.GetHashCode() * 31 + Target.GetHashCode();
     }
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultEdge", "equals(Object)")]
     public override bool Equals(object? obj)
     {
@@ -40,6 +45,7 @@ public class DefaultEdge
             || (obj is DefaultEdge other && other.Source.Equals(Source) && other.Target.Equals(Target));
     }
 
+    /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.util.graph.DefaultEdge", "toString()")]
     public override string ToString()
     {
@@ -55,9 +61,13 @@ public class DefaultEdge
         return new DefaultEdgeFactory<V>();
     }
 
+    /// <summary>
+    /// The <see cref="DirectedGraph{V, E}.EdgeFactory"/> returned by <see cref="Factory{V}"/>.
+    /// </summary>
     sealed class DefaultEdgeFactory<V> : DirectedGraph<V, DefaultEdge>.EdgeFactory
     {
 
+        /// <inheritdoc/>
         public DefaultEdge CreateEdge(V v0, V v1)
         {
             return new DefaultEdge(v0!, v1!);

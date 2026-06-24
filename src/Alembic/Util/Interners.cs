@@ -47,6 +47,9 @@ public static class Interners
 
         bool _strong = true;
 
+        /// <summary>
+        /// Use <see cref="Interners.NewBuilder"/> to obtain a builder.
+        /// </summary>
         internal InternerBuilder()
         {
         }
@@ -80,6 +83,10 @@ public static class Interners
 
     }
 
+    /// <summary>
+    /// The <see cref="IInterner{T}"/> implementation: delegates to an <see cref="InternMap{E}"/> whose keys
+    /// are held strongly or weakly per the builder's choice.
+    /// </summary>
     [Provenance(ProvenanceSource.Other, "com.google.common.collect.Interners.InternerImpl")]
     sealed class InternerImpl<T> : IInterner<T>
         where T : class
@@ -87,11 +94,16 @@ public static class Interners
 
         readonly InternMap<T> _map;
 
+        /// <summary>
+        /// Creates an interner backed by an <see cref="InternMap{E}"/>; <paramref name="weakKeys"/> selects
+        /// weak (collectible) over strong retention.
+        /// </summary>
         internal InternerImpl(bool weakKeys)
         {
             _map = new InternMap<T>(weakKeys, EqualityComparer<T>.Default);
         }
 
+        /// <inheritdoc/>
         [Provenance(ProvenanceSource.Other, "com.google.common.collect.Interners.InternerImpl", "intern(E)")]
         public T Intern(T sample)
         {
@@ -133,6 +145,10 @@ public static class Interners
         readonly bool _weakKeys;
         int _sinceSweep;
 
+        /// <summary>
+        /// Creates the map; <paramref name="weakKeys"/> selects weak retention of canonical instances and
+        /// <paramref name="equivalence"/> defines element equality.
+        /// </summary>
         public InternMap(bool weakKeys, IEqualityComparer<E> equivalence)
         {
             _weakKeys = weakKeys;
@@ -200,6 +216,10 @@ public static class Interners
             readonly E? _strong;
             readonly System.WeakReference<E>? _weak;
 
+            /// <summary>
+            /// Holds <paramref name="value"/> strongly, or weakly when <paramref name="weak"/> is set, and
+            /// caches <paramref name="hash"/> so the entry hashes stably after a weak value is collected.
+            /// </summary>
             public Entry(E value, int hash, bool weak)
             {
                 Hash = hash;
@@ -209,24 +229,39 @@ public static class Interners
                     _strong = value;
             }
 
+            /// <summary>
+            /// The element's cached hash, stable for the entry's lifetime.
+            /// </summary>
             public int Hash { get; }
 
+            /// <summary>
+            /// The held element, or <c>null</c> if it was weakly held and has been collected.
+            /// </summary>
             public E? Get() => _weak is null ? _strong : (_weak.TryGetTarget(out var value) ? value : null);
 
         }
 
+        /// <summary>
+        /// Compares <see cref="Entry"/> instances by their elements' equivalence and cached hash, treating
+        /// a collected (dead) entry as equal only to itself.
+        /// </summary>
         sealed class EntryComparer : IEqualityComparer<Entry>
         {
 
             readonly IEqualityComparer<E> _equivalence;
 
+            /// <summary>
+            /// Creates the comparer over the given element <paramref name="equivalence"/>.
+            /// </summary>
             public EntryComparer(IEqualityComparer<E> equivalence)
             {
                 _equivalence = equivalence;
             }
 
+            /// <inheritdoc/>
             public int GetHashCode(Entry entry) => entry.Hash;
 
+            /// <inheritdoc/>
             public bool Equals(Entry? x, Entry? y)
             {
                 if (ReferenceEquals(x, y))

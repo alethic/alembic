@@ -15,8 +15,13 @@ internal sealed class LinkedHashSet<T> : IReadOnlySet<T>
     readonly HashSet<T> _set = new HashSet<T>();
     readonly List<T> _order = new List<T>();
 
+    /// <inheritdoc/>
     public int Count => _set.Count;
 
+    /// <summary>
+    /// Adds <paramref name="item"/> at the end of the iteration order; returns <c>true</c> if it was not
+    /// already a member.
+    /// </summary>
     public bool Add(T item)
     {
         if (!_set.Add(item))
@@ -26,6 +31,9 @@ internal sealed class LinkedHashSet<T> : IReadOnlySet<T>
         return true;
     }
 
+    /// <summary>
+    /// Removes <paramref name="item"/>; returns <c>true</c> if it was a member.
+    /// </summary>
     public bool Remove(T item)
     {
         if (!_set.Remove(item))
@@ -35,6 +43,9 @@ internal sealed class LinkedHashSet<T> : IReadOnlySet<T>
         return true;
     }
 
+    /// <summary>
+    /// Removes every element matching <paramref name="match"/>; returns the number of elements removed.
+    /// </summary>
     public int RemoveWhere(Predicate<T> match)
     {
         int removed = _order.RemoveAll(match);
@@ -44,22 +55,30 @@ internal sealed class LinkedHashSet<T> : IReadOnlySet<T>
         return removed;
     }
 
+    /// <inheritdoc/>
     public bool Contains(T item) => _set.Contains(item);
 
+    /// <inheritdoc/>
     public IEnumerator<T> GetEnumerator() => _order.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+    /// <inheritdoc/>
     public bool IsProperSubsetOf(IEnumerable<T> other) => _set.IsProperSubsetOf(other);
 
+    /// <inheritdoc/>
     public bool IsProperSupersetOf(IEnumerable<T> other) => _set.IsProperSupersetOf(other);
 
+    /// <inheritdoc/>
     public bool IsSubsetOf(IEnumerable<T> other) => _set.IsSubsetOf(other);
 
+    /// <inheritdoc/>
     public bool IsSupersetOf(IEnumerable<T> other) => _set.IsSupersetOf(other);
 
+    /// <inheritdoc/>
     public bool Overlaps(IEnumerable<T> other) => _set.Overlaps(other);
 
+    /// <inheritdoc/>
     public bool SetEquals(IEnumerable<T> other) => _set.SetEquals(other);
 
 }
