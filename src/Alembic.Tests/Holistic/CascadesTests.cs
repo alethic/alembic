@@ -2,7 +2,6 @@ using System.Collections.Generic;
 
 using Alembic.Algebra;
 using Alembic.Plan;
-using Alembic.Plan.Rules;
 using Alembic.Plan.Volcano;
 
 using Alembic.Tests.Languages.Relational;
@@ -11,6 +10,8 @@ using Alembic.Tests.Languages.Relational.Physical;
 
 using Xunit;
 using Xunit.Abstractions;
+
+using Alembic.Algebra.Rules;
 
 namespace Alembic.Tests.Holistic;
 

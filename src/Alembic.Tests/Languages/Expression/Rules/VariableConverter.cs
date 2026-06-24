@@ -1,9 +1,10 @@
 using Alembic.Algebra;
 using Alembic.Plan;
-using Alembic.Plan.Rules;
 
 using Alembic.Tests.Languages.Expression.Logical;
 using Alembic.Tests.Languages.Expression.Physical;
+
+using Alembic.Algebra.Convert;
 
 namespace Alembic.Tests.Languages.Expression.Rules;
 

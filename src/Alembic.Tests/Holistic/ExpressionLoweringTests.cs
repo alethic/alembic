@@ -1,7 +1,6 @@
 using Alembic.Algebra;
 using Alembic.Plan;
 using Alembic.Plan.Hep;
-using Alembic.Plan.Rules;
 
 using Alembic.Tests.Languages.Expression;
 using Alembic.Tests.Languages.Expression.Logical;
@@ -10,6 +9,8 @@ using Alembic.Tests.Languages.Expression.Rules;
 
 using Xunit;
 using Xunit.Abstractions;
+
+using Alembic.Algebra.Convert;
 
 namespace Alembic.Tests.Holistic;
 

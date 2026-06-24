@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using Alembic.Algebra;
 using Alembic.Plan;
 using Alembic.Plan.Hep;
-using Alembic.Plan.Rules;
 
 using Alembic.Tests.Languages.Expression;
 using Alembic.Tests.Languages.Expression.Logical;

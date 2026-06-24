@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 using Alembic.Algebra;
-using Alembic.Plan.Rules;
+using Alembic.Util;
 
 namespace Alembic.Plan;
 

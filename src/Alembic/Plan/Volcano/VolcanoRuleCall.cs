@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 
 using Alembic.Algebra;
-using Alembic.Plan.Rules;
+using Alembic.Algebra.Rules;
 
 namespace Alembic.Plan.Volcano;
 

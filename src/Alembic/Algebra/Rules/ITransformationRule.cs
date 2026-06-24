@@ -1,4 +1,4 @@
-namespace Alembic.Plan.Rules;
+namespace Alembic.Algebra.Rules;
 
 /// <summary>
 /// Marks a rule as a transformation rule: one that rewrites an op into an equivalent form within the

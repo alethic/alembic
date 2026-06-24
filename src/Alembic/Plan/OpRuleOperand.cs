@@ -5,7 +5,7 @@ using System.Linq;
 using Alembic.Algebra;
 using Alembic.Algebra.Convert;
 
-namespace Alembic.Plan.Rules;
+namespace Alembic.Plan;
 
 /// <summary>
 /// How an operand treats the op's children.

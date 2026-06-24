@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
-using Alembic.Plan.Rules;
 
 namespace Alembic.Plan.Hep;
 

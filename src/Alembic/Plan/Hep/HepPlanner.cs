@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 
 using Alembic.Algebra;
 using Alembic.Algebra.Convert;
-using Alembic.Plan.Rules;
 using Alembic.Util.Graph;
 
 namespace Alembic.Plan.Hep;

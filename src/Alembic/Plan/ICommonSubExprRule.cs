@@ -1,4 +1,4 @@
-namespace Alembic.Plan.Rules;
+namespace Alembic.Plan;
 
 /// <summary>
 /// A marker that a rule (a <see cref="OpRule"/>) should be attempted only on common sub-expressions —

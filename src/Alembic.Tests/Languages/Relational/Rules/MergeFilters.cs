@@ -1,7 +1,8 @@
 using Alembic.Algebra;
-using Alembic.Plan.Rules;
 
 using Alembic.Tests.Languages.Relational.Logical;
+
+using Alembic.Plan;
 
 namespace Alembic.Tests.Languages.Relational.Rules;
 

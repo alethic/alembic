@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 using Alembic.Algebra;
-using Alembic.Plan.Rules;
 
 namespace Alembic.Plan;
 

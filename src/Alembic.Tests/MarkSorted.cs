@@ -1,5 +1,6 @@
 using Alembic.Algebra;
-using Alembic.Plan.Rules;
+
+using Alembic.Plan;
 
 namespace Alembic.Tests;
 

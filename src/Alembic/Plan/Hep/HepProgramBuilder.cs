@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 
-using Alembic.Plan.Rules;
 
 namespace Alembic.Plan.Hep;
 

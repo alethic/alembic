@@ -1,6 +1,7 @@
 using Alembic.Algebra;
 using Alembic.Plan;
-using Alembic.Plan.Rules;
+
+using Alembic.Algebra.Convert;
 
 namespace Alembic.Tests.Languages.Image.Rules;
 

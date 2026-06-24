@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 using Alembic.Algebra;
-using Alembic.Plan.Rules;
+using Alembic.Algebra.Convert;
 using Alembic.Plan.Volcano;
 using Alembic.Util;
 using Alembic.Util.Graph;

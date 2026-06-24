@@ -2,7 +2,6 @@ using System.Text.RegularExpressions;
 
 using Alembic.Algebra;
 using Alembic.Plan;
-using Alembic.Plan.Rules;
 using Alembic.Plan.Volcano;
 
 using Alembic.Tests.Languages.Relational;

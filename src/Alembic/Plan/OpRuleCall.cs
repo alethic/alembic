@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 
 using Alembic.Algebra;
 
-namespace Alembic.Plan.Rules;
+namespace Alembic.Plan;
 
 /// <summary>
 /// The context of a single rule match: the ops bound to each operand and <see cref="TransformTo(IOp)"/> —

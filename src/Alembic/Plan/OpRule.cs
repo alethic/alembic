@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 
 using Alembic.Algebra;
 
-namespace Alembic.Plan.Rules;
+namespace Alembic.Plan;
 
 /// <summary>
 /// A transformation rule: a root <see cref="OpRuleOperand"/> selecting the ops it applies to, and the
@@ -228,16 +228,16 @@ public abstract class OpRule
     /// operands in prefix order.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "assignSolveOrder(List<RelOptRuleOperand>)")]
-    static void AssignSolveOrder(ImmutableArray<OpRuleOperand> operands)
+    static void AssignSolveOrder(IReadOnlyList<OpRuleOperand> operands)
     {
         foreach (var operand in operands)
         {
-            operand.SolveOrder = new int[operands.Length];
+            operand.SolveOrder = new int[operands.Count];
             int m = 0;
             for (OpRuleOperand? o = operand; o is not null; o = o.Parent)
                 operand.SolveOrder[m++] = o.OrdinalInRule;
 
-            for (int k = 0; k < operands.Length; k++)
+            for (int k = 0; k < operands.Count; k++)
             {
                 bool exists = false;
                 for (int n = 0; n < m; n++)

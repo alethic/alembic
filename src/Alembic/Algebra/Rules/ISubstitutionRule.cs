@@ -1,4 +1,4 @@
-namespace Alembic.Plan.Rules;
+namespace Alembic.Algebra.Rules;
 
 /// <summary>
 /// Marks a transformation rule as a <em>substitution</em> rule: the equivalent it produces is meant to

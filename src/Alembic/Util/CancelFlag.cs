@@ -1,6 +1,6 @@
 using System.Threading;
 
-namespace Alembic.Plan;
+namespace Alembic.Util;
 
 /// <summary>
 /// A flag for cooperatively cancelling a long-running plan (e.g. on a timeout). A caller requests

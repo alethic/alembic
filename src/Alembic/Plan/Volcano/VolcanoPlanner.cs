@@ -5,7 +5,7 @@ using System.Linq;
 
 using Alembic.Algebra;
 using Alembic.Algebra.Convert;
-using Alembic.Plan.Rules;
+using Alembic.Algebra.Rules;
 using Alembic.Util;
 
 namespace Alembic.Plan.Volcano;

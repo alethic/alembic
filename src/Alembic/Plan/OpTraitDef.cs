@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 
 using Alembic.Algebra;
-using Alembic.Plan.Rules;
+using Alembic.Algebra.Convert;
 using Alembic.Util;
 
 namespace Alembic.Plan;

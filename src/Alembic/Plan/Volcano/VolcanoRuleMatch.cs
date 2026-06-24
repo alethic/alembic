@@ -3,7 +3,6 @@ using System.Collections.Immutable;
 using System.Text;
 
 using Alembic.Algebra;
-using Alembic.Plan.Rules;
 
 namespace Alembic.Plan.Volcano;
 

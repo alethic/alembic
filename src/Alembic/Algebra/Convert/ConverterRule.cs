@@ -1,6 +1,7 @@
 using Alembic.Algebra;
+using Alembic.Plan;
 
-namespace Alembic.Plan.Rules;
+namespace Alembic.Algebra.Convert;
 
 /// <summary>
 /// A rule that converts an op from one trait value to another — most commonly a convention, but any

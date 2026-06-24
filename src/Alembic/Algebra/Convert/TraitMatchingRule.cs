@@ -1,6 +1,7 @@
 using Alembic.Algebra;
+using Alembic.Plan;
 
-namespace Alembic.Plan.Rules;
+namespace Alembic.Algebra.Convert;
 
 /// <summary>
 /// Adapts a converter rule, restricting it to fire only when its single input already carries the
