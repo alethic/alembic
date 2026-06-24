@@ -3,7 +3,7 @@ namespace Alembic;
 /// <summary>
 /// Where an annotated type or member originates.
 /// </summary>
-public enum ProvenanceSource
+enum ProvenanceSource
 {
 
     /// <summary>

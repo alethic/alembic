@@ -11,12 +11,14 @@ namespace Alembic.Algebra.Metadata;
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata")]
 public static class BuiltInMetadata
 {
+
     /// <summary>
     /// Metadata about the cost of evaluating an op, <em>including</em> the cost of its inputs.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.CumulativeCost")]
     public interface CumulativeCost : IMetadata
     {
+
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.CumulativeCost", "DEF")]
         public static readonly MetadataDef Def = MetadataDef.Of(typeof(CumulativeCost), typeof(Handler));
 
@@ -29,6 +31,7 @@ public static class BuiltInMetadata
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.CumulativeCost.Handler", "getCumulativeCost(RelNode, RelMetadataQuery)")]
             IOpCost? GetCumulativeCost(IOp op, OpMetadataQuery mq);
         }
+
     }
 
     /// <summary>
@@ -37,6 +40,7 @@ public static class BuiltInMetadata
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.NonCumulativeCost")]
     public interface NonCumulativeCost : IMetadata
     {
+
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.NonCumulativeCost", "DEF")]
         public static readonly MetadataDef Def = MetadataDef.Of(typeof(NonCumulativeCost), typeof(Handler));
 
@@ -49,6 +53,7 @@ public static class BuiltInMetadata
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.NonCumulativeCost.Handler", "getNonCumulativeCost(RelNode, RelMetadataQuery)")]
             IOpCost? GetNonCumulativeCost(IOp op, OpMetadataQuery mq);
         }
+
     }
 
     /// <summary>
@@ -57,6 +62,7 @@ public static class BuiltInMetadata
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Memory")]
     public interface Memory : IMetadata
     {
+
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Memory", "DEF")]
         public static readonly MetadataDef Def = MetadataDef.Of(typeof(Memory), typeof(Handler));
 
@@ -81,6 +87,7 @@ public static class BuiltInMetadata
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Memory.Handler", "cumulativeMemoryWithinPhaseSplit(RelNode, RelMetadataQuery)")]
             double? CumulativeMemoryWithinPhaseSplit(IOp op, OpMetadataQuery mq);
         }
+
     }
 
     /// <summary>
@@ -89,6 +96,7 @@ public static class BuiltInMetadata
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Parallelism")]
     public interface Parallelism : IMetadata
     {
+
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Parallelism", "DEF")]
         public static readonly MetadataDef Def = MetadataDef.Of(typeof(Parallelism), typeof(Handler));
 
@@ -107,6 +115,7 @@ public static class BuiltInMetadata
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Parallelism.Handler", "splitCount(RelNode, RelMetadataQuery)")]
             int? SplitCount(IOp op, OpMetadataQuery mq);
         }
+
     }
 
     /// <summary>
@@ -116,6 +125,7 @@ public static class BuiltInMetadata
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.LowerBoundCost")]
     public interface LowerBoundCost : IMetadata
     {
+
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.LowerBoundCost", "DEF")]
         public static readonly MetadataDef Def = MetadataDef.Of(typeof(LowerBoundCost), typeof(Handler));
 
@@ -128,5 +138,7 @@ public static class BuiltInMetadata
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.LowerBoundCost.Handler", "getLowerBoundCost(RelNode, RelMetadataQuery, VolcanoPlanner)")]
             IOpCost? GetLowerBoundCost(IOp op, OpMetadataQuery mq, VolcanoPlanner planner);
         }
+
     }
+
 }

@@ -30,7 +30,7 @@ namespace Alembic;
 /// </para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface | AttributeTargets.Enum | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Constructor | AttributeTargets.Field, AllowMultiple = true, Inherited = false)]
-public sealed class ProvenanceAttribute : Attribute
+sealed class ProvenanceAttribute : Attribute
 {
 
     /// <summary>

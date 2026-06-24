@@ -10,6 +10,7 @@ namespace Alembic.Algebra.Metadata;
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.MetadataDef")]
 public sealed class MetadataDef
 {
+
     MetadataDef(Type metadataClass, Type handlerClass)
     {
         MetadataClass = metadataClass;
@@ -24,4 +25,5 @@ public sealed class MetadataDef
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.MetadataDef", "of(Class, Class, Method...)")]
     public static MetadataDef Of(Type metadataClass, Type handlerClass) => new MetadataDef(metadataClass, handlerClass);
+
 }
