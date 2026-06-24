@@ -130,7 +130,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "checkCancel()")]
     public override void CheckCancel()
     {
-        if (CancelFlag.IsCancelRequested)
+        if (CancellationToken.IsCancellationRequested)
             throw new VolcanoTimeoutException();
     }
 

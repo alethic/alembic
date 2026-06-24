@@ -1,60 +1,56 @@
 using System;
+using System.Threading;
 
 using Alembic.Plan;
 using Alembic.Plan.Hep;
 using Alembic.Plan.Volcano;
-using Alembic.Util;
 
 using Xunit;
 
 namespace Alembic.Tests;
 
 /// <summary>
-/// Exercises cooperative cancellation: a caller requests cancel via the planner's
-/// <see cref="CancelFlag"/>, and the planner observes it at <see cref="AbstractOpPlanner.CheckCancel"/>.
-/// The cost-based planner throws a <see cref="VolcanoTimeoutException"/> (which its drivers catch),
-/// while the base planner throws an <see cref="OperationCanceledException"/>.
+/// Exercises cooperative cancellation: a caller supplies a <see cref="CancellationTokenSource"/> through
+/// the planner's <see cref="IContext"/> and cancels it; the planner observes the token at
+/// <see cref="AbstractOpPlanner.CheckCancel"/>. The cost-based planner throws a
+/// <see cref="VolcanoTimeoutException"/> (which its drivers catch); the base planner throws an
+/// <see cref="OperationCanceledException"/>.
 /// </summary>
 public class CancellationTests
 {
 
     [Fact]
-    public void The_volcano_planner_throws_a_timeout_when_cancel_is_requested()
+    public void The_volcano_planner_throws_a_timeout_when_cancellation_is_requested()
     {
-        var planner = new VolcanoPlanner();
+        var cts = new CancellationTokenSource();
+        var planner = new VolcanoPlanner(context: Contexts.Of(cts));
 
-        planner.CheckCancel(); // no cancellation requested yet: does nothing
+        Assert.Equal(cts.Token, planner.CancellationToken);
+        planner.CheckCancel(); // not cancelled yet: does nothing
 
-        planner.CancelFlag.RequestCancel();
+        cts.Cancel();
         Assert.Throws<VolcanoTimeoutException>(() => planner.CheckCancel());
-
-        // The flag can be cleared and reused.
-        planner.CancelFlag.ClearCancel();
-        planner.CheckCancel();
     }
 
     [Fact]
-    public void The_base_planner_throws_a_cancellation_when_cancel_is_requested()
+    public void The_base_planner_throws_a_cancellation_when_cancellation_is_requested()
     {
-        var planner = new HepPlanner(HepProgram.Builder().Build());
+        var cts = new CancellationTokenSource();
+        var planner = new HepPlanner(HepProgram.Builder().Build(), Contexts.Of(cts));
 
         planner.CheckCancel();
 
-        planner.CancelFlag.RequestCancel();
+        cts.Cancel();
         Assert.Throws<OperationCanceledException>(() => planner.CheckCancel());
     }
 
     [Fact]
-    public void A_cancel_flag_supplied_via_the_context_is_the_one_the_planner_uses()
+    public void A_planner_with_no_cancellation_source_never_cancels()
     {
-        var flag = new CancelFlag();
-        var planner = new VolcanoPlanner(context: Contexts.Of(flag));
+        var planner = new VolcanoPlanner();
 
-        Assert.Same(flag, planner.CancelFlag);
-
-        // Cancelling through the externally held flag aborts the planner.
-        flag.RequestCancel();
-        Assert.Throws<VolcanoTimeoutException>(() => planner.CheckCancel());
+        Assert.Equal(CancellationToken.None, planner.CancellationToken);
+        planner.CheckCancel(); // CancellationToken.None is never cancelled
     }
 
 }
