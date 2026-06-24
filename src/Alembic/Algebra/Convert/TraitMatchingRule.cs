@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 using Alembic.Algebra;
 using Alembic.Plan;
@@ -31,6 +32,10 @@ public class TraitMatchingRule : OpRule
     public override string Description => "TraitMatchingRule: " + _converterRule.Description;
 
     /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.TraitMatchingRule", "getOutConvention()")]
+    public override IConvention? OutConvention => _converterRule.OutConvention;
+
+    /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.TraitMatchingRule", "onMatch(RelOptRuleCall)")]
     public override void OnMatch(OpRuleCall call)
     {
@@ -45,6 +50,7 @@ public class TraitMatchingRule : OpRule
     static OpRuleOperand BuildOperand(ConverterRule converterRule)
     {
         var converterOperand = converterRule.GetOperand();
+        Debug.Assert(converterOperand.ChildPolicy == RuleOperandChildPolicy.Any);
         var input = new OpRuleOperand(typeof(IOp), null, static _ => true, RuleOperandChildPolicy.Any, ImmutableArray<OpRuleOperand>.Empty);
         return new OpRuleOperand(converterOperand.MatchedType, converterOperand.Trait, converterOperand.Predicate, RuleOperandChildPolicy.Some, ImmutableArray.Create(input));
     }

@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Alembic.Algebra;
 using Alembic.Plan;
 
@@ -19,11 +21,24 @@ public abstract class ConverterRule : OpRule
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "ConverterRule(Class<? extends RelNode>, RelTrait, RelTrait, String)")]
     protected ConverterRule(IOpTrait source, IOpTrait target)
-        : base(ConvertOperand<IOp>(source))
+        : base(ConvertOperand<IOp>(static _ => true, source))
     {
         Source = source;
         Target = target;
+
+        // Source and target must share a trait dimension.
+        Debug.Assert(source.TraitDef == target.TraitDef);
+
+        // Most sub-classes convert one convention to another, and for them the
+        // Out field is a convenient shortcut to the target convention.
+        Out = target as IConvention;
     }
+
+    /// <summary>
+    /// The target convention, when <see cref="Target"/> is one; otherwise null. A convenient shortcut for
+    /// the common case of converting one convention to another.
+    /// </summary>
+    protected readonly IConvention? Out;
 
     /// <summary>
     /// The trait this rule converts from.
@@ -37,7 +52,10 @@ public abstract class ConverterRule : OpRule
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "getOutTrait()")]
     public IOpTrait Target { get; }
 
+    /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterRule", "getOutConvention()")]
+    public override IConvention? OutConvention => (IConvention)Target;
+
     /// <summary>
     /// The trait dimension this rule converts on (the dimension of <see cref="Source"/> and
     /// <see cref="Target"/>, which share it).

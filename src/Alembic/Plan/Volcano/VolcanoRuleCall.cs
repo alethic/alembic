@@ -42,8 +42,8 @@ public class VolcanoRuleCall : OpRuleCall
     /// <paramref name="operand0"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleCall", "VolcanoRuleCall(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    internal VolcanoRuleCall(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops)
-        : base(planner, operand0, ops, ImmutableDictionary<IOp, IReadOnlyList<IOp>>.Empty)
+    protected VolcanoRuleCall(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs)
+        : base(planner, operand0, ops, nodeInputs)
     {
         _planner = planner;
         Rels = new IOp?[operand0.Rule.Operands.Length];
@@ -77,19 +77,19 @@ public class VolcanoRuleCall : OpRuleCall
 
             // Skip the match if any bound op has gone stale since it was queued: its set was merged away,
             // it was removed from its subset (during a rename), or it has been pruned.
-            foreach (var rel in Rels)
+            foreach (var op in Rels)
             {
-                if (rel is null)
+                if (op is null)
                     continue;
 
-                var subset = _planner.GetSubset(rel);
+                var subset = _planner.GetSubset(op);
                 if (subset is null)
                     return;
 
-                if (subset.Set.EquivalentSet is not null || (!ReferenceEquals(subset, rel) && !subset.Contains(rel)))
+                if (subset.Set.EquivalentSet is not null || (!ReferenceEquals(subset, op) && !subset.Contains(op)))
                     return;
 
-                if (_planner.IsPruned(rel))
+                if (_planner.IsPruned(op))
                     return;
             }
 
@@ -183,7 +183,7 @@ public class VolcanoRuleCall : OpRuleCall
 
             parentOperand = operand;
             var subset = _planner.GetSubsetNonNull(previous);
-            successors = subset.GetParentRels();
+            successors = subset.GetParentOps();
         }
         else
         {
@@ -214,7 +214,7 @@ public class VolcanoRuleCall : OpRuleCall
                             continue;
 
                         var inputSubset = (OpSubset)input;
-                        foreach (var rel in inputSubset.GetRels())
+                        foreach (var rel in inputSubset.GetOps())
                         {
                             if (!duplicates.Add(rel))
                                 // Ignore duplicate ops.
@@ -235,7 +235,7 @@ public class VolcanoRuleCall : OpRuleCall
                     // subset's trait set.
                     successors = subset.GetSubsetsSatisfyingThis();
                 else
-                    successors = subset.GetRels();
+                    successors = subset.GetOps();
             }
             else
             {
@@ -299,7 +299,7 @@ public class VolcanoRuleCall : OpRuleCall
                 }
                 else
                 {
-                    var existing = GetChildRels(previous);
+                    var existing = GetChildOps(previous);
                     var inputs = existing is not null ? new List<IOp>(existing) : new List<IOp>(previous.Children);
                     inputs[operand.OrdinalInParent] = rel;
                     SetChildRels(previous, inputs);

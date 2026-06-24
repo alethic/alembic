@@ -56,6 +56,13 @@ public abstract class OpRuleCall
     IDictionary<IOp, IReadOnlyList<IOp>> _nodeInputs;
 
     /// <summary>
+    /// The recorded inputs of each op matched by an unordered operand, keyed by op. Subclasses read the
+    /// whole map to pass it on when building a derived call or match.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "nodeInputs")]
+    protected IDictionary<IOp, IReadOnlyList<IOp>> NodeInputs => _nodeInputs;
+
+    /// <summary>
     /// This call's stable identity, assigned in creation order.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "id")]
@@ -115,7 +122,7 @@ public abstract class OpRuleCall
     /// are equivalence subsets, not the matched ops); the heuristic planner records the concrete inputs.
     /// </remarks>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "getChildRels(RelNode)")]
-    public IReadOnlyList<IOp>? GetChildRels(IOp op) => _nodeInputs.TryGetValue(op, out var inputs) ? inputs : null;
+    public IReadOnlyList<IOp>? GetChildOps(IOp op) => _nodeInputs.TryGetValue(op, out var inputs) ? inputs : null;
 
     /// <summary>
     /// Records the inputs of <paramref name="op"/> as seen by this call. Only called for an operand

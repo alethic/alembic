@@ -1,5 +1,7 @@
-using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 using Alembic.Algebra;
@@ -23,13 +25,11 @@ internal class VolcanoRuleMatch : VolcanoRuleCall
     /// <paramref name="operand0"/>; throws if any operand is unbound.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "VolcanoRuleMatch(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    internal VolcanoRuleMatch(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops)
-        : base(planner, operand0, ops)
+    internal VolcanoRuleMatch(VolcanoPlanner planner, OpRuleOperand operand0, ImmutableArray<IOp> ops, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs)
+        : base(planner, operand0, ops, nodeInputs)
     {
         // A completed match must have bound an op to every operand.
-        foreach (var op in ops)
-            if (op is null)
-                throw new ArgumentException("A rule match must have an op bound to every operand.", nameof(ops));
+        Debug.Assert(ops.All(op => op is not null));
 
         _digest = ComputeDigest();
     }

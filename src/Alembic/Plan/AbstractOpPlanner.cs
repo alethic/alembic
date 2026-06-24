@@ -148,11 +148,11 @@ public abstract class AbstractOpPlanner : IOpPlanner
     public virtual OpTraitSet EmptyTraitSet => OpTraitSet.CreateEmpty();
 
     /// <summary>
-    /// The cumulative cost of <paramref name="op"/>, via the metadata query. The cost-based planner
-    /// overrides this with its own walk; Alembic ops always supply a cost, so the result is never null.
+    /// The cumulative cost of <paramref name="op"/>, via the metadata query, or <c>null</c> if it cannot
+    /// be determined. The cost-based planner overrides this with its own walk.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getCost(RelNode, RelMetadataQuery)")]
-    public virtual IOpCost GetCost(IOp op, OpMetadataQuery mq) => mq.GetCumulativeCost(op)!;
+    public virtual IOpCost? GetCost(IOp op, OpMetadataQuery mq) => mq.GetCumulativeCost(op);
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "addRule(RelOptRule)")]
@@ -265,16 +265,6 @@ public abstract class AbstractOpPlanner : IOpPlanner
     /// Whether any listener is attached.
     /// </summary>
     protected internal bool HasListeners => _listener is not null;
-
-    /// <summary>
-    /// Notifies listeners that an op has joined an equivalence class (optionally identified by
-    /// <paramref name="equivalenceClass"/>, with <paramref name="isPhysical"/> flagging a physical op).
-    /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "notifyEquivalence(RelNode, Object, boolean)")]
-    protected internal void FireOpEquivalenceFound(IOp op, object? equivalenceClass, bool isPhysical)
-    {
-        _listener?.OpEquivalenceFound(new IPlannerListener.OpEquivalenceEvent(this, op, equivalenceClass, isPhysical));
-    }
 
     /// <summary>
     /// Notifies listeners that a rule is being attempted (before and after).

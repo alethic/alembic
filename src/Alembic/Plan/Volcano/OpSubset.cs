@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
+using System.Runtime.CompilerServices;
 
 using Alembic.Algebra;
 using Alembic.Algebra.Metadata;
@@ -39,14 +41,18 @@ public class OpSubset : AbstractOp
     void ComputeBestCost(VolcanoPlanner planner)
     {
         BestCost = planner.CostFactory.MakeInfiniteCost();
+
         var mq = Cluster.GetMetadataQuery();
-        foreach (var rel in GetRels())
+        foreach (var op in GetOps())
         {
-            var cost = planner.GetCost(rel, mq);
+            var cost = planner.GetCost(op, mq);
+            if (cost is null)
+                continue;
+
             if (cost.IsLessThan(BestCost))
             {
                 BestCost = cost;
-                Best = rel;
+                Best = op;
             }
         }
     }
@@ -101,7 +107,13 @@ public class OpSubset : AbstractOp
         if (Set.Ops.Contains(op))
             return;
 
-        ((AbstractOpPlanner)op.Cluster.Planner).FireOpEquivalenceFound(op, Set.Id, !op.Convention!.Equals(IConvention.None));
+        var planner = (VolcanoPlanner)op.Cluster.Planner;
+        if (planner.Listener is not null)
+        {
+            var @event = new IPlannerListener.OpEquivalenceEvent(planner, op, this, true);
+            planner.Listener.OpEquivalenceFound(@event);
+        }
+
         Set.AddInternal(op);
     }
 
@@ -167,7 +179,11 @@ public class OpSubset : AbstractOp
     /// Disables enforcer (converter) generation for this subset.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "disableEnforcing()")]
-    internal void DisableEnforcing() => _enforceDisabled = true;
+    internal void DisableEnforcing()
+    {
+        Debug.Assert(IsDelivered);
+        _enforceDisabled = true;
+    }
 
     /// <summary>
     /// Whether enforcer generation is disabled for this subset.
@@ -306,7 +322,7 @@ public class OpSubset : AbstractOp
     /// Every member of this subset: the set's ops whose trait set satisfies this subset's.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getRels()")]
-    public IEnumerable<IOp> GetRels()
+    public IEnumerable<IOp> GetOps()
     {
         foreach (var rel in LiveSet.Ops)
             if (rel.Traits.Satisfies(Traits))
@@ -314,10 +330,10 @@ public class OpSubset : AbstractOp
     }
 
     /// <summary>
-    /// As <see cref="GetRels"/>, but as a list.
+    /// As <see cref="GetOps"/>, but as a list.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getRelList()")]
-    public IList<IOp> GetRelList()
+    public IList<IOp> GetOpList()
     {
         var list = new List<IOp>();
         foreach (var rel in LiveSet.Ops)
@@ -412,7 +428,7 @@ public class OpSubset : AbstractOp
     /// The ops one of whose inputs is in this subset (its trait set satisfied by this subset's).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getParentRels()")]
-    public IEnumerable<IOp> GetParentRels()
+    public IEnumerable<IOp> GetParentOps()
     {
         var live = LiveSet;
         var seen = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
@@ -455,7 +471,7 @@ public class OpSubset : AbstractOp
 
         readonly VolcanoPlanner _planner;
 
-        readonly Dictionary<IOp, IOp> _visited = new Dictionary<IOp, IOp>(ReferenceEqualityComparer.Instance);
+        readonly Dictionary<int, IOp> _visited = new Dictionary<int, IOp>();
 
         /// <summary>
         /// Creates a replacer that fires "op chosen" events on <paramref name="planner"/> as it builds.
@@ -473,10 +489,10 @@ public class OpSubset : AbstractOp
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset.CheapestPlanReplacer", "visit(RelNode, int, RelNode)")]
         public IOp Visit(IOp p, int ordinal, IOp? parent)
         {
-            if (_visited.TryGetValue(p, out var prevVisit))
+            var pId = p.Id;
+            if (_visited.TryGetValue(pId, out var prevVisit))
                 return prevVisit;
 
-            var key = p;
             if (p is OpSubset subset)
             {
                 var cheapest = subset.Best;
@@ -491,19 +507,17 @@ public class OpSubset : AbstractOp
 
             var oldInputs = p.Children;
             var inputs = ImmutableArray.CreateBuilder<IOp>(oldInputs.Length);
-            bool changed = false;
             for (int i = 0; i < oldInputs.Length; i++)
             {
                 var input = Visit(oldInputs[i], i, p);
-                if (!ReferenceEquals(input, oldInputs[i]))
-                    changed = true;
-
                 inputs.Add(input);
             }
 
-            var result = changed ? p.Copy(p.Traits, inputs.MoveToImmutable()) : p;
-            _visited[key] = result;
-            return result;
+            if (!inputs.SequenceEqual(oldInputs))
+                p = p.Copy(p.Traits, inputs.ToImmutable());
+
+            _visited[pId] = p;
+            return p;
         }
 
     }
@@ -515,16 +529,38 @@ public class OpSubset : AbstractOp
     public override IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq) => planner.CostFactory.MakeZeroCost();
 
     /// <summary>
-    /// A subset's identity is its set; the trait set is compared by the base. (<see cref="Best"/> is
-    /// mutable optimizer state and is deliberately excluded.)
+    /// A subset is identified by reference: two subsets are structurally equal only if they are the same
+    /// object.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "deepEquals(Object)")]
+    public override bool DeepEquals(IOp? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "deepHashCode()")]
+    public override int DeepHashCode() => RuntimeHelpers.GetHashCode(this);
+
+    /// <summary>
+    /// Not a typical implementation of "explain": it does the work directly rather than gathering terms
+    /// to be rendered later.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "explain(RelWriter)")]
-    public override IOpWriter ExplainTerms(IOpWriter writer)
+    public override void Explain(IOpWriter pw)
     {
-        base.ExplainTerms(writer);
-        writer.Item("subset", Set.Id);
-        return writer;
+        // Not a typical implementation of "explain". We don't gather terms &
+        // values to be printed later. We actually do the work.
+        pw.Item("subset", ToString());
+        var input = (AbstractOp?)global::Alembic.Util.Util.First(Best, GetOriginal());
+        if (input is null)
+            return;
+        input.ExplainTerms(pw);
+        pw.Done(input);
     }
+
+    /// <summary>
+    /// The subset's digest in string form: <c>"RelSubset#" + set.id + '.' + traitSet</c>.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "getDigest()")]
+    public override string GetDigest() => "OpSubset#" + Set.Id + "." + Traits;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "copy(RelTraitSet, List<RelNode>)")]

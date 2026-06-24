@@ -4,39 +4,8 @@ using System.Diagnostics;
 using System.Linq;
 
 using Alembic.Algebra;
-using Alembic.Algebra.Convert;
 
 namespace Alembic.Plan;
-
-/// <summary>
-/// How an operand treats the op's children.
-/// </summary>
-[Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperandChildPolicy")]
-public enum RuleOperandChildPolicy
-{
-
-    /// <summary>
-    /// Matches regardless of the op's children (no child operands are checked).
-    /// </summary>
-    Any,
-
-    /// <summary>
-    /// Matches only an op with no children.
-    /// </summary>
-    Leaf,
-
-    /// <summary>
-    /// Matches the child operands against the op's children positionally (same count, in order).
-    /// </summary>
-    Some,
-
-    /// <summary>
-    /// Each child operand matches any one of the op's children, regardless of position; the op's
-    /// child count is not constrained.
-    /// </summary>
-    Unordered
-
-}
 
 /// <summary>
 /// An op-tree pattern. An op matches an operand when it is an instance of <see cref="MatchedType"/>,
@@ -46,7 +15,7 @@ public enum RuleOperandChildPolicy
 /// against an op's children is performed by the planner as it fires rules.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand")]
-public sealed class OpRuleOperand
+public class OpRuleOperand
 {
 
     /// <summary>
@@ -138,13 +107,6 @@ public sealed class OpRuleOperand
     internal readonly Func<IOp, bool> Predicate;
 
     /// <summary>
-    /// Whether this operand carries the converter-on-converter guard. Set by the converter operand factory,
-    /// it applies the same check as Calcite's <c>ConverterRelOptRuleOperand.matches</c> so a converter rule
-    /// does not match its own output (avoiding an n² effect).
-    /// </summary>
-    internal bool IsConverterOperand { get; init; }
-
-    /// <summary>
     /// How this operand treats the op's children.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "childPolicy")]
@@ -162,14 +124,8 @@ public sealed class OpRuleOperand
     /// are matched separately, by the matcher, per the <see cref="ChildPolicy"/>).
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "matches(RelNode)")]
-    public bool Matches(IOp op)
+    public virtual bool Matches(IOp op)
     {
-        // Don't apply a converter rule to a converter that operates on the same trait dimension —
-        // otherwise we get an n^2 effect (Calcite's ConverterRelOptRuleOperand.matches).
-        if (IsConverterOperand && op is IConverter converter && Rule is ConverterRule rule
-            && ReferenceEquals(rule.TraitDef, converter.TraitDef))
-            return false;
-
         if (!MatchedType.IsInstanceOfType(op))
             return false;
 

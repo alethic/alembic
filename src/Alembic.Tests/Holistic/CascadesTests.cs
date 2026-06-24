@@ -68,8 +68,9 @@ public class CascadesTests
         planner.AddTraitDef(SortednessTraitDef.Instance);
         var cluster = new OpCluster(planner);
         var sorted = Physical.Plus(Sortedness.Sorted);
+        var unsorted = Physical.Plus(Sortedness.Unsorted);
 
-        var filter = new PhysicalFilter(Physical, new PhysicalSource(cluster, Physical, "t"), "x > 5");
+        var filter = new PhysicalFilter(unsorted, new PhysicalSource(cluster, unsorted, "t"), "x > 5");
 
         // Pushing a sorted requirement through the filter yields a sorted filter whose input is required
         // sorted in turn.
@@ -87,8 +88,9 @@ public class CascadesTests
         planner.AddTraitDef(SortednessTraitDef.Instance);
         var cluster = new OpCluster(planner);
         var sorted = Physical.Plus(Sortedness.Sorted);
+        var unsorted = Physical.Plus(Sortedness.Unsorted);
 
-        var filter = new PhysicalFilter(Physical, new PhysicalSource(cluster, Physical, "t"), "x > 5");
+        var filter = new PhysicalFilter(unsorted, new PhysicalSource(cluster, unsorted, "t"), "x > 5");
 
         // Given a sorted input, the filter derives a sorted output.
         var derived = Assert.IsType<PhysicalFilter>(((IPhysicalOp)filter).Derive(sorted, 0));
@@ -139,7 +141,6 @@ public class CascadesTests
         // gains a delivered sorted subset that nobody asked for.
         planner.AddRule(new OfferSortedSource());
         planner.SetRoot(root);
-        planner.SetRoot(planner.ChangeTraits(root, unsorted));
         var best = planner.FindBestPlan();
         _output.WriteLine(PlanUtil.ToString(best));
 

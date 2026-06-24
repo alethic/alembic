@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 
 using Alembic.Algebra;
+using Alembic.Algebra.Convert;
 
 namespace Alembic.Plan;
 
@@ -70,6 +71,12 @@ public abstract class OpRule
     }
 
     /// <summary>
+    /// The convention of the result of firing this rule, null if not known.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "getOutConvention()")]
+    public virtual IConvention? OutConvention => null;
+
+    /// <summary>
     /// Invoked for a matched op; the rule registers equivalents on the call.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "onMatch(RelOptRuleCall)")]
@@ -112,7 +119,7 @@ public abstract class OpRule
     // ~ Operand factories — Calcite's two-layer operand construction: the operand/operandJ builders plus
     // the some/none/any/unordered child-operand lists (all @Deprecated // to be removed before 2.0 in
     // Calcite, superseded by RelRule.Config, which Alembic does not port). ConvertOperand mirrors
-    // convertOperand; its converter-on-converter guard lives on OpRuleOperand (IsConverterOperand).
+    // convertOperand; its converter-on-converter guard lives on the nested ConverterOpRuleOperand.
 
     /// <summary>
     /// Creates an operand matching an op of type <typeparamref name="TOp"/> with the given child operands.
@@ -186,10 +193,10 @@ public abstract class OpRule
     /// — used to match an op needing conversion.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule", "convertOperand(Class, Predicate, RelTrait)")]
-    protected static OpRuleOperand ConvertOperand<TOp>(IOpTrait trait)
+    protected static ConverterOpRuleOperand ConvertOperand<TOp>(Func<IOp, bool> predicate, IOpTrait trait)
         where TOp : IOp
     {
-        return new OpRuleOperand(typeof(TOp), trait, static _ => true, RuleOperandChildPolicy.Any, ImmutableArray<OpRuleOperand>.Empty) { IsConverterOperand = true };
+        return new ConverterOpRuleOperand(typeof(TOp), trait, predicate);
     }
 
     /// <summary>
@@ -287,6 +294,37 @@ public abstract class OpRule
                 if (!exists)
                     operand.SolveOrder[m++] = k;
             }
+        }
+    }
+
+    /// <summary>
+    /// Operand to an instance of the converter rule.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule.ConverterRelOptRuleOperand")]
+    protected class ConverterOpRuleOperand : OpRuleOperand
+    {
+
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule.ConverterRelOptRuleOperand", "ConverterRelOptRuleOperand(Class, RelTrait, Predicate)")]
+        internal ConverterOpRuleOperand(Type clazz, IOpTrait? inTrait, Func<IOp, bool> predicate)
+            : base(clazz, inTrait, predicate, RuleOperandChildPolicy.Any, ImmutableArray<OpRuleOperand>.Empty)
+        {
+        }
+
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRule.ConverterRelOptRuleOperand", "matches(RelNode)")]
+        public override bool Matches(IOp op)
+        {
+            // Don't apply converters to converters that operate
+            // on the same trait dimension -- otherwise we get
+            // an n^2 effect.
+            if (op is IConverter converter)
+            {
+                if (ReferenceEquals(((ConverterRule)Rule).TraitDef, converter.TraitDef))
+                {
+                    return false;
+                }
+            }
+
+            return base.Matches(op);
         }
     }
 

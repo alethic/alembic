@@ -44,7 +44,7 @@ sealed class HepOpVertex : AbstractOp, IDelegatingMetadataOp
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "getMetadataDelegateRel()")]
-    public IOp GetMetadataDelegateRel() => _currentOp;
+    public IOp GetMetadataDelegateOp() => _currentOp;
 
     /// <summary>
     /// Replaces the implementation for this vertex with a new op.

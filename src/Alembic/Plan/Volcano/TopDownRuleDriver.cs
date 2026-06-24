@@ -105,7 +105,7 @@ internal class TopDownRuleDriver : IRuleDriver
         {
             if (subset.ResetTaskState() || explored)
             {
-                foreach (var parentRel in subset.GetParentRels())
+                foreach (var parentRel in subset.GetParentOps())
                     ClearProcessed(_planner.GetSet(parentRel));
 
                 if (ReferenceEquals(subset, _planner.RootSubset))

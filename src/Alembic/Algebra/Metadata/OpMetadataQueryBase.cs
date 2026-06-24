@@ -57,7 +57,7 @@ public abstract class OpMetadataQueryBase
     protected static IOp Delegate(IOp op)
     {
         while (op is IDelegatingMetadataOp delegating)
-            op = delegating.GetMetadataDelegateRel();
+            op = delegating.GetMetadataDelegateOp();
 
         return op;
     }

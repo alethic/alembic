@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 
 using Alembic.Algebra;
@@ -240,13 +241,20 @@ public class VolcanoPlanner : AbstractOpPlanner
     {
         _cluster ??= op.Cluster;
         _root = EnsureRegistered(op, null);
+        EnsureRootConverters();
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "changeTraits(RelNode, RelTraitSet)")]
     public override IOp ChangeTraits(IOp op, OpTraitSet toTraits)
     {
+        Debug.Assert(!op.Traits.Equals(toTraits));
+        Debug.Assert(toTraits.AllSimple());
+
         var subset = EnsureRegistered(op, null);
+        if (subset.Traits.Equals(toTraits))
+            return subset;
+
         return EquivRoot(subset.Set).GetOrCreateSubset(subset.Cluster, toTraits, required: true);
     }
 
@@ -270,6 +278,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "register(RelNode, RelNode)")]
     internal OpSubset Register(IOp op, IOp? equivalent)
     {
+        Debug.Assert(!IsRegistered(op));
         OpSet? set = null;
         if (equivalent is not null)
         {
@@ -332,16 +341,22 @@ public class VolcanoPlanner : AbstractOpPlanner
         if (op is OpSubset subset)
             return RegisterSubset(set, subset);
 
+        Debug.Assert(!IsRegistered(op));
+        if (!ReferenceEquals(op.Cluster.Planner, this))
+            throw new InvalidOperationException($"Op {op} belongs to a different planner than is currently being used.");
+
         // An op must implement the interface its convention requires; a converter is exempt, since it
         // exists to bridge conventions.
         if (op is not IConverter && !op.Convention.Interface.IsInstanceOfType(op))
             throw new InvalidOperationException($"Op '{op.GetType().Name}' is not an instance of the '{op.Convention.Interface.Name}' interface required by convention '{op.Convention}'.");
+        if (op.Traits.Count != _traitDefs.Count)
+            throw new InvalidOperationException($"Op {op} does not have the correct number of traits: {op.Traits.Count} != {_traitDefs.Count}.");
 
         // Make sure the children are registered first, replacing each with its subset.
         op = op.OnRegister(this);
 
         // If an equivalent expression already exists, return the set it belongs to.
-        if (_digestToOp.TryGetValue(op.GetDigest(), out var equivExp))
+        if (_digestToOp.TryGetValue(op.GetOpDigest(), out var equivExp))
         {
             if (ReferenceEquals(equivExp, op))
                 // The same op is already registered, so return its subset.
@@ -368,7 +383,7 @@ public class VolcanoPlanner : AbstractOpPlanner
                 // existing expression.
                 if (FixUpInputs(op))
                 {
-                    var digest = op.GetDigest();
+                    var digest = op.GetOpDigest();
                     var equivOp = _digestToOp.GetValueOrDefault(digest);
                     if (equivOp != op && equivOp is not null)
                     {
@@ -402,9 +417,9 @@ public class VolcanoPlanner : AbstractOpPlanner
         var added = AddOpToSet(op, set);
 
         // putIfAbsent: only the first op seen for this digest owns the mapping.
-        var firstForDigest = !_digestToOp.ContainsKey(op.GetDigest());
+        var firstForDigest = !_digestToOp.ContainsKey(op.GetOpDigest());
         if (firstForDigest)
-            _digestToOp[op.GetDigest()] = op;
+            _digestToOp[op.GetOpDigest()] = op;
 
         // The op may have been registered while we recursively registered its children. If so, done.
         if (!firstForDigest)
@@ -439,7 +454,20 @@ public class VolcanoPlanner : AbstractOpPlanner
     {
         var subset = set.Add(op);
         _opToSubset[op] = subset;
-        PropagateCostImprovements(op);
+
+        // While a tree of ops is being registered, sometimes ops' costs improve and the subset doesn't
+        // hear about it. You can end up with a subset with a single op of cost 99 which thinks its best
+        // cost is 100. We think this happens because the back-links to parents are not established. So,
+        // give the subset another chance to figure out its cost.
+        try
+        {
+            PropagateCostImprovements(op);
+        }
+        catch (CyclicMetadataException)
+        {
+            // ignore
+        }
+
         _ruleDriver.OnProduce(op, subset);
         return subset;
     }
@@ -452,7 +480,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "reregister(RelSet, RelNode)")]
     internal void ReRegister(OpSet set, IOp op)
     {
-        if (_digestToOp.TryGetValue(op.GetDigest(), out var equiv) && !ReferenceEquals(equiv, op))
+        if (_digestToOp.TryGetValue(op.GetOpDigest(), out var equiv) && !ReferenceEquals(equiv, op))
         {
             CheckPruned(equiv, op);
             return;
@@ -469,48 +497,68 @@ public class VolcanoPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "propagateCostImprovements(RelNode)")]
     internal void PropagateCostImprovements(IOp op)
     {
-        // A best-first worklist: ops whose cost may have improved, processed cheapest-first. The cost
-        // for each op lives in the map (read from there, not the heap); the heap only orders the work.
-        var propagateOps = new Dictionary<IOp, IOpCost>(ReferenceEqualityComparer.Instance);
-        var propagateHeap = new PriorityQueue<IOp, IOpCost>(Comparer<IOpCost>.Create(
-            (a, b) => a.IsLessThan(b) ? -1 : b.IsLessThan(a) ? 1 : 0));
-
         var mq = op.Cluster.GetMetadataQuery();
+        var propagateOps = new Dictionary<IOp, IOpCost>(ReferenceEqualityComparer.Instance);
+        var propagateHeap = new PriorityQueue<IOp>(Comparer<IOp>.Create((o1, o2) =>
+        {
+            var c1 = propagateOps.TryGetValue(o1, out var v1) ? v1 : null;
+            var c2 = propagateOps.TryGetValue(o2, out var v2) ? v2 : null;
+            if (c1 is null)
+            {
+                return c2 is null ? 0 : -1;
+            }
+            if (c2 is null)
+            {
+                return 1;
+            }
+            if (CostEquals(c1, c2))
+            {
+                return 0;
+            }
+            else if (c1.IsLessThan(c2))
+            {
+                return -1;
+            }
+            return 1;
+        }));
+        propagateOps[op] = GetCostOrInfinite(op, mq);
+        propagateHeap.Offer(op);
 
-        propagateOps[op] = GetCost(op, mq);
-        propagateHeap.Enqueue(op, propagateOps[op]);
-
-        while (propagateHeap.TryDequeue(out var current, out _))
+        IOp? current;
+        while ((current = propagateHeap.Poll()) is not null)
         {
             var cost = propagateOps[current];
-
             foreach (var subset in GetSubsetNonNull(current).Set.Subsets)
             {
                 if (!current.Traits.Satisfies(subset.Traits))
+                {
                     continue;
-
-                // Not the current best and not cheaper than it → no change.
+                }
                 if (!ReferenceEquals(current, subset.Best) && !cost.IsLessThan(subset.BestCost))
+                {
                     continue;
-
-                // Already the best at the same cost → nothing to do.
+                }
                 if (ReferenceEquals(current, subset.Best) && CostEquals(cost, subset.BestCost))
+                {
                     continue;
-
+                }
+                // (Calcite increments subset.timestamp here for the legacy CachingRelMetadataProvider, which is unported — the per-query cache is invalidated via ClearCache instead.)
                 subset.BestCost = cost;
                 subset.Best = current;
-
+                mq.ClearCache(subset);
                 foreach (var parent in subset.GetParents())
                 {
-                    var newCost = GetCost(parent, mq);
-                    if (!propagateOps.TryGetValue(parent, out var existingCost) || newCost.IsLessThan(existingCost))
+                    mq.ClearCache(parent);
+                    var newCost = GetCostOrInfinite(parent, mq);
+                    var existed = propagateOps.TryGetValue(parent, out var existingCost);
+                    if (!existed || newCost.IsLessThan(existingCost!))
                     {
                         propagateOps[parent] = newCost;
-
-                        // The reference removes the stale heap entry before re-offering; .NET's PriorityQueue
-                        // has no remove, so the stale (higher-cost) entry stays and is harmlessly skipped when
-                        // polled — the cost is read from the map, so re-polling an op is a no-op.
-                        propagateHeap.Enqueue(parent, newCost);
+                        if (existed)
+                        {
+                            propagateHeap.Remove(parent); // Cost reduced — force the heap to adjust ordering
+                        }
+                        propagateHeap.Offer(parent);
                     }
                 }
             }
@@ -519,9 +567,20 @@ public class VolcanoPlanner : AbstractOpPlanner
 
     static bool CostEquals(IOpCost a, IOpCost b) => !a.IsLessThan(b) && !b.IsLessThan(a);
 
+    /// <summary>
+    /// The cost of <paramref name="op"/>, or the infinite cost when <see cref="GetCost"/> returns
+    /// <c>null</c> (a cost could not be determined).
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getCostOrInfinite(RelNode, RelMetadataQuery)")]
+    IOpCost GetCostOrInfinite(IOp op, OpMetadataQuery mq)
+    {
+        var cost = GetCost(op, mq);
+        return cost is null ? InfiniteCost : cost;
+    }
+
     /// <inheritdoc/>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getCost(RelNode, RelMetadataQuery)")]
-    public override IOpCost GetCost(IOp op, OpMetadataQuery mq)
+    public override IOpCost? GetCost(IOp op, OpMetadataQuery mq)
     {
         if (op is OpSubset subset)
             return subset.BestCost;
@@ -530,15 +589,23 @@ public class VolcanoPlanner : AbstractOpPlanner
             && op.Convention.Equals(Convention.None))
             return CostFactory.MakeInfiniteCost();
 
-        // The op's own cost flows through the metadata query (so it is cached); Alembic ops always
-        // supply one, so it is never null.
-        var cost = mq.GetNonCumulativeCost(op)!;
+        // The op's own cost flows through the metadata query (so it is cached).
+        var cost = mq.GetNonCumulativeCost(op);
+        if (cost is null)
+            return null;
+
         if (!ZeroCost.IsLessThan(cost))
             // cost must be positive, so nudge it
             cost = CostFactory.MakeTinyCost();
 
         foreach (var child in op.Children)
-            cost = cost.Plus(GetCost(child, mq));
+        {
+            var inputCost = GetCost(child, mq);
+            if (inputCost is null)
+                return null;
+
+            cost = cost.Plus(inputCost);
+        }
 
         return cost;
     }
@@ -697,7 +764,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     {
         var root = _root!;
         var subsets = new HashSet<OpSubset>();
-        foreach (var op in root.GetRels())
+        foreach (var op in root.GetOps())
         {
             if (op is AbstractConverter converter && !_topDownOpt)
                 subsets.Add((OpSubset)converter.Input);
@@ -811,7 +878,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     /// absorbed). The C# analog of the upstream package-private <c>allSets.remove</c>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "allSets")]
-    internal void RemoveSet(OpSet set) => _allSets.Remove(set);
+    internal bool RemoveSet(OpSet set) => _allSets.Remove(set);
 
     /// <summary>
     /// Records the subset an op now belongs to (called by <see cref="OpSet.MergeWith"/> as it moves
@@ -849,7 +916,7 @@ public class VolcanoPlanner : AbstractOpPlanner
 
         if (changeCount > 0)
         {
-            _digestToOp.Remove(op.GetDigest());
+            _digestToOp.Remove(op.GetOpDigest());
             for (int i = 0; i < inputs.Length; i++)
                 op.ReplaceInput(i, newInputs[i]);
 
@@ -871,7 +938,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     {
         if (FixUpInputs(op))
         {
-            var newDigest = op.GetDigest();
+            var newDigest = op.GetOpDigest();
             _digestToOp.TryGetValue(newDigest, out var equiv);
             _digestToOp[newDigest] = op;
             if (equiv is not null)

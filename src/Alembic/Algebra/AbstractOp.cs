@@ -71,7 +71,7 @@ public abstract class AbstractOp : IOp
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "explain(RelWriter)")]
-    public void Explain(IOpWriter writer)
+    public virtual void Explain(IOpWriter writer)
     {
         ExplainTerms(writer).Done(this);
     }
@@ -107,10 +107,16 @@ public abstract class AbstractOp : IOp
     /// This op's kept digest. Returning the same instance lets the planner reuse its cached hash.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getRelDigest()")]
-    public IOpDigest GetDigest()
+    public IOpDigest GetOpDigest()
     {
         return _digest;
     }
+
+    /// <summary>
+    /// This op's digest in string form: the object digest's rendering.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getDigest()")]
+    public virtual string GetDigest() => GetOpDigest().ToString();
 
     /// <summary>
     /// Discards this op's cached digest, so it is recomputed on next use.
@@ -119,6 +125,16 @@ public abstract class AbstractOp : IOp
     public void RecomputeDigest()
     {
         _digest.Clear();
+    }
+
+    /// <summary>
+    /// This op's string form: <c>"rel#" + id + ':' + getDigest()</c>, where the digest string is
+    /// <see cref="GetDigest"/>'s rendering.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "toString()")]
+    public override string ToString()
+    {
+        return "rel#" + Id + ":" + GetDigest();
     }
 
     /// <inheritdoc />

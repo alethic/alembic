@@ -8,9 +8,11 @@ namespace Alembic.Algebra.Metadata;
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.DelegatingMetadataRel")]
 public interface IDelegatingMetadataOp
 {
+
     /// <summary>
     /// Returns the underlying op that metadata requests should be delegated to.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.DelegatingMetadataRel", "getMetadataDelegateRel()")]
-    IOp GetMetadataDelegateRel();
+    IOp GetMetadataDelegateOp();
+
 }

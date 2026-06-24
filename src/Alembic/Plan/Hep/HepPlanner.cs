@@ -108,11 +108,12 @@ public class HepPlanner : AbstractOpPlanner
     {
         _rootOp = op;
 
-        // initRelToVertexCache quickly skips common (shared) nodes before traversing their inputs.
-        var initRelToVertexCache = _largePlanMode && !_noDag
+        // initOpToVertexCache quickly skips common (shared) nodes before traversing their inputs.
+        var initOpToVertexCache = _largePlanMode && !_noDag
             ? new Dictionary<IOp, HepOpVertex>(ReferenceEqualityComparer.Instance)
             : null;
-        _root = AddOpToGraph(op, initRelToVertexCache);
+
+        _root = AddOpToGraph(op, initOpToVertexCache);
     }
 
     /// <inheritdoc />
@@ -311,10 +312,10 @@ public class HepPlanner : AbstractOpPlanner
     }
 
     /// <summary>
-    /// Executes a <see cref="HepInstruction.CommonRelSubExprRules"/> instruction.
+    /// Executes a <see cref="HepInstruction.CommonOpSubExprRules"/> instruction.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "executeCommonRelSubExprRules(HepInstruction.CommonRelSubExprRules, HepInstruction.CommonRelSubExprRules.State)")]
-    internal void ExecuteCommonRelSubExprRules(HepInstruction.CommonRelSubExprRules instruction, HepInstruction.CommonRelSubExprRules.State state)
+    internal void ExecuteCommonOpSubExprRules(HepInstruction.CommonOpSubExprRules instruction, HepInstruction.CommonOpSubExprRules.State state)
     {
         if (state.RuleSet is null)
         {
@@ -522,15 +523,15 @@ public class HepPlanner : AbstractOpPlanner
         var boundOps = bindings.ToImmutableArray();
 
         // Cache the fired rule before constructing a HepRuleCall.
-        ImmutableIntList? relIds = null;
+        ImmutableIntList? opIds = null;
         if (_enableFiredRulesCache)
         {
             var ids = new int[bindings.Count];
             for (int i = 0; i < bindings.Count; i++)
                 ids[i] = bindings[i].Id;
 
-            relIds = ImmutableIntList.Of(ids);
-            if (_firedRulesCache.Get(relIds).Contains(rule))
+            opIds = ImmutableIntList.Of(ids);
+            if (_firedRulesCache.Get(opIds).Contains(rule))
                 return null;
         }
 
@@ -544,11 +545,11 @@ public class HepPlanner : AbstractOpPlanner
         rule.OnMatch(call);
         FireRuleAttempted(call, false);
 
-        if (relIds is not null)
+        if (opIds is not null)
         {
-            _firedRulesCache.Put(relIds, rule);
-            for (int i = 0; i < relIds.Count; i++)
-                _firedRulesCacheIndex.Put(relIds.GetInt(i), relIds);
+            _firedRulesCache.Put(opIds, rule);
+            for (int i = 0; i < opIds.Count; i++)
+                _firedRulesCacheIndex.Put(opIds.GetInt(i), opIds);
         }
 
         if (call.Results.Count > 0)
@@ -563,11 +564,11 @@ public class HepPlanner : AbstractOpPlanner
         var outTrait = converter.Target;
         foreach (var parent in Graphs.PredecessorListOf(_graph, vertex))
         {
-            var parentRel = parent.CurrentOp;
-            if (parentRel is IConverter)
+            var parentOp = parent.CurrentOp;
+            if (parentOp is IConverter)
                 continue; // We don't support converter chains.
 
-            if (parentRel.Traits.Contains(outTrait))
+            if (parentOp.Traits.Contains(outTrait))
                 return true; // This parent wants the traits the converter produces.
         }
 
@@ -597,29 +598,32 @@ public class HepPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "applyTransformationResults(HepRelVertex, HepRuleCall, RelTrait)")]
     HepOpVertex ApplyTransformationResults(HepOpVertex vertex, HepRuleCall call, IOpTrait? parentTrait)
     {
-        IOp? bestRel;
+        IOp? bestOp;
         if (call.Results.Count == 1)
         {
-            bestRel = call.Results[0];
+            bestOp = call.Results[0];
         }
         else
         {
-            bestRel = null;
+            bestOp = null;
             IOpCost? bestCost = null;
             var mq = call.GetMetadataQuery();
             foreach (var rel in call.Results)
             {
                 var thisCost = GetCost(rel, mq);
-                if (bestRel is null || thisCost.IsLessThan(bestCost!))
+                if (thisCost is null)
+                    continue;
+
+                if (bestOp is null || thisCost.IsLessThan(bestCost!))
                 {
-                    bestRel = rel;
+                    bestOp = rel;
                     bestCost = thisCost;
                 }
             }
         }
 
         ++_nTransformations;
-        FireRuleProductionSucceeded(call, bestRel!, before: true);
+        FireRuleProductionSucceeded(call, bestOp!, before: true);
 
         // Snapshot the parents before adding the result, so contraction only re-points existing parents,
         // not new ones (which would create loops). Filter by trait when this is a converter rule.
@@ -639,7 +643,7 @@ public class HepPlanner : AbstractOpPlanner
             parents.Add(parent);
         }
 
-        var newVertex = AddOpToGraph(bestRel!, null);
+        var newVertex = AddOpToGraph(bestOp!, null);
         var garbage = new HashSet<HepOpVertex>();
 
         // The new vertex may already be one of the parents (common subexpression); treat that as a nop
@@ -655,7 +659,7 @@ public class HepPlanner : AbstractOpPlanner
         else if (HasListeners)
             CollectGarbage();
 
-        FireRuleProductionSucceeded(call, bestRel!, before: false);
+        FireRuleProductionSucceeded(call, bestOp!, before: false);
 
         return newVertex;
     }
@@ -673,39 +677,39 @@ public class HepPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "addRelToGraph(RelNode, IdentityHashMap<RelNode, HepRelVertex>)")]
-    HepOpVertex AddOpToGraph(IOp rel, Dictionary<IOp, HepOpVertex>? initRelToVertexCache)
+    HepOpVertex AddOpToGraph(IOp op, Dictionary<IOp, HepOpVertex>? initOpToVertexCache)
     {
-        if (rel is HepOpVertex existing && _graph.VertexSet.Contains(existing))
+        if (op is HepOpVertex existing && _graph.VertexSet.Contains(existing))
             return existing;
 
         // Fast equiv vertex for set-root, before traversing children (skips shared subexpressions).
-        if (initRelToVertexCache is not null && initRelToVertexCache.TryGetValue(rel, out var cached))
+        if (initOpToVertexCache is not null && initOpToVertexCache.TryGetValue(op, out var cached))
             return cached;
 
         // Recursively add children, replacing this op's inputs with their vertices.
-        var newInputs = new List<IOp>(rel.Children.Length);
-        foreach (var input in rel.Children)
-            newInputs.Add(AddOpToGraph(input, initRelToVertexCache));
+        var newInputs = new List<IOp>(op.Children.Length);
+        foreach (var input in op.Children)
+            newInputs.Add(AddOpToGraph(input, initOpToVertexCache));
 
-        if (!ShallowEqual(rel.Children, newInputs))
-            rel = rel.Copy(rel.Traits, newInputs.ToImmutableArray());
+        if (!ShallowEqual(op.Children, newInputs))
+            op = op.Copy(op.Traits, newInputs.ToImmutableArray());
 
         // Compute the digest the first time we add to the DAG, otherwise a common subexpression can't be
         // found for the equivalent-vertex lookup below.
-        rel.RecomputeDigest();
+        op.RecomputeDigest();
 
-        if (!_noDag && _mapDigestToVertex.TryGetValue(rel.GetDigest(), out var equivVertex))
+        if (!_noDag && _mapDigestToVertex.TryGetValue(op.GetOpDigest(), out var equivVertex))
             return equivVertex; // Use the existing equivalent vertex.
 
-        var newVertex = new HepOpVertex(rel);
+        var newVertex = new HepOpVertex(op);
         _graph.AddVertex(newVertex);
-        UpdateVertex(newVertex, rel);
+        UpdateVertex(newVertex, op);
 
-        foreach (var input in rel.Children)
+        foreach (var input in op.Children)
             _graph.AddEdge(newVertex, (HepOpVertex)input);
 
-        if (initRelToVertexCache is not null)
-            initRelToVertexCache[rel] = newVertex;
+        if (initOpToVertexCache is not null)
+            initOpToVertexCache[op] = newVertex;
 
         _nTransformations++;
         return newVertex;
@@ -717,21 +721,21 @@ public class HepPlanner : AbstractOpPlanner
         if (ReferenceEquals(preservedVertex, discardedVertex))
             return;
 
-        var rel = preservedVertex.CurrentOp;
-        UpdateVertex(preservedVertex, rel);
+        var op = preservedVertex.CurrentOp;
+        UpdateVertex(preservedVertex, op);
 
         // Update specified parents of discardedVertex.
         foreach (var parent in parents)
         {
-            var parentRel = parent.CurrentOp;
-            var inputs = parentRel.Children;
+            var parentOp = parent.CurrentOp;
+            var inputs = parentOp.Children;
             for (int i = 0; i < inputs.Length; i++)
             {
                 var child = inputs[i];
                 if (!ReferenceEquals(child, discardedVertex))
                     continue;
 
-                parentRel.ReplaceInput(i, preservedVertex);
+                parentOp.ReplaceInput(i, preservedVertex);
             }
 
             ClearCache(parent);
@@ -740,7 +744,7 @@ public class HepPlanner : AbstractOpPlanner
             if (!_noDag && _largePlanMode)
             {
                 // Recursive merge parent path
-                if (_mapDigestToVertex.TryGetValue(parentRel.GetDigest(), out var addedVertex)
+                if (_mapDigestToVertex.TryGetValue(parentOp.GetOpDigest(), out var addedVertex)
                     && !ReferenceEquals(addedVertex, parent))
                 {
                     // contractVertices will change predecessorList
@@ -751,7 +755,7 @@ public class HepPlanner : AbstractOpPlanner
             }
 
             _graph.AddEdge(parent, preservedVertex);
-            UpdateVertex(parent, parentRel);
+            UpdateVertex(parent, parentOp);
         }
 
         // We don't remove discardedVertex now (it may still be reachable from preservedVertex); garbage
@@ -788,18 +792,18 @@ public class HepPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "updateVertex(HepRelVertex, RelNode)")]
-    void UpdateVertex(HepOpVertex vertex, IOp rel)
+    void UpdateVertex(HepOpVertex vertex, IOp op)
     {
-        if (!ReferenceEquals(rel, vertex.CurrentOp))
+        if (!ReferenceEquals(op, vertex.CurrentOp))
             FireOpDiscarded(vertex.CurrentOp);
 
-        var oldKey = vertex.CurrentOp.GetDigest();
+        var oldKey = vertex.CurrentOp.GetOpDigest();
         if (_mapDigestToVertex.TryGetValue(oldKey, out var mapped) && ReferenceEquals(mapped, vertex))
             _mapDigestToVertex.Remove(oldKey);
 
-        _mapDigestToVertex[rel.GetDigest()] = vertex;
-        if (!ReferenceEquals(rel, vertex.CurrentOp))
-            vertex.ReplaceOp(rel);
+        _mapDigestToVertex[op.GetOpDigest()] = vertex;
+        if (!ReferenceEquals(op, vertex.CurrentOp))
+            vertex.ReplaceOp(op);
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "buildFinalPlan(HepRelVertex)")]
@@ -808,10 +812,10 @@ public class HepPlanner : AbstractOpPlanner
         if (memo.TryGetValue(vertex, out var done))
             return done;
 
-        var rel = vertex.CurrentOp;
-        FireOpChosen(rel);
+        var op = vertex.CurrentOp;
+        FireOpChosen(op);
 
-        var children = rel.Children;
+        var children = op.Children;
         ImmutableArray<IOp>.Builder? builder = null;
         for (int i = 0; i < children.Length; i++)
         {
@@ -822,7 +826,7 @@ public class HepPlanner : AbstractOpPlanner
             }
         }
 
-        var result = builder is null ? rel : rel.Copy(rel.Traits, builder.ToImmutable());
+        var result = builder is null ? op : op.Copy(op.Traits, builder.ToImmutable());
         memo[vertex] = result;
         return result;
     }
@@ -835,8 +839,8 @@ public class HepPlanner : AbstractOpPlanner
         if (ReferenceEquals(vertex, _root) || !_graph.VertexSet.Contains(vertex) || _graph.GetInwardEdges(vertex).Count != 0)
             return;
 
-        var rel = vertex.CurrentOp;
-        FireOpDiscarded(rel);
+        var op = vertex.CurrentOp;
+        FireOpDiscarded(op);
 
         var outVertices = new List<HepOpVertex>();
         foreach (var edge in _graph.GetOutwardEdges(vertex))
@@ -846,13 +850,13 @@ public class HepPlanner : AbstractOpPlanner
             _graph.RemoveEdge(vertex, child);
 
         _graph.RemoveAllVertices(new[] { vertex });
-        _mapDigestToVertex.Remove(rel.GetDigest());
+        _mapDigestToVertex.Remove(op.GetOpDigest());
 
         foreach (var child in outVertices)
             TryCleanVertices(child);
 
         if (_enableFiredRulesCache)
-            RemoveFiredRules(rel);
+            RemoveFiredRules(op);
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "collectGarbage(Set<HepRelVertex>)")]
@@ -894,7 +898,7 @@ public class HepPlanner : AbstractOpPlanner
 
         foreach (var vertex in sweepSet)
         {
-            var key = vertex.CurrentOp.GetDigest();
+            var key = vertex.CurrentOp.GetOpDigest();
             if (_mapDigestToVertex.TryGetValue(key, out var mapped) && sweepSet.Contains(mapped))
                 _mapDigestToVertex.Remove(key);
         }
@@ -904,12 +908,12 @@ public class HepPlanner : AbstractOpPlanner
                 RemoveFiredRules(vertex.CurrentOp);
     }
 
-    void RemoveFiredRules(IOp rel)
+    void RemoveFiredRules(IOp op)
     {
-        foreach (var relIds in _firedRulesCacheIndex.Get(rel.Id))
-            _firedRulesCache.RemoveAll(relIds);
+        foreach (var opIds in _firedRulesCacheIndex.Get(op.Id))
+            _firedRulesCache.RemoveAll(opIds);
 
-        _firedRulesCacheIndex.RemoveAll(rel.Id);
+        _firedRulesCacheIndex.RemoveAll(op.Id);
     }
 
 
@@ -928,7 +932,7 @@ public class HepPlanner : AbstractOpPlanner
                 return false;
 
         bindings.Add(op);
-        var childRels = op.Children;
+        var childOps = op.Children;
 
         switch (operand.ChildPolicy)
         {
@@ -941,9 +945,9 @@ public class HepPlanner : AbstractOpPlanner
                 foreach (var childOperand in operand.Children)
                 {
                     var match = false;
-                    foreach (var childRel in childRels)
+                    foreach (var childOp in childOps)
                     {
-                        match = MatchOperand(childOperand, ((HepOpVertex)childRel).CurrentOp, bindings, nodeChildren);
+                        match = MatchOperand(childOperand, ((HepOpVertex)childOp).CurrentOp, bindings, nodeChildren);
                         if (match)
                             break;
                     }
@@ -952,19 +956,20 @@ public class HepPlanner : AbstractOpPlanner
                         return false;
                 }
 
-                var children = new List<IOp>(childRels.Length);
-                foreach (var childRel in childRels)
-                    children.Add(((HepOpVertex)childRel).CurrentOp);
+                var children = new List<IOp>(childOps.Length);
+                foreach (var childOp in childOps)
+                    children.Add(((HepOpVertex)childOp).CurrentOp);
+
                 nodeChildren[op] = children;
                 return true;
 
             default:
                 int n = operand.Children.Length;
-                if (childRels.Length < n)
+                if (childOps.Length < n)
                     return false;
 
                 for (int i = 0; i < n; i++)
-                    if (!MatchOperand(operand.Children[i], ((HepOpVertex)childRels[i]).CurrentOp, bindings, nodeChildren))
+                    if (!MatchOperand(operand.Children[i], ((HepOpVertex)childOps[i]).CurrentOp, bindings, nodeChildren))
                         return false;
 
                 return true;

@@ -1,3 +1,4 @@
+using Alembic.Algebra.Metadata;
 using Alembic.Plan;
 
 namespace Alembic.Algebra.Convert;
@@ -33,5 +34,12 @@ public abstract class ConverterImpl : SingleOp, IConverter
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.Converter", "getInput()")]
     public IOp Input => Child;
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.convert.ConverterImpl", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
+    public override IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq)
+    {
+        return planner.CostFactory.MakeCost(0, 0);
+    }
 
 }

@@ -100,7 +100,7 @@ public class HepProgramBuilder
     public HepProgramBuilder AddCommonRelSubExprInstruction()
     {
         Check(_group < 0);
-        return AddInstruction(new HepInstruction.CommonRelSubExprRules());
+        return AddInstruction(new HepInstruction.CommonOpSubExprRules());
     }
 
     /// <summary>

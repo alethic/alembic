@@ -176,7 +176,7 @@ public abstract class HepInstruction
     /// <see cref="ICommonSubExprRule"/>s to them.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules")]
-    internal sealed class CommonRelSubExprRules : HepInstruction
+    internal sealed class CommonOpSubExprRules : HepInstruction
     {
 
         /// <inheritdoc/>
@@ -184,12 +184,12 @@ public abstract class HepInstruction
         internal override HepState Prepare(PrepareContext px) => new State(px, this);
 
         /// <summary>
-        /// Runtime state for <see cref="CommonRelSubExprRules"/>.
+        /// Runtime state for <see cref="CommonOpSubExprRules"/>.
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules.State")]
         internal sealed class State : HepState
         {
-            internal readonly CommonRelSubExprRules Instruction;
+            internal readonly CommonOpSubExprRules Instruction;
 
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules.State.ruleSet")]
             // Insertion-ordered (Calcite's ruleSet is a LinkedHashSet) so rule application order is
@@ -200,11 +200,11 @@ public abstract class HepInstruction
             /// Creates the state for <paramref name="instruction"/>.
             /// </summary>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules.State", "State(PrepareContext)")]
-            internal State(PrepareContext px, CommonRelSubExprRules instruction) : base(px) => Instruction = instruction;
+            internal State(PrepareContext px, CommonOpSubExprRules instruction) : base(px) => Instruction = instruction;
 
             /// <inheritdoc/>
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepInstruction.CommonRelSubExprRules.State", "execute()")]
-            internal override void Execute() => Planner.ExecuteCommonRelSubExprRules(Instruction, this);
+            internal override void Execute() => Planner.ExecuteCommonOpSubExprRules(Instruction, this);
         }
 
     }

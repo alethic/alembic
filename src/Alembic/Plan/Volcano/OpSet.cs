@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 
 using Alembic.Algebra;
 using Alembic.Algebra.Convert;
@@ -107,18 +108,17 @@ internal class OpSet
     }
 
     /// <summary>
-    /// Returns the subset for <paramref name="traits"/>, creating and registering it if absent.
+    /// Notifies the planner's listener that <paramref name="op"/> has joined this set's equivalence class.
     /// </summary>
-    internal OpSubset GetOrCreateSubset(OpCluster cluster, OpTraitSet traits)
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "postEquivalenceEvent(VolcanoPlanner, RelNode)")]
+    void PostEquivalenceEvent(VolcanoPlanner planner, IOp op)
     {
-        var subset = GetSubset(traits);
-        if (subset is null)
+        var listener = planner.Listener;
+        if (listener is not null)
         {
-            subset = new OpSubset(cluster, this, traits);
-            Subsets.Add(subset);
+            var @event = new IPlannerListener.OpEquivalenceEvent(planner, op, "equivalence class " + Id, false);
+            listener.OpEquivalenceFound(@event);
         }
-
-        return subset;
     }
 
     /// <summary>
@@ -130,13 +130,20 @@ internal class OpSet
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "getOrCreateSubset(RelOptCluster, RelTraitSet, boolean)")]
     internal OpSubset GetOrCreateSubset(OpCluster cluster, OpTraitSet traits, bool required)
     {
+        var planner = (VolcanoPlanner)cluster.Planner;
         var needsConverter = false;
         var subset = GetSubset(traits);
         if (subset is null)
         {
             needsConverter = true;
             subset = new OpSubset(cluster, this, traits);
+
+            // Need to first add to the set before adding the abstract converters (for others->subset),
+            // since otherwise during register() the planner will try to add this subset again.
             Subsets.Add(subset);
+
+            if (planner.Listener is not null)
+                PostEquivalenceEvent(planner, subset);
         }
         else if ((required && !subset.IsRequired) || (!required && !subset.IsDelivered))
         {
@@ -151,7 +158,7 @@ internal class OpSet
             subset.SetDelivered();
 
         if (needsConverter)
-            AddConverters(subset, required, useAbstractConverter: !((VolcanoPlanner)cluster.Planner).TopDownOpt);
+            AddConverters(subset, required, useAbstractConverter: !planner.TopDownOpt);
 
         return subset;
     }
@@ -186,6 +193,7 @@ internal class OpSet
             if (from == to
                 || to.IsEnforceDisabled
                 || (useAbstractConverter
+                    && from.Traits.Convention is not null
                     && !from.Traits.Convention.UseAbstractConvertersForConversion(from.Traits, to.Traits)))
             {
                 continue;
@@ -198,9 +206,9 @@ internal class OpSet
             foreach (var fromTrait in to.Traits.Difference(from.Traits))
             {
                 var traitDef = fromTrait.TraitDef;
-                var toTrait = to.Traits.Get(traitDef);
+                IOpTrait? toTrait = to.Traits.Get(traitDef);
 
-                if (!traitDef.CanConvert(planner, fromTrait, toTrait))
+                if (toTrait is null || !traitDef.CanConvert(planner, fromTrait, toTrait))
                 {
                     needsConverter = false;
                     break;
@@ -229,21 +237,25 @@ internal class OpSet
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "add(RelNode)")]
     internal OpSubset Add(IOp op)
     {
-        var subset = GetOrCreateSubset(op.Cluster, op.Traits, op.IsEnforcer);
+        Debug.Assert(EquivalentSet is null, "adding to a dead set");
+        var traits = op.Traits.Simplify();
+        var subset = GetOrCreateSubset(op.Cluster, traits, op.IsEnforcer);
         subset.Add(op);
         return subset;
     }
 
     /// <summary>
-    /// Appends <paramref name="op"/> to the set's op list (if not already present) and records it as
-    /// the set's representative when the set has none yet. The equivalence-found notification is fired by
-    /// the caller, <see cref="OpSubset.Add"/>.
+    /// Appends <paramref name="op"/> to the set's op list (if not already present), firing the
+    /// equivalence-found notification, and records it as the set's representative when the set has none yet.
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "addInternal(RelNode)")]
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "addInternal(RelNode, VolcanoPlanner)")]
     internal void AddInternal(IOp op)
     {
         if (!Ops.Contains(op))
+        {
             Ops.Add(op);
+            PostEquivalenceEvent((VolcanoPlanner)op.Cluster.Planner, op);
+        }
 
         Rel ??= op;
     }
@@ -288,8 +300,14 @@ internal class OpSet
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSet", "mergeWith(VolcanoPlanner, RelSet)")]
     internal void MergeWith(VolcanoPlanner planner, OpSet other)
     {
+        Debug.Assert(!ReferenceEquals(this, other));
+        Debug.Assert(EquivalentSet is null);
+        Debug.Assert(other.EquivalentSet is null);
         other.EquivalentSet = this;
-        planner.RemoveSet(other);
+
+        // remove from table
+        var existed = planner.RemoveSet(other);
+        Debug.Assert(existed, "merging with a dead otherSet");
 
         var cluster = Rel!.Cluster;
         var changedRels = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
@@ -332,6 +350,9 @@ internal class OpSet
             planner.ReRegister(this, otherRel);
         }
 
+        // Has another set merged with this?
+        Debug.Assert(EquivalentSet is null);
+
         // Propagate the new best information from the changed ops.
         foreach (var rel in changedRels)
             planner.PropagateCostImprovements(rel);
@@ -350,10 +371,14 @@ internal class OpSet
         // Make sure cost changes from the merge are propagated to the parents.
         foreach (var parentRel in Parents)
             planner.PropagateCostImprovements(parentRel);
+        Debug.Assert(EquivalentSet is null);
 
         // Each op in the old set now has new parents, so rules may fire again, as if newly registered.
         foreach (var op in Ops)
+        {
+            Debug.Assert(ReferenceEquals(planner.GetSet(op), this));
             planner.FireRules(op);
+        }
 
         // Fire rule matches on the subsets as well.
         foreach (var subset in Subsets)
