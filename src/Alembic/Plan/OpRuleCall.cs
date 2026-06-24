@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 
 using Alembic.Algebra;
@@ -39,6 +40,7 @@ public abstract class OpRuleCall
         Ops = rels;
         _nodeInputs = nodeInputs;
         Parents = parents;
+        Debug.Assert(rels.Length == Rule.Operands.Length);
     }
 
     /// <summary>

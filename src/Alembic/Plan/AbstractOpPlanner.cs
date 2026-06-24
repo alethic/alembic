@@ -242,18 +242,12 @@ public abstract class AbstractOpPlanner : IOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "addListener(RelOptListener)")]
     public void AddListener(IPlannerListener newListener)
     {
-        // A planner holds a single listener; registering a second wraps both in a multicast (Calcite).
+        // The planner's listener is always a multicast: the first registration creates it, and every
+        // listener (even a single one) is added to it.
         if (_listener is null)
-            _listener = newListener;
-        else if (_listener is MulticastPlannerListener multicast)
-            multicast.AddListener(newListener);
-        else
-        {
-            var combined = new MulticastPlannerListener();
-            combined.AddListener(_listener);
-            combined.AddListener(newListener);
-            _listener = combined;
-        }
+            _listener = new MulticastPlannerListener();
+
+        ((MulticastPlannerListener)_listener).AddListener(newListener);
     }
 
     /// <summary>

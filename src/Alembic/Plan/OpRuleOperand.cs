@@ -2,6 +2,7 @@ using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 using Alembic.Algebra;
 
@@ -163,6 +164,58 @@ public class OpRuleOperand
             hash.Add(child);
 
         return hash.ToHashCode();
+    }
+
+    /// <summary>
+    /// A description of the operand tree rooted at this operand's rule, with this operand's class name
+    /// highlighted by '*'.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "toString()")]
+    public override string ToString()
+    {
+        var root = this;
+        while (root.Parent is not null)
+            root = root.Parent;
+
+        return root.DescribeIt(this).ToString();
+    }
+
+    /// <summary>
+    /// Builds this operand's description, highlighting <paramref name="that"/>'s class name with '*' when
+    /// it is this operand.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleOperand", "describeIt(RelOptRuleOperand)")]
+    StringBuilder DescribeIt(OpRuleOperand that)
+    {
+        var s = new StringBuilder();
+        if (Parent is null)
+            s.Append(Rule).Append(": ");
+
+        if (ReferenceEquals(this, that))
+            s.Append('*');
+
+        s.Append(MatchedType.Name);
+
+        if (ReferenceEquals(this, that))
+            s.Append('*');
+
+        if (!Children.IsEmpty)
+        {
+            s.Append('(');
+            var first = true;
+            foreach (var child in Children)
+            {
+                if (!first)
+                    s.Append(", ");
+
+                s.Append(child.DescribeIt(that));
+                first = false;
+            }
+
+            s.Append(')');
+        }
+
+        return s;
     }
 
 }
