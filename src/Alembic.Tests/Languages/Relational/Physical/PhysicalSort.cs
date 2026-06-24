@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 
 using Alembic.Algebra;
+using Alembic.Algebra.Metadata;
 using Alembic.Plan;
 
 namespace Alembic.Tests.Languages.Relational.Physical;
@@ -21,7 +22,7 @@ sealed class PhysicalSort : SingleOp
 
     public IOp Input => Child;
 
-    public override IOpCost ComputeSelfCost(IOpPlanner planner) => planner.CostFactory.MakeCost(50, 0);
+    public override IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq) => planner.CostFactory.MakeCost(50, 0);
 
     public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {

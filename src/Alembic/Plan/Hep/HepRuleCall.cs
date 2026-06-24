@@ -41,6 +41,7 @@ public class HepRuleCall : OpRuleCall
     public override void TransformTo(IOp equivalent, IReadOnlyDictionary<IOp, IOp> equiv)
     {
         _results.Add(equivalent);
+        Op(0).Cluster.InvalidateMetadataQuery();
     }
 
 }

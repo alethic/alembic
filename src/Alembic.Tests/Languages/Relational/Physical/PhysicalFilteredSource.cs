@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 
 using Alembic.Algebra;
+using Alembic.Algebra.Metadata;
 using Alembic.Plan;
 
 namespace Alembic.Tests.Languages.Relational.Physical;
@@ -29,7 +30,7 @@ sealed class PhysicalFilteredSource : AbstractOp
     public string Predicate => _predicate;
 
     // A fused scan-and-filter is cheaper than a separate filter over a separate scan (10 + 100).
-    public override IOpCost ComputeSelfCost(IOpPlanner planner) => planner.CostFactory.MakeCost(100, 0);
+    public override IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq) => planner.CostFactory.MakeCost(100, 0);
 
     public override IOpWriter ExplainTerms(IOpWriter writer)
     {

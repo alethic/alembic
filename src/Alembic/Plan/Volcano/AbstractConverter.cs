@@ -3,6 +3,7 @@ using System.Diagnostics;
 
 using Alembic.Algebra;
 using Alembic.Algebra.Convert;
+using Alembic.Algebra.Metadata;
 
 namespace Alembic.Plan.Volcano;
 
@@ -39,7 +40,7 @@ public class AbstractConverter : ConverterImpl
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
-    public override IOpCost ComputeSelfCost(IOpPlanner planner) => planner.CostFactory.MakeInfiniteCost();
+    public override IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq) => planner.CostFactory.MakeInfiniteCost();
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter", "isEnforcer()")]

@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 
 using Alembic.Algebra;
+using Alembic.Algebra.Metadata;
 using Alembic.Plan;
 
 namespace Alembic.Tests.Languages.Relational.Physical;
@@ -22,7 +23,7 @@ sealed class PhysicalIndexSource : AbstractOp
 
     public string Table => _table;
 
-    public override IOpCost ComputeSelfCost(IOpPlanner planner) => planner.CostFactory.MakeCost(50, 0);
+    public override IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq) => planner.CostFactory.MakeCost(50, 0);
 
     public override IOpWriter ExplainTerms(IOpWriter writer)
     {

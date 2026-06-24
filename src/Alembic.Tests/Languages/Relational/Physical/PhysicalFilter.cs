@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 
 using Alembic.Algebra;
+using Alembic.Algebra.Metadata;
 using Alembic.Plan;
 using Alembic.Util;
 
@@ -27,7 +28,7 @@ sealed class PhysicalFilter : SingleOp, IPhysicalOp
 
     public string Predicate => _predicate;
 
-    public override IOpCost ComputeSelfCost(IOpPlanner planner) => planner.CostFactory.MakeCost(10, 0);
+    public override IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq) => planner.CostFactory.MakeCost(10, 0);
 
     public Pair<OpTraitSet, IList<OpTraitSet>>? PassThroughTraits(OpTraitSet required)
     {

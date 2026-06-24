@@ -1,4 +1,5 @@
 using Alembic.Algebra;
+using Alembic.Algebra.Metadata;
 using Alembic.Plan;
 
 namespace Alembic.Tests.Languages.Image;
@@ -24,7 +25,7 @@ abstract class ImageOp : SingleOp, IImageOperation
     /// </summary>
     public virtual bool SupportsGpu => true;
 
-    public override IOpCost ComputeSelfCost(IOpPlanner planner)
+    public override IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq)
     {
         return planner.CostFactory.MakeCost(ImageConventions.OpCost(Traits.Convention), 0);
     }

@@ -88,7 +88,7 @@ public class ConventionTraitDef : OpTraitDef<IConvention>
             var failed = false;
             foreach (var arc in conversionPath)
             {
-                var cost = ((VolcanoPlanner)planner).GetCost(converted);
+                var cost = ((VolcanoPlanner)planner).GetCost(converted, converted.Cluster.GetMetadataQuery());
                 if ((cost is null || cost.IsInfinite) && !allowInfiniteCostConverters)
                 {
                     failed = true;

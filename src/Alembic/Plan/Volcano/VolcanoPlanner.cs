@@ -5,6 +5,7 @@ using System.Linq;
 
 using Alembic.Algebra;
 using Alembic.Algebra.Convert;
+using Alembic.Algebra.Metadata;
 using Alembic.Algebra.Rules;
 using Alembic.Util;
 
@@ -469,7 +470,9 @@ public class VolcanoPlanner : AbstractOpPlanner
         var propagateHeap = new PriorityQueue<IOp, IOpCost>(Comparer<IOpCost>.Create(
             (a, b) => a.IsLessThan(b) ? -1 : b.IsLessThan(a) ? 1 : 0));
 
-        propagateOps[op] = GetCost(op);
+        var mq = op.Cluster.GetMetadataQuery();
+
+        propagateOps[op] = GetCost(op, mq);
         propagateHeap.Enqueue(op, propagateOps[op]);
 
         while (propagateHeap.TryDequeue(out var current, out _))
@@ -494,7 +497,7 @@ public class VolcanoPlanner : AbstractOpPlanner
 
                 foreach (var parent in subset.GetParents())
                 {
-                    var newCost = GetCost(parent);
+                    var newCost = GetCost(parent, mq);
                     if (!propagateOps.TryGetValue(parent, out var existingCost) || newCost.IsLessThan(existingCost))
                     {
                         propagateOps[parent] = newCost;
@@ -512,7 +515,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     static bool CostEquals(IOpCost a, IOpCost b) => !a.IsLessThan(b) && !b.IsLessThan(a);
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getCost(RelNode, RelMetadataQuery)")]
-    internal IOpCost GetCost(IOp op)
+    public override IOpCost GetCost(IOp op, OpMetadataQuery mq)
     {
         if (op is OpSubset subset)
             return subset.BestCost;
@@ -521,13 +524,15 @@ public class VolcanoPlanner : AbstractOpPlanner
             && op.Convention.Equals(Convention.None))
             return CostFactory.MakeInfiniteCost();
 
-        var cost = op.ComputeSelfCost(this);
+        // The op's own cost flows through the metadata query (so it is cached); Alembic ops always
+        // supply one, so it is never null.
+        var cost = mq.GetNonCumulativeCost(op)!;
         if (!ZeroCost.IsLessThan(cost))
             // cost must be positive, so nudge it
             cost = CostFactory.MakeTinyCost();
 
         foreach (var child in op.Children)
-            cost = cost.Plus(GetCost(child));
+            cost = cost.Plus(GetCost(child, mq));
 
         return cost;
     }
@@ -650,7 +655,12 @@ public class VolcanoPlanner : AbstractOpPlanner
     /// so the top-down search keeps its branch-and-bound structure but performs no lower-bound pruning.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getLowerBound(RelNode)")]
-    internal IOpCost GetLowerBound(IOp op) => ZeroCost;
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getLowerBound(RelNode)")]
+    internal IOpCost GetLowerBound(IOp op)
+    {
+        var mq = op.Cluster.GetMetadataQuery();
+        return mq.GetLowerBoundCost(op, this) ?? ZeroCost;
+    }
 
     /// <summary>
     /// The upper bound to allow an op's inputs, given the op's own upper bound: the bound minus the
@@ -661,9 +671,9 @@ public class VolcanoPlanner : AbstractOpPlanner
     {
         if (!upperBound.IsInfinite)
         {
-            var selfCost = op.ComputeSelfCost(this);
-            if (!selfCost.IsInfinite)
-                return upperBound.Minus(selfCost);
+            var rootCost = op.Cluster.GetMetadataQuery().GetNonCumulativeCost(op);
+            if (rootCost is not null && !rootCost.IsInfinite)
+                return upperBound.Minus(rootCost);
         }
 
         return upperBound;

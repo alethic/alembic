@@ -13,8 +13,9 @@ namespace Alembic.Plan.Volcano;
 /// and deriving traits up from optimized inputs.
 /// </summary>
 /// <remarks>
-/// The branch-and-bound structure is faithful, but lower-bound pruning is disabled: pending the metadata
-/// subsystem, <see cref="VolcanoPlanner.GetLowerBound"/> returns zero, so the bound checks never prune.
+/// The branch-and-bound structure is faithful, and lower-bound pruning is active:
+/// <see cref="VolcanoPlanner.GetLowerBound"/> consults the metadata subsystem
+/// (<see cref="Alembic.Algebra.Metadata.BuiltInMetadata.LowerBoundCost"/>), so the bound checks prune.
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver")]
 internal class TopDownRuleDriver : IRuleDriver

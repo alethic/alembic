@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 
 using Alembic.Algebra;
+using Alembic.Algebra.Metadata;
 
 namespace Alembic.Plan.Volcano;
 
@@ -34,9 +35,10 @@ public class OpSubset : AbstractOp
     void ComputeBestCost(VolcanoPlanner planner)
     {
         BestCost = planner.CostFactory.MakeInfiniteCost();
+        var mq = Cluster.GetMetadataQuery();
         foreach (var rel in GetRels())
         {
-            var cost = planner.GetCost(rel);
+            var cost = planner.GetCost(rel, mq);
             if (cost.IsLessThan(BestCost))
             {
                 BestCost = cost;
@@ -468,7 +470,7 @@ public class OpSubset : AbstractOp
     /// A subset has no cost of its own.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
-    public override IOpCost ComputeSelfCost(IOpPlanner planner) => planner.CostFactory.MakeZeroCost();
+    public override IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq) => planner.CostFactory.MakeZeroCost();
 
     /// <summary>
     /// A subset's identity is its set; the trait set is compared by the base. (<see cref="Best"/> is

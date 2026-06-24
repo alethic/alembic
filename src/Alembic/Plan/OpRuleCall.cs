@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 
 using Alembic.Algebra;
+using Alembic.Algebra.Metadata;
 
 namespace Alembic.Plan;
 
@@ -94,6 +95,12 @@ public abstract class OpRuleCall
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "rel(int)")]
     public IOp Op(int ordinal) => Ops[ordinal];
+
+    /// <summary>
+    /// The metadata query for this call — the one on the matched op's cluster.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "getMetadataQuery()")]
+    public OpMetadataQuery GetMetadataQuery() => Op(0).Cluster.GetMetadataQuery();
 
     /// <summary>
     /// The inputs of an op matched by an operand whose child policy is <see cref="RuleOperandChildPolicy.Unordered"/>,

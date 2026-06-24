@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text;
 
+using Alembic.Algebra.Metadata;
 using Alembic.Plan;
 
 namespace Alembic.Algebra;
@@ -96,7 +97,7 @@ public abstract class AbstractOp : IOp
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
-    public virtual IOpCost ComputeSelfCost(IOpPlanner planner)
+    public virtual IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq)
     {
         return planner.CostFactory.MakeTinyCost();
     }

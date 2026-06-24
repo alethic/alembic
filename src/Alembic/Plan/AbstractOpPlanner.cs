@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 
 using Alembic.Algebra;
+using Alembic.Algebra.Metadata;
 using Alembic.Plan.Volcano;
 using Alembic.Util;
 
@@ -141,6 +142,13 @@ public abstract class AbstractOpPlanner : IOpPlanner
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "emptyTraitSet()")]
     public virtual OpTraitSet EmptyTraitSet => OpTraitSet.CreateEmpty();
+
+    /// <summary>
+    /// The cumulative cost of <paramref name="op"/>, via the metadata query. The cost-based planner
+    /// overrides this with its own walk; Alembic ops always supply a cost, so the result is never null.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getCost(RelNode, RelMetadataQuery)")]
+    public virtual IOpCost GetCost(IOp op, OpMetadataQuery mq) => mq.GetCumulativeCost(op)!;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "addRule(RelOptRule)")]

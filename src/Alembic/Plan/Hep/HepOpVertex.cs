@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 
 using Alembic.Algebra;
+using Alembic.Algebra.Metadata;
 
 namespace Alembic.Plan.Hep;
 
@@ -14,7 +15,7 @@ namespace Alembic.Plan.Hep;
 /// current op.
 /// </remarks>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex")]
-sealed class HepOpVertex : AbstractOp
+sealed class HepOpVertex : AbstractOp, IDelegatingMetadataOp
 {
 
     IOp _currentOp;
@@ -37,6 +38,10 @@ sealed class HepOpVertex : AbstractOp
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "stripped()")]
     public IOp Stripped => _currentOp;
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "getMetadataDelegateRel()")]
+    public IOp GetMetadataDelegateRel() => _currentOp;
 
     /// <summary>
     /// Replaces the implementation for this vertex with a new op.

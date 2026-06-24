@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 
+using Alembic.Algebra.Metadata;
 using Alembic.Plan;
 
 namespace Alembic.Algebra;
@@ -131,6 +132,6 @@ public interface IOp
     /// default.)
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
-    IOpCost ComputeSelfCost(IOpPlanner planner);
+    IOpCost ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq);
 
 }

@@ -569,9 +569,10 @@ public class HepPlanner : AbstractOpPlanner
         {
             bestRel = null;
             IOpCost? bestCost = null;
+            var mq = call.GetMetadataQuery();
             foreach (var rel in call.Results)
             {
-                var thisCost = GetCost(rel);
+                var thisCost = GetCost(rel, mq);
                 if (bestRel is null || thisCost.IsLessThan(bestCost!))
                 {
                     bestRel = rel;
@@ -877,16 +878,6 @@ public class HepPlanner : AbstractOpPlanner
         _firedRulesCacheIndex.Remove(rel);
     }
 
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "getCost(RelNode, RelMetadataQuery)")]
-    IOpCost GetCost(IOp op)
-    {
-        var current = op is HepOpVertex vertex ? vertex.CurrentOp : op;
-        var cost = current.ComputeSelfCost(this);
-        foreach (var child in current.Children)
-            cost = cost.Plus(GetCost(child));
-
-        return cost;
-    }
 
     // ~ RuleOperand matching (sees through vertices) -----------------------------
 
