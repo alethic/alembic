@@ -81,7 +81,11 @@ public class HandlerDispatchProxy : DispatchProxy
 
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
     {
-        var op = (IOp)args![0]!;
+        // Only the metadata methods (op first, then the query) are dispatched; anything else on the
+        // handler interface (e.g. getDef) is not supported on the proxy, as in Calcite.
+        if (args is null || args.Length == 0 || args[0] is not IOp op)
+            throw new NotSupportedException($"Not supported: {targetMethod?.Name}");
+
         var (target, method) = Resolve(targetMethod!.Name, op.GetType());
         try
         {

@@ -6,18 +6,18 @@ namespace Alembic.Algebra.Metadata;
 /// <c>Exchange</c> — are relational and not ported.)
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdParallelism")]
-public sealed class OpMdParallelism : IMetadataHandler
+public class OpMdParallelism : IMetadataHandler<BuiltInMetadata.Parallelism>
 {
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdParallelism", "SOURCE")]
     public static readonly IOpMetadataProvider Source =
         ReflectiveOpMetadataProvider.ReflectiveSource(new OpMdParallelism(), typeof(BuiltInMetadata.Parallelism.Handler));
 
-    OpMdParallelism()
+    protected OpMdParallelism()
     {
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdParallelism", "getDef()")]
-    public MetadataDef GetDef() => BuiltInMetadata.Parallelism.Def;
+    public MetadataDef<BuiltInMetadata.Parallelism> GetDef() => BuiltInMetadata.Parallelism.Def;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdParallelism", "isPhaseTransition(RelNode, RelMetadataQuery)")]
     public bool? IsPhaseTransition(IOp op, OpMetadataQuery mq) => false;

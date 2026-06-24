@@ -6,18 +6,18 @@ namespace Alembic.Algebra.Metadata;
 /// split count. Depends on <see cref="BuiltInMetadata.Parallelism"/>.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdMemory")]
-public sealed class OpMdMemory : IMetadataHandler
+public class OpMdMemory : IMetadataHandler<BuiltInMetadata.Memory>
 {
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdMemory", "SOURCE")]
     public static readonly IOpMetadataProvider Source =
         ReflectiveOpMetadataProvider.ReflectiveSource(new OpMdMemory(), typeof(BuiltInMetadata.Memory.Handler));
 
-    OpMdMemory()
+    protected OpMdMemory()
     {
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdMemory", "getDef()")]
-    public MetadataDef GetDef() => BuiltInMetadata.Memory.Def;
+    public MetadataDef<BuiltInMetadata.Memory> GetDef() => BuiltInMetadata.Memory.Def;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdMemory", "memory(RelNode, RelMetadataQuery)")]
     public double? Memory(IOp op, OpMetadataQuery mq) => null;

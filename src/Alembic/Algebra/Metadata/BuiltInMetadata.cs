@@ -20,13 +20,13 @@ public static class BuiltInMetadata
     {
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.CumulativeCost", "DEF")]
-        public static readonly MetadataDef Def = MetadataDef.Of(typeof(CumulativeCost), typeof(Handler));
+        public static readonly MetadataDef<CumulativeCost> Def = MetadataDef<CumulativeCost>.Of(typeof(CumulativeCost), typeof(Handler));
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.CumulativeCost", "getCumulativeCost()")]
         IOpCost? GetCumulativeCost();
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.CumulativeCost.Handler")]
-        public interface Handler : IMetadataHandler
+        public interface Handler : IMetadataHandler<CumulativeCost>
         {
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.CumulativeCost.Handler", "getCumulativeCost(RelNode, RelMetadataQuery)")]
             IOpCost? GetCumulativeCost(IOp op, OpMetadataQuery mq);
@@ -42,13 +42,13 @@ public static class BuiltInMetadata
     {
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.NonCumulativeCost", "DEF")]
-        public static readonly MetadataDef Def = MetadataDef.Of(typeof(NonCumulativeCost), typeof(Handler));
+        public static readonly MetadataDef<NonCumulativeCost> Def = MetadataDef<NonCumulativeCost>.Of(typeof(NonCumulativeCost), typeof(Handler));
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.NonCumulativeCost", "getNonCumulativeCost()")]
         IOpCost? GetNonCumulativeCost();
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.NonCumulativeCost.Handler")]
-        public interface Handler : IMetadataHandler
+        public interface Handler : IMetadataHandler<NonCumulativeCost>
         {
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.NonCumulativeCost.Handler", "getNonCumulativeCost(RelNode, RelMetadataQuery)")]
             IOpCost? GetNonCumulativeCost(IOp op, OpMetadataQuery mq);
@@ -64,7 +64,7 @@ public static class BuiltInMetadata
     {
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Memory", "DEF")]
-        public static readonly MetadataDef Def = MetadataDef.Of(typeof(Memory), typeof(Handler));
+        public static readonly MetadataDef<Memory> Def = MetadataDef<Memory>.Of(typeof(Memory), typeof(Handler));
 
         // Calcite also declares the accessor `memory()`; C# forbids a member named the same as its
         // enclosing type, so it is omitted here. (These accessors are the old metadata-proxy API and are
@@ -76,7 +76,7 @@ public static class BuiltInMetadata
         double? CumulativeMemoryWithinPhaseSplit();
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Memory.Handler")]
-        public interface Handler : IMetadataHandler
+        public interface Handler : IMetadataHandler<Memory>
         {
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Memory.Handler", "memory(RelNode, RelMetadataQuery)")]
             double? Memory(IOp op, OpMetadataQuery mq);
@@ -98,7 +98,7 @@ public static class BuiltInMetadata
     {
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Parallelism", "DEF")]
-        public static readonly MetadataDef Def = MetadataDef.Of(typeof(Parallelism), typeof(Handler));
+        public static readonly MetadataDef<Parallelism> Def = MetadataDef<Parallelism>.Of(typeof(Parallelism), typeof(Handler));
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Parallelism", "isPhaseTransition()")]
         bool? IsPhaseTransition();
@@ -107,7 +107,7 @@ public static class BuiltInMetadata
         int? SplitCount();
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Parallelism.Handler")]
-        public interface Handler : IMetadataHandler
+        public interface Handler : IMetadataHandler<Parallelism>
         {
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.Parallelism.Handler", "isPhaseTransition(RelNode, RelMetadataQuery)")]
             bool? IsPhaseTransition(IOp op, OpMetadataQuery mq);
@@ -127,13 +127,13 @@ public static class BuiltInMetadata
     {
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.LowerBoundCost", "DEF")]
-        public static readonly MetadataDef Def = MetadataDef.Of(typeof(LowerBoundCost), typeof(Handler));
+        public static readonly MetadataDef<LowerBoundCost> Def = MetadataDef<LowerBoundCost>.Of(typeof(LowerBoundCost), typeof(Handler));
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.LowerBoundCost", "getLowerBoundCost(VolcanoPlanner)")]
         IOpCost? GetLowerBoundCost(VolcanoPlanner planner);
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.LowerBoundCost.Handler")]
-        public interface Handler : IMetadataHandler
+        public interface Handler : IMetadataHandler<LowerBoundCost>
         {
             [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.BuiltInMetadata.LowerBoundCost.Handler", "getLowerBoundCost(RelNode, RelMetadataQuery, VolcanoPlanner)")]
             IOpCost? GetLowerBoundCost(IOp op, OpMetadataQuery mq, VolcanoPlanner planner);

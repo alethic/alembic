@@ -9,18 +9,18 @@ namespace Alembic.Algebra.Metadata;
 /// typed methods are the per-op-type overloads the reflective provider routes between.
 /// </summary>
 [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdLowerBoundCost")]
-public sealed class OpMdLowerBoundCost : IMetadataHandler
+public class OpMdLowerBoundCost : IMetadataHandler<BuiltInMetadata.LowerBoundCost>
 {
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdLowerBoundCost", "SOURCE")]
     public static readonly IOpMetadataProvider Source =
         ReflectiveOpMetadataProvider.ReflectiveSource(new OpMdLowerBoundCost(), typeof(BuiltInMetadata.LowerBoundCost.Handler));
 
-    OpMdLowerBoundCost()
+    protected OpMdLowerBoundCost()
     {
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdLowerBoundCost", "getDef()")]
-    public MetadataDef GetDef() => BuiltInMetadata.LowerBoundCost.Def;
+    public MetadataDef<BuiltInMetadata.LowerBoundCost> GetDef() => BuiltInMetadata.LowerBoundCost.Def;
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdLowerBoundCost", "getLowerBoundCost(RelSubset, RelMetadataQuery, VolcanoPlanner)")]
     public IOpCost? GetLowerBoundCost(OpSubset subset, OpMetadataQuery mq, VolcanoPlanner planner)
