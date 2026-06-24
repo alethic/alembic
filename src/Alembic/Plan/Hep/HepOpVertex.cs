@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Linq;
 
 using Alembic.Algebra;
 using Alembic.Algebra.Metadata;
@@ -28,6 +31,7 @@ sealed class HepOpVertex : AbstractOp, IDelegatingMetadataOp
         : base(currentOp.Cluster, currentOp.Traits)
     {
         _currentOp = currentOp;
+        if (currentOp is HepOpVertex) throw new ArgumentException();
     }
 
     /// <summary>
@@ -59,6 +63,8 @@ sealed class HepOpVertex : AbstractOp, IDelegatingMetadataOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "copy(RelTraitSet, List<RelNode>)")]
     public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
+        Debug.Assert(traits.Equals(Traits));
+        Debug.Assert(children.SequenceEqual(Children));
         return this;
     }
 
@@ -66,12 +72,11 @@ sealed class HepOpVertex : AbstractOp, IDelegatingMetadataOp
     /// A vertex explains itself in terms of the op it currently stands in for.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "explain(RelWriter)")]
-    public override IOpWriter ExplainTerms(IOpWriter writer)
-    {
-        base.ExplainTerms(writer);
-        writer.Input("current", _currentOp);
-        return writer;
-    }
+    public override void Explain(IOpWriter pw) => _currentOp.Explain(pw);
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "getDigest()")]
+    public override string GetDigest() => "HepRelVertex(" + _currentOp + ")";
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "deepEquals(Object)")]

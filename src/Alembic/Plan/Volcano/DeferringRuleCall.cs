@@ -1,5 +1,3 @@
-using Alembic.Algebra;
-
 namespace Alembic.Plan.Volcano;
 
 /// <summary>

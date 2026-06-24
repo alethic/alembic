@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 
 using Alembic.Algebra;
@@ -644,7 +645,7 @@ public class HepPlanner : AbstractOpPlanner
         }
 
         var newVertex = AddOpToGraph(bestOp!, null);
-        var garbage = new HashSet<HepOpVertex>();
+        var garbage = new LinkedHashSet<HepOpVertex>();
 
         // The new vertex may already be one of the parents (common subexpression); treat that as a nop
         // to avoid creating a loop.
@@ -716,7 +717,7 @@ public class HepPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "contractVertices(HepRelVertex, HepRelVertex, List<HepRelVertex>, Set<HepRelVertex>)")]
-    void ContractVertices(HepOpVertex preservedVertex, HepOpVertex discardedVertex, List<HepOpVertex> parents, HashSet<HepOpVertex> garbage)
+    void ContractVertices(HepOpVertex preservedVertex, HepOpVertex discardedVertex, List<HepOpVertex> parents, LinkedHashSet<HepOpVertex> garbage)
     {
         if (ReferenceEquals(preservedVertex, discardedVertex))
             return;
@@ -767,29 +768,31 @@ public class HepPlanner : AbstractOpPlanner
     }
 
     /// <summary>
-    /// Clears the cached digest of a vertex and its ancestors, so they are recomputed after a child's
-    /// content changed.
+    /// Clears the metadata cache for the op of a vertex and its ancestors, after a child's content changed.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "clearCache(HepRelVertex)")]
     void ClearCache(HepOpVertex vertex)
     {
-        vertex.CurrentOp.RecomputeDigest();
-        vertex.RecomputeDigest();
+        ClearMetadataCache(vertex.CurrentOp);
+        if (!ClearMetadataCache(vertex))
+            return;
 
-        var seen = new HashSet<HepOpVertex>();
         var queue = new Queue<DefaultEdge>(_graph.GetInwardEdges(vertex));
         while (queue.Count > 0)
         {
             var source = (HepOpVertex)queue.Dequeue().Source;
-            if (!seen.Add(source))
-                continue;
-
-            source.CurrentOp.RecomputeDigest();
-            source.RecomputeDigest();
-            foreach (var edge in _graph.GetInwardEdges(source))
-                queue.Enqueue(edge);
+            ClearMetadataCache(source.CurrentOp);
+            if (ClearMetadataCache(source))
+                foreach (var edge in _graph.GetInwardEdges(source))
+                    queue.Enqueue(edge);
         }
     }
+
+    /// <summary>
+    /// Clears the metadata cache for <paramref name="op"/>, returning whether anything was cached.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.RelMdUtil", "clearCache(RelNode)")]
+    static bool ClearMetadataCache(IOp op) => op.Cluster.GetMetadataQuery().ClearCache(op);
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "updateVertex(HepRelVertex, RelNode)")]
     void UpdateVertex(HepOpVertex vertex, IOp op)
@@ -842,18 +845,22 @@ public class HepPlanner : AbstractOpPlanner
         var op = vertex.CurrentOp;
         FireOpDiscarded(op);
 
-        var outVertices = new List<HepOpVertex>();
+        var outVertices = new LinkedHashSet<HepOpVertex>();
         foreach (var edge in _graph.GetOutwardEdges(vertex))
             outVertices.Add((HepOpVertex)edge.Target);
 
         foreach (var child in outVertices)
             _graph.RemoveEdge(vertex, child);
 
+        Debug.Assert(_graph.GetInwardEdges(vertex).Count == 0);
+        Debug.Assert(_graph.GetOutwardEdges(vertex).Count == 0);
         _graph.RemoveAllVertices(new[] { vertex });
         _mapDigestToVertex.Remove(op.GetOpDigest());
 
         foreach (var child in outVertices)
             TryCleanVertices(child);
+
+        ClearCache(vertex);
 
         if (_enableFiredRulesCache)
             foreach (var opIds in _firedRulesCacheIndex.Get(op.Id))
@@ -861,7 +868,7 @@ public class HepPlanner : AbstractOpPlanner
     }
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "collectGarbage(Set<HepRelVertex>)")]
-    void CollectGarbage(HashSet<HepOpVertex> garbage)
+    void CollectGarbage(LinkedHashSet<HepOpVertex> garbage)
     {
         foreach (var vertex in garbage)
             TryCleanVertices(vertex);
