@@ -243,10 +243,12 @@ public abstract class AbstractOpPlanner : IOpPlanner
         if (_ruleDescExclusionFilter is null)
             return false;
 
-        // Calcite uses Matcher.matches(), which requires the *entire* description to match (not a
-        // substring); replicate that whole-string anchoring.
-        var match = _ruleDescExclusionFilter.Match(rule.Description);
-        return match.Success && match.Index == 0 && match.Length == rule.Description.Length;
+        // = Calcite's ruleDescExclusionFilter.matcher(rule.toString()).matches(). Java's matches() makes
+        // the pattern consume the *whole* description (anchored both ends, backtracking across alternation);
+        // .NET's Match is leftmost-substring, so anchor the pattern end to end. A leftmost-match + length
+        // check would disagree with matches() when an alternative matches only a prefix (e.g. "a|abc" on
+        // "abc": matches() succeeds via the second alternative, but the leftmost match is the prefix "a").
+        return Regex.IsMatch(rule.ToString(), @"\A(?:" + _ruleDescExclusionFilter + @")\z", _ruleDescExclusionFilter.Options);
     }
 
     /// <inheritdoc />
@@ -287,8 +289,8 @@ public abstract class AbstractOpPlanner : IOpPlanner
         if (IsRuleExcluded(ruleCall.Rule))
             return;
 
-        // (Calcite also checks ruleCall.isRuleExcluded() for exclusion hints; Alembic ports neither the
-        // hint subsystem nor that check.)
+        if (ruleCall.IsRuleExcluded())
+            return;
 
         FireRuleAttempted(ruleCall, before: true);
         ruleCall.Rule.OnMatch(ruleCall);

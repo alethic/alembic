@@ -44,8 +44,7 @@ public abstract class OpMetadataQueryBase
         }
         catch (Exception)
         {
-            // Clear the op's row so a later request can retry from a clean state.
-            Map.Remove(op);
+            row.Clear();
             throw;
         }
     }

@@ -147,4 +147,12 @@ public interface IOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
     IOpCost? ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq);
 
+    /// <summary>
+    /// Whether this op is valid, reporting any failure through <paramref name="litmus"/> (which may throw
+    /// or return false). The base op is always valid; an op may override to check its own invariants.
+    /// (Calcite's second <c>Context</c> parameter is correlation-only — relational — so it is dropped.)
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "isValid(Litmus, Context)")]
+    bool IsValid(Alembic.Util.Litmus litmus);
+
 }

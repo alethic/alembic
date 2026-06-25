@@ -29,7 +29,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     readonly List<OpSet> _allSets = new List<OpSet>();
     readonly Dictionary<IOpDigest, IOp> _digestToOp = new Dictionary<IOpDigest, IOp>();
     readonly Dictionary<IOp, OpSubset> _opToSubset = new Dictionary<IOp, OpSubset>(ReferenceEqualityComparer.Instance);
-    readonly Multimap<Type, OpRuleOperand> _classOperands = new Multimap<Type, OpRuleOperand>();
+    readonly LinkedListMultimap<Type, OpRuleOperand> _classOperands = new LinkedListMultimap<Type, OpRuleOperand>();
     readonly HashSet<IOp> _prunedOps = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
 
     readonly List<OpTraitDef> _traitDefs = new List<OpTraitDef>();

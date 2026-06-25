@@ -159,7 +159,7 @@ public class ConventionTraitDef : OpTraitDef<IConvention>
         internal readonly DefaultDirectedGraph<IConvention, DefaultEdge> ConversionGraph = DefaultDirectedGraph<IConvention, DefaultEdge>.Create();
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.ConventionTraitDef.ConversionData", "mapArcToConverterRule")]
-        internal readonly Multimap<Pair<IConvention, IConvention>, ConverterRule> MapArcToConverterRule = new Multimap<Pair<IConvention, IConvention>, ConverterRule>();
+        internal readonly HashMultimap<Pair<IConvention, IConvention>, ConverterRule> MapArcToConverterRule = new HashMultimap<Pair<IConvention, IConvention>, ConverterRule>();
 
         Graphs.FrozenGraph<IConvention, DefaultEdge>? _pathMap;
 

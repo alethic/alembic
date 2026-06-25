@@ -34,8 +34,8 @@ public class HepPlanner : AbstractOpPlanner
 
     readonly Dictionary<IOpDigest, HepOpVertex> _mapDigestToVertex = new Dictionary<IOpDigest, HepOpVertex>();
     readonly DirectedGraph<HepOpVertex, DefaultEdge> _graph = DefaultDirectedGraph<HepOpVertex, DefaultEdge>.Create();
-    readonly Multimap<ImmutableIntList, OpRule> _firedRulesCache = new Multimap<ImmutableIntList, OpRule>();
-    readonly Multimap<int, ImmutableIntList> _firedRulesCacheIndex = new Multimap<int, ImmutableIntList>();
+    readonly HashMultimap<ImmutableIntList, OpRule> _firedRulesCache = new HashMultimap<ImmutableIntList, OpRule>();
+    readonly HashMultimap<int, ImmutableIntList> _firedRulesCacheIndex = new HashMultimap<int, ImmutableIntList>();
 
     HepOpVertex? _root;
     OpTraitSet? _requestedRootTraits;

@@ -118,6 +118,14 @@ public abstract class OpRuleCall
     public ImmutableArray<IOp> GetOpList() => ImmutableArray.CreateRange(Ops.Select(r => r!));
 
     /// <summary>
+    /// Whether the rule is excluded from firing on this match. Calcite returns <c>true</c> if any bound op
+    /// is <c>Hintable</c> and its cluster's hint strategies exclude the rule; Alembic ports no hints, so no
+    /// op is <c>Hintable</c> and the loop always falls through — the result is always <c>false</c>.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "isRuleExcluded()")]
+    public bool IsRuleExcluded() => false;
+
+    /// <summary>
     /// The metadata query for this call — the one on the matched op's cluster.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptRuleCall", "getMetadataQuery()")]

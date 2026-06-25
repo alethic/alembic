@@ -59,9 +59,11 @@ public class VolcanoRuleCall : OpRuleCall
             if (_planner.IsRuleExcluded(Rule))
                 return;
 
-            // (Calcite also checks isRuleExcluded() for root-node hints, and pushes/pops a ruleCallStack
-            // to record each result's rule provenance. Alembic ports neither the hint nor the provenance
-            // subsystem.)
+            if (IsRuleExcluded())
+                return;
+
+            // (Calcite also pushes/pops a ruleCallStack here to record each result's rule provenance;
+            // Alembic ports no provenance subsystem.)
 
             // Skip the match if any bound op has gone stale since it was queued: its set was merged away,
             // it was removed from its subset (during a rename), or it has been pruned.

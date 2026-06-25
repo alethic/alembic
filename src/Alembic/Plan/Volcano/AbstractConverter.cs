@@ -50,7 +50,7 @@ public class AbstractConverter : ConverterImpl
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.AbstractConverter", "copy(RelTraitSet, List<RelNode>)")]
     public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
-        return new AbstractConverter(children[0].Cluster, children[0], TraitDef, traits);
+        return new AbstractConverter(Cluster, children[0], TraitDef, traits);
     }
 
 }

@@ -92,7 +92,7 @@ internal class IterativeRuleQueue : RuleQueue
         internal readonly HashSet<string> Names = new HashSet<string>();
 
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.IterativeRuleQueue.MatchList", "matchMap")]
-        internal readonly Multimap<OpSubset, VolcanoRuleMatch> MatchMap = new Multimap<OpSubset, VolcanoRuleMatch>();
+        internal readonly HashMultimap<OpSubset, VolcanoRuleMatch> MatchMap = new HashMultimap<OpSubset, VolcanoRuleMatch>();
 
         /// <summary>
         /// Enqueues <paramref name="match"/>: substitutions go to the high-priority pre-queue, others to
