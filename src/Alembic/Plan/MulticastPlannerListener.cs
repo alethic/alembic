@@ -11,12 +11,13 @@ public class MulticastPlannerListener : IPlannerListener
 {
 
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.MulticastRelOptListener", "listeners")]
-    readonly List<IPlannerListener> _listeners = new List<IPlannerListener>();
+    readonly List<IPlannerListener> _listeners;
 
     /// <summary>Creates a multicast listener with no constituents.</summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.MulticastRelOptListener", "MulticastRelOptListener()")]
     public MulticastPlannerListener()
     {
+        _listeners = new List<IPlannerListener>();
     }
 
     /// <summary>Adds a listener to the fan-out.</summary>
@@ -48,19 +49,19 @@ public class MulticastPlannerListener : IPlannerListener
     }
 
     /// <inheritdoc />
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.MulticastRelOptListener", "relDiscarded(RelDiscardedEvent)")]
-    public void OpDiscarded(IPlannerListener.OpDiscardedEvent e)
-    {
-        foreach (var listener in _listeners)
-            listener.OpDiscarded(e);
-    }
-
-    /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.MulticastRelOptListener", "relChosen(RelChosenEvent)")]
     public void OpChosen(IPlannerListener.OpChosenEvent e)
     {
         foreach (var listener in _listeners)
             listener.OpChosen(e);
+    }
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.MulticastRelOptListener", "relDiscarded(RelDiscardedEvent)")]
+    public void OpDiscarded(IPlannerListener.OpDiscardedEvent e)
+    {
+        foreach (var listener in _listeners)
+            listener.OpDiscarded(e);
     }
 
 }

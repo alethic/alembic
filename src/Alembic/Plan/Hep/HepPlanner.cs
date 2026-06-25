@@ -26,6 +26,12 @@ public class HepPlanner : AbstractOpPlanner
 {
 
     readonly HepProgram _mainProgram;
+
+    // Calcite stores Util.first(onCopyHook, Functions.ignore2()) (never null); the nullable field with a
+    // null-conditional invoke in OnCopy is the equivalent — no hook means do nothing.
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "onCopyHook")]
+    readonly Action<IOp, IOp>? _onCopyHook;
+
     readonly Dictionary<IOpDigest, HepOpVertex> _mapDigestToVertex = new Dictionary<IOpDigest, HepOpVertex>();
     readonly DirectedGraph<HepOpVertex, DefaultEdge> _graph = DefaultDirectedGraph<HepOpVertex, DefaultEdge>.Create();
     readonly Multimap<ImmutableIntList, OpRule> _firedRulesCache = new Multimap<ImmutableIntList, OpRule>();
@@ -55,10 +61,11 @@ public class HepPlanner : AbstractOpPlanner
     /// Creates a planner driven by the given program, costing ops with <paramref name="costFactory"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "HepPlanner(HepProgram, Context, boolean, Function2<RelNode, RelNode, Void>, RelOptCostFactory)")]
-    public HepPlanner(HepProgram program, IOpCostFactory costFactory, IContext? context = null)
+    public HepPlanner(HepProgram program, IOpCostFactory costFactory, IContext? context = null, Action<IOp, IOp>? onCopyHook = null)
         : base(costFactory, context)
     {
         _mainProgram = program;
+        _onCopyHook = onCopyHook;
     }
 
     /// <summary>
@@ -117,6 +124,14 @@ public class HepPlanner : AbstractOpPlanner
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "getRoot()")]
     public override IOp? Root => _root;
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "onCopy(RelNode, RelNode)")]
+    public override void OnCopy(IOp op, IOp newOp) => _onCopyHook?.Invoke(op, newOp);
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "isRegistered(RelNode)")]
+    public override bool IsRegistered(IOp op) => true;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "clear()")]
@@ -539,9 +554,7 @@ public class HepPlanner : AbstractOpPlanner
         if (!rule.Matches(call))
             return null;
 
-        FireRuleAttempted(call, true);
-        rule.OnMatch(call);
-        FireRuleAttempted(call, false);
+        FireRule(call);
 
         if (opIds is not null)
         {
@@ -690,7 +703,11 @@ public class HepPlanner : AbstractOpPlanner
             newInputs.Add(AddOpToGraph(input, initOpToVertexCache));
 
         if (!ShallowEqual(op.Children, newInputs))
+        {
+            var oldOp = op;
             op = op.Copy(op.Traits, newInputs.ToImmutableArray());
+            OnCopy(oldOp, op);
+        }
 
         // Compute the digest the first time we add to the DAG, otherwise a common subexpression can't be
         // found for the equivalent-vertex lookup below.

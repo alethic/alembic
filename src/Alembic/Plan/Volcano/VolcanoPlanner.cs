@@ -717,7 +717,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     /// Whether an op has been registered.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "isRegistered(RelNode)")]
-    internal bool IsRegistered(IOp op) => _opToSubset.ContainsKey(op);
+    public override bool IsRegistered(IOp op) => _opToSubset.ContainsKey(op);
 
     /// <summary>
     /// The live set a registered op belongs to.

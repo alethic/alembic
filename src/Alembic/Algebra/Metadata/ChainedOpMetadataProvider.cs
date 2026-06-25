@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace Alembic.Algebra.Metadata;
 
@@ -18,6 +20,7 @@ public class ChainedOpMetadataProvider : IOpMetadataProvider
     protected ChainedOpMetadataProvider(IReadOnlyList<IOpMetadataProvider> providers)
     {
         _providers = providers;
+        Debug.Assert(!_providers.Contains(this));
     }
 
     /// <summary>
@@ -35,5 +38,21 @@ public class ChainedOpMetadataProvider : IOpMetadataProvider
             handlers.AddRange(provider.Handlers(handlerClass));
 
         return handlers;
+    }
+
+    /// <inheritdoc/>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.ChainedRelMetadataProvider", "equals(Object)")]
+    public override bool Equals(object? obj)
+        => obj is ChainedOpMetadataProvider other && _providers.SequenceEqual(other._providers);
+
+    /// <inheritdoc/>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.metadata.ChainedRelMetadataProvider", "hashCode()")]
+    public override int GetHashCode()
+    {
+        var hash = 1;
+        foreach (var provider in _providers)
+            hash = 31 * hash + (provider?.GetHashCode() ?? 0);
+
+        return hash;
     }
 }

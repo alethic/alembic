@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -122,6 +123,16 @@ public abstract class AbstractOpPlanner : IOpPlanner
     protected virtual void OnNewClass(IOp op)
     {
         op.Register(this);
+    }
+
+    /// <inheritdoc />
+    public abstract bool IsRegistered(IOp op);
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "onCopy(RelNode, RelNode)")]
+    public virtual void OnCopy(IOp op, IOp newOp)
+    {
+        // do nothing
     }
 
     /// <summary>
@@ -263,9 +274,31 @@ public abstract class AbstractOpPlanner : IOpPlanner
     protected internal bool HasListeners => _listener is not null;
 
     /// <summary>
-    /// Notifies listeners that a rule is being attempted (before and after).
+    /// Takes a rule referenced by a rule call: checks for cancellation, verifies the rule still matches,
+    /// applies the exclusion filter, notifies listeners, and invokes the rule's
+    /// <see cref="OpRule.OnMatch"/>.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.AbstractRelOptPlanner", "fireRule(RelOptRuleCall)")]
+    protected internal void FireRule(OpRuleCall ruleCall)
+    {
+        CheckCancel();
+
+        Debug.Assert(ruleCall.Rule.Matches(ruleCall));
+        if (IsRuleExcluded(ruleCall.Rule))
+            return;
+
+        // (Calcite also checks ruleCall.isRuleExcluded() for exclusion hints; Alembic ports neither the
+        // hint subsystem nor that check.)
+
+        FireRuleAttempted(ruleCall, before: true);
+        ruleCall.Rule.OnMatch(ruleCall);
+        FireRuleAttempted(ruleCall, before: false);
+    }
+
+    /// <summary>
+    /// Notifies listeners that a rule is being attempted (before and after). Shared by <see cref="FireRule"/>
+    /// and <see cref="Volcano.VolcanoRuleCall.OnMatch"/>, which both fire this event inline in Calcite.
+    /// </summary>
     protected internal void FireRuleAttempted(OpRuleCall call, bool before)
     {
         _listener?.RuleAttempted(new IPlannerListener.RuleAttemptedEvent(this, call.Op(0), call, before));

@@ -81,10 +81,12 @@ public class TopologicalOrderIterator<V, E> : IEnumerator<V>
             }
         }
 
+        // Iterate the graph's vertices (insertion-ordered) rather than the Dictionary, so the empties
+        // queue is seeded deterministically — matching Calcite's insertion-ordered LinkedHashMap.
         var zeros = new List<V>();
-        foreach (var pair in _count)
-            if (pair.Value == 0)
-                zeros.Add(pair.Key);
+        foreach (var vertex in _graph.VertexSet)
+            if (_count[vertex] == 0)
+                zeros.Add(vertex);
 
         foreach (var zero in zeros)
         {
@@ -112,7 +114,7 @@ public class TopologicalOrderIterator<V, E> : IEnumerator<V>
         {
             var key = _order == HepMatchOrder.TopDown ? (V)edge.Target : (V)edge.Source;
             if (!_count.TryGetValue(key, out var remaining))
-                continue;
+                throw new System.InvalidOperationException("no counts found for " + key);
 
             remaining--;
             if (remaining == 0)

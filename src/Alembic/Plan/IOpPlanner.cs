@@ -125,6 +125,18 @@ public interface IOpPlanner
     IOp EnsureRegistered(IOp op, IOp? equivalent);
 
     /// <summary>
+    /// Determines whether <paramref name="op"/> has been registered with the planner.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "isRegistered(RelNode)")]
+    bool IsRegistered(IOp op);
+
+    /// <summary>
+    /// Called when an op is copied to a similar op.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "onCopy(RelNode, RelNode)")]
+    void OnCopy(IOp op, IOp newOp);
+
+    /// <summary>
     /// Runs the planner and returns the resulting plan.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "findBestExp()")]
