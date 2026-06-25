@@ -335,12 +335,16 @@ public abstract class AbstractOpPlanner : IOpPlanner
     }
 
     /// <inheritdoc />
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "setRoot(RelNode)")]
-    public abstract void SetRoot(IOp op);
+    public void SetRoot(IOp op) => Root = op;
 
     /// <inheritdoc />
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "getRoot()")]
-    public abstract IOp? Root { get; }
+    public abstract IOp? Root
+    {
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "getRoot()")]
+        get;
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "setRoot(RelNode)")]
+        set;
+    }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "changeTraits(RelNode, RelTraitSet)")]

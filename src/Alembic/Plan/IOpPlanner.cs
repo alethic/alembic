@@ -97,16 +97,21 @@ public interface IOpPlanner
     void AddListener(IPlannerListener listener);
 
     /// <summary>
-    /// Sets the root of the plan to optimize.
+    /// Sets the root of the plan to optimize — a convenience for assigning <see cref="Root"/>.
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "setRoot(RelNode)")]
     void SetRoot(IOp op);
 
     /// <summary>
-    /// The current root of the plan, or <c>null</c> if none is set.
+    /// The current root of the plan, or <c>null</c> if none is set. Assigning it sets the plan to
+    /// optimize (registering the op as the cost-based planner's root subset / the heuristic graph root).
     /// </summary>
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "getRoot()")]
-    IOp? Root { get; }
+    IOp? Root
+    {
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "getRoot()")]
+        get;
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptPlanner", "setRoot(RelNode)")]
+        set;
+    }
 
     /// <summary>
     /// Returns an equivalent of <paramref name="op"/> with the given traits, registering it if needed —

@@ -41,8 +41,9 @@ The canonical end-to-end shape:
 A plan is a tree (more precisely, a DAG during planning) of **ops**. The op contract is `IOp`:
 
 - `Traits` — the op's physical properties (see §4).
-- `Children` — its inputs, in order.
-- `Copy(traits, children)` — produce a new op like this one but with different traits/children; how a
+- `Inputs` — its input ops, in order.
+- `OutputType` — an opaque descriptor of *what* the op produces; the equivalence invariant (see §3).
+- `Copy(traits, inputs)` — produce a new op like this one but with different traits/inputs; how a
   rule rewrites a subtree.
 - `ReplaceInput(ordinal, op)` — replace one input in place; the planner uses this during registration
   as a child's equivalence set merges, mirroring Calcite's `RelNode`.
@@ -55,9 +56,10 @@ but the planner itself re-points an op's inputs in place via `ReplaceInput` as e
 (Whether to restore full immutability is an open question, revisited once the Calcite port is complete.)
 
 `AbstractOp` is an optional convenience base (most op types use it). It derives `DeepEquals` /
-`DeepHashCode` from an op's **explain terms** (§3) and keeps a cached digest. `SingleOp` (one child)
-and `BiOp` (two children, `Left`/`Right`) are thin bases over it. An op type can also implement
-`IOp` directly — the base classes are a convenience, not a requirement.
+`DeepHashCode` from an op's **explain terms** (§3), keeps a cached digest, and derives the op's
+`OutputType` from a `DeriveOutputType` hook (§3). An op stores and lists its own inputs — one input or
+several, the op keeps the fields and writes them in `ExplainTerms`. An op type can also implement
+`IOp` directly — the base class is a convenience, not a requirement.
 
 ---
 
@@ -67,8 +69,8 @@ The optimizer constantly asks "have I seen this op before?" (to deduplicate) and
 the same?" (to detect equivalences). An op's ordinary `Equals`/`GetHashCode` stay as **reference
 identity**; the meaningful, structural notion is a *separate* contract:
 
-- **`DeepEquals(other)`** — structurally equivalent: same type, same traits, same attributes, and
-  recursively equal children.
+- **`DeepEquals(other)`** — structurally equivalent: same type, same traits, same **output type**, same
+  attributes, and recursively equal inputs.
 - **`DeepHashCode()`** — a hash consistent with `DeepEquals`.
 
 That is the actual definition of identity. Everything else is a way to *populate* it.
@@ -88,6 +90,26 @@ An op may **override** `DeepEquals`/`DeepHashCode` directly (e.g., with a hand-r
 representation) instead of using the explain-term derivation — the contract is what matters, the
 derivation is just the default.
 
+### Output type
+
+Every op has an **output type** (`OutputType`) — an opaque, user-supplied descriptor of *what the op
+produces*. The engine attaches no meaning to it; it asks one question, through
+`IOutputType.IsEquivalentTo`: **are two ops' outputs equivalent?** That single relation is the
+**equivalence invariant** — two ops may be treated as interchangeable (share an equivalence class,
+deduplicate, register as equivalents) only if their output types match. It folds into `DeepEquals`
+above, and the planner enforces it whenever an op joins a set.
+
+Output type is **derived, not assigned by the planner**: `AbstractOp.OutputType` lazily calls a
+`DeriveOutputType` hook (the analog of Calcite's `deriveRowType`). A leaf carries an intrinsic output
+type given at construction and returns it; an interior op derives its own from its inputs. Ops that
+attach no meaning to their output default to the trivial **`Void`** type (`VoidOutputType`, equivalent
+only to itself).
+
+Crucially, output type is an **invariant, not a trait**: it never *converts*. Where a trait can be
+established by an enforcer within an equivalence class (§4, §8), changing an op's output is the job of a
+*rule* that rewrites it into a different op. A downstream layer (e.g. a relational one) can supply a
+rich `IOutputType` — a row type — while a medium that doesn't care leaves everything `Void`.
+
 ---
 
 ## 4. Traits — the heart of the model
@@ -106,7 +128,8 @@ this property?**
 - **Convention** — a logical operation vs its GPU implementation: same result, different machinery →
   *trait*.
 - **A filter's predicate** (`x>5` vs `x>3`) — different results → **not a trait; it's identity**.
-- **Output schema / shape** — a different schema is a different result → **not a trait; identity**.
+- **Output type / shape** — a different output is a different result → **not a trait; it's the op's
+  `OutputType`** (§3), the equivalence invariant.
 
 Two further properties make a trait *useful to the optimizer*:
 
@@ -188,7 +211,7 @@ The optimizer never invents transformations on its own; it applies **rules** you
   and registers them via `call.Transform(equivalent)`.
 
 A crucial detail: a rule reaches its matched ops through **`call.Op(i)`** (the operand-bound ops),
-*not* by navigating `op.Children`. Under the heuristic planner an op's children are concrete; under
+*not* by navigating `op.Inputs`. Under the heuristic planner an op's inputs are concrete; under
 the cost-based planner they are equivalence *subsets* — so only the operand-bound ops are guaranteed
 to be the concrete types the rule expects. Because rules use `Op(i)`, **the same rule works under both
 planners**.
@@ -259,7 +282,7 @@ The data model:
 > different physical form that can be converted.
 
 The lifecycle:
-1. **Register** (`SetRoot` → `RegisterImpl`). Each op's children are replaced by their subsets
+1. **Register** (`SetRoot` → `RegisterImpl`). Each op's inputs are replaced by their subsets
    (`OnRegister`); the op is deduplicated by digest, placed in a set, costed, and its rules are fired.
 2. **Fire rules.** When an op is registered, a `DeferringRuleCall` matches each rule's operand and
    *defers* every match as a `VolcanoRuleMatch` onto a `RuleQueue` (rather than applying it inline).
@@ -388,8 +411,9 @@ something runnable" callback.
 To stay medium-agnostic, Alembic omits everything specific to relational algebra and SQL, even though it
 inherits its structure from a relational optimizer:
 
-- **No row types / schemas, no row expressions, no SQL.** An op's "output shape" (if your domain needs
-  one) is just one of its identity-bearing attributes, modeled however you like — not a built-in.
+- **No row types / schemas, no row expressions, no SQL.** Alembic has a built-in but *opaque* output
+  type (`OutputType`, §3) — the equivalence invariant — that it attaches no meaning to and defaults to
+  `Void`. A relational row type is one way a downstream layer can fill that slot; it is not built in.
 - **No metadata/statistics framework** (cardinality, selectivity). Costs come from `ComputeSelfCost`
   today.
 - **No materialized views, lattices, hints, correlation variables.**
@@ -404,7 +428,8 @@ to any tree-shaped computation.
 
 | Concept | Type(s) |
 |---|---|
-| A plan op | `IOp`; bases `AbstractOp`, `SingleOp`, `BiOp` |
+| A plan op | `IOp`; base `AbstractOp` |
+| What an op produces | `OutputType` / `IOutputType`; `VoidOutputType`; `DeriveOutputType` |
 | Structural identity | `DeepEquals` / `DeepHashCode`; `Explain(IOpWriter)`; `IOpDigest` |
 | Plan rendering | `IOp.ToPlanString()` |
 | A physical property (value / dimension) | `IOpTrait` / `OpTraitDef`; multi-valued: `IOpMultipleTrait`, `OpCompositeTrait` |

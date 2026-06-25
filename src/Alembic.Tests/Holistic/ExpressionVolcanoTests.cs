@@ -30,7 +30,7 @@ public class ExpressionVolcanoTests
         var planner = new VolcanoPlanner();
         var cluster = new OpCluster(planner);
 
-        // (a * b) + c — exercises the two-child BiOp shape through the cost-based planner.
+        // (a * b) + c — exercises the two-child op shape through the cost-based planner.
         IOp root = new Add(logical, new Multiply(logical, new Variable(cluster, logical, "a"), new Variable(cluster, logical, "b")), new Variable(cluster, logical, "c"));
 
         ExpressionConventions.Physical.Register(planner);

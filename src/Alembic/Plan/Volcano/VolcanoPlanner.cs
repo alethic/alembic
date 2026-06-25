@@ -95,8 +95,18 @@ public class VolcanoPlanner : AbstractOpPlanner
     internal IRuleDriver RuleDriver => _ruleDriver;
 
     /// <inheritdoc />
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getRoot()")]
-    public override IOp? Root => _root;
+    public override IOp? Root
+    {
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "getRoot()")]
+        get => _root;
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "setRoot(RelNode)")]
+        set
+        {
+            _cluster ??= value!.Cluster;
+            _root = EnsureRegistered(value!, null);
+            EnsureRootConverters();
+        }
+    }
 
     /// <summary>
     /// Whether the planner uses the top-down (Cascades) search rather than the default bottom-up search.
@@ -235,15 +245,6 @@ public class VolcanoPlanner : AbstractOpPlanner
                 if (operand.MatchedType.IsAssignableFrom(clazz))
                     _classOperands.Put(clazz, operand);
         }
-    }
-
-    /// <inheritdoc />
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "setRoot(RelNode)")]
-    public override void SetRoot(IOp op)
-    {
-        _cluster ??= op.Cluster;
-        _root = EnsureRegistered(op, null);
-        EnsureRootConverters();
     }
 
     /// <inheritdoc />

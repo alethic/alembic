@@ -110,20 +110,21 @@ public class HepPlanner : AbstractOpPlanner
     }
 
     /// <inheritdoc />
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "setRoot(RelNode)")]
-    public override void SetRoot(IOp op)
+    public override IOp? Root
     {
-        // initOpToVertexCache quickly skips common (shared) nodes before traversing their inputs.
-        var initOpToVertexCache = _largePlanMode && !_noDag
-            ? new Dictionary<IOp, HepOpVertex>(ReferenceEqualityComparer.Instance)
-            : null;
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "getRoot()")]
+        get => _root;
+        [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "setRoot(RelNode)")]
+        set
+        {
+            // initOpToVertexCache quickly skips common (shared) nodes before traversing their inputs.
+            var initOpToVertexCache = _largePlanMode && !_noDag
+                ? new Dictionary<IOp, HepOpVertex>(ReferenceEqualityComparer.Instance)
+                : null;
 
-        _root = AddOpToGraph(op, initOpToVertexCache);
+            _root = AddOpToGraph(value!, initOpToVertexCache);
+        }
     }
-
-    /// <inheritdoc />
-    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "getRoot()")]
-    public override IOp? Root => _root;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepPlanner", "onCopy(RelNode, RelNode)")]

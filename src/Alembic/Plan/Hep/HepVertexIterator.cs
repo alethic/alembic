@@ -65,20 +65,11 @@ sealed class HepVertexIterator : IEnumerator<HepOpVertex>
         _current = _deque.Pop();
 
         var current = _current.CurrentOp;
-        if (current is SingleOp single)
+        foreach (var input in current.Inputs)
         {
-            var target = (HepOpVertex)single.Child;
+            var target = (HepOpVertex)input;
             if (_visited.Add(target.Id))
                 _deque.Push(target);
-        }
-        else
-        {
-            foreach (var input in current.Inputs)
-            {
-                var target = (HepOpVertex)input;
-                if (_visited.Add(target.Id))
-                    _deque.Push(target);
-            }
         }
 
         return true;

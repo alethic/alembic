@@ -41,7 +41,7 @@ public class ConverterProgramTests
         planner.ChangeTraits(root, Physical);
 
         var filter = Assert.IsType<PhysicalFilter>(planner.FindBestPlan());
-        Assert.IsType<PhysicalSource>(filter.Child);
+        Assert.IsType<PhysicalSource>(filter.Input);
     }
 
     [Fact]

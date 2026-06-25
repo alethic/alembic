@@ -9,8 +9,8 @@ namespace Alembic.Tests.Languages.Expression.Physical;
 /// <summary>
 /// A physical fused multiply-add — computes <c>a * b + c</c> in one step. It is the result of pushing a
 /// <see cref="PhysicalMultiply"/> up into the <see cref="PhysicalAdd"/> above it: a single physical
-/// realization that replaces the two-op form. Having three children, it is a plain
-/// <see cref="AbstractOp"/> rather than a <see cref="BiOp"/>, and stores and replaces them itself.
+/// realization that replaces the two-op form. Like every op, it is an <see cref="AbstractOp"/> that
+/// stores and replaces its three children itself.
 /// </summary>
 sealed class PhysicalFma : AbstractOp
 {

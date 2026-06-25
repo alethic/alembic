@@ -144,7 +144,7 @@ public abstract class AbstractOp : IOp
     /// This op's digest in string form: the object digest's rendering.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getDigest()")]
-    public virtual string GetDigest() => GetOpDigest().ToString();
+    public virtual string GetDigest() => GetOpDigest().ToString() ?? "";
 
     /// <summary>
     /// Discards this op's cached digest, so it is recomputed on next use.
@@ -162,7 +162,7 @@ public abstract class AbstractOp : IOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "toString()")]
     public override string ToString()
     {
-        return "rel#" + Id + ":" + GetDigest();
+        return "op#" + Id + ":" + GetDigest();
     }
 
     /// <inheritdoc />
