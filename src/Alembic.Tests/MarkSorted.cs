@@ -20,7 +20,7 @@ sealed class MarkSorted : OpRule
     {
         var op = call.Op(0);
         var traits = op.Traits.Replace(SortednessTraitDef.Instance, Sortedness.Sorted);
-        call.TransformTo(op.Copy(traits, op.Children));
+        call.TransformTo(op.Copy(traits, op.Inputs));
     }
 
 }

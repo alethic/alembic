@@ -56,7 +56,7 @@ public class OpMdLowerBoundCost : IMetadataHandler<BuiltInMetadata.LowerBoundCos
         if (selfCost is not null && selfCost.IsInfinite)
             selfCost = null;
 
-        foreach (var input in op.Children)
+        foreach (var input in op.Inputs)
         {
             var lb = mq.GetLowerBoundCost(input, planner);
             if (lb is not null)

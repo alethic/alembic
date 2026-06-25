@@ -157,8 +157,8 @@ public class ExpressionLoweringTests
         var best = Lower(planner, root, physical);
 
         var add = Assert.IsType<PhysicalAdd>(best);
-        Assert.Equal(ExpressionConventions.Logical, add.Children[0].Convention);
-        Assert.Equal(ExpressionConventions.Logical, add.Children[1].Convention);
+        Assert.Equal(ExpressionConventions.Logical, add.Inputs[0].Convention);
+        Assert.Equal(ExpressionConventions.Logical, add.Inputs[1].Convention);
     }
 
     static (OpTraitSet Logical, OpTraitSet Physical) Setup()

@@ -30,7 +30,7 @@ public abstract class BiOp : AbstractOp
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.BiRel", "getInputs()")]
-    public override ImmutableArray<IOp> Children => ImmutableArray.Create(_left, _right);
+    public override ImmutableArray<IOp> Inputs => [_left, _right];
 
     /// <summary>
     /// This op's left child.

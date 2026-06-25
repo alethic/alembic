@@ -598,7 +598,7 @@ public class HepPlanner : AbstractOpPlanner
         foreach (var parentVertex in Graphs.PredecessorListOf(_graph, vertex))
         {
             var parent = parentVertex.CurrentOp;
-            foreach (var child in parent.Children)
+            foreach (var child in parent.Inputs)
                 if (ReferenceEquals(child, vertex))
                     parents.Add(parentVertex);
         }
@@ -698,11 +698,11 @@ public class HepPlanner : AbstractOpPlanner
             return cached;
 
         // Recursively add children, replacing this op's inputs with their vertices.
-        var newInputs = new List<IOp>(op.Children.Length);
-        foreach (var input in op.Children)
+        var newInputs = new List<IOp>(op.Inputs.Length);
+        foreach (var input in op.Inputs)
             newInputs.Add(AddOpToGraph(input, initOpToVertexCache));
 
-        if (!ShallowEqual(op.Children, newInputs))
+        if (!ShallowEqual(op.Inputs, newInputs))
         {
             var oldOp = op;
             op = op.Copy(op.Traits, newInputs.ToImmutableArray());
@@ -720,7 +720,7 @@ public class HepPlanner : AbstractOpPlanner
         _graph.AddVertex(newVertex);
         UpdateVertex(newVertex, op);
 
-        foreach (var input in op.Children)
+        foreach (var input in op.Inputs)
             _graph.AddEdge(newVertex, (HepOpVertex)input);
 
         if (initOpToVertexCache is not null)
@@ -743,7 +743,7 @@ public class HepPlanner : AbstractOpPlanner
         foreach (var parent in parents)
         {
             var parentOp = parent.CurrentOp;
-            var inputs = parentOp.Children;
+            var inputs = parentOp.Inputs;
             for (int i = 0; i < inputs.Length; i++)
             {
                 var child = inputs[i];
@@ -831,7 +831,7 @@ public class HepPlanner : AbstractOpPlanner
         FireOpChosen(op);
 
         // Recursively process children, replacing this op's inputs with the corresponding child ops.
-        var inputs = op.Children;
+        var inputs = op.Inputs;
         var changed = false;
         for (int i = 0; i < inputs.Length; i++)
         {
@@ -951,14 +951,14 @@ public class HepPlanner : AbstractOpPlanner
         if (!operand.Matches(op))
             return false;
 
-        foreach (var input in op.Children)
+        foreach (var input in op.Inputs)
             if (input is not HepOpVertex)
                 // The graph could be partially optimized (e.g. for a materialized view). In that case the
                 // input is a real op, not a vertex, and should not be matched again here.
                 return false;
 
         bindings.Add(op);
-        var childOps = op.Children;
+        var childOps = op.Inputs;
 
         switch (operand.ChildPolicy)
         {

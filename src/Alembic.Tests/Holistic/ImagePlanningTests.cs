@@ -132,7 +132,7 @@ public class ImagePlanningTests
     static int Count<T>(IOp op) where T : IOp
     {
         var count = op is T ? 1 : 0;
-        foreach (var child in op.Children)
+        foreach (var child in op.Inputs)
             count += Count<T>(child);
 
         return count;
@@ -143,7 +143,7 @@ public class ImagePlanningTests
         if (op is T match)
             return match;
 
-        foreach (var child in op.Children)
+        foreach (var child in op.Inputs)
             if (TryFirst<T>(child, out var found))
                 return found;
 
@@ -158,7 +158,7 @@ public class ImagePlanningTests
             return true;
         }
 
-        foreach (var child in op.Children)
+        foreach (var child in op.Inputs)
             if (TryFirst<T>(child, out found))
                 return true;
 
@@ -170,7 +170,7 @@ public class ImagePlanningTests
     {
         Assert.Equal(ImageConventions.Cpu, op.Convention);
 
-        foreach (var child in op.Children)
+        foreach (var child in op.Inputs)
             AssertAllCpu(child);
     }
 

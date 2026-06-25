@@ -49,7 +49,7 @@ public class TraitPlannerTests
         Assert.Equal(Sortedness.Sorted, op.Traits.Get(SortednessTraitDef.Instance));
         Assert.Equal(RelationalConventions.Logical, op.Convention);
 
-        foreach (var child in op.Children)
+        foreach (var child in op.Inputs)
             AssertSorted(child);
     }
 

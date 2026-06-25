@@ -257,7 +257,11 @@ internal class OpSet
             PostEquivalenceEvent((VolcanoPlanner)op.Cluster.Planner, op);
         }
 
-        Rel ??= op;
+        if (Rel is null)
+            Rel = op;
+        else
+            // Output types must be the same, except for cosmetic naming.
+            PlanUtil.VerifyTypeEquivalence(Rel, op, this);
     }
 
     /// <summary>
@@ -280,7 +284,7 @@ internal class OpSet
             if (op is IConverter)
                 continue;
 
-            foreach (var child in op.Children)
+            foreach (var child in op.Inputs)
             {
                 var childSet = VolcanoPlanner.EquivRoot(((OpSubset)child).Set);
                 if (!ReferenceEquals(childSet, this))
@@ -340,8 +344,8 @@ internal class OpSet
             // is a parent that adds nothing over its single input, it is redundant and can be pruned.
             if (!otherRel.IsEnforcer && parentRels.Contains(otherRel))
             {
-                if (otherRel.Children.Length != 1
-                    || otherRel.Children[0].Traits.Satisfies(otherRel.Traits))
+                if (otherRel.Inputs.Length != 1
+                    || otherRel.Inputs[0].Traits.Satisfies(otherRel.Traits))
                 {
                     planner.Prune(otherRel);
                 }

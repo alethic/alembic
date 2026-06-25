@@ -50,7 +50,7 @@ public class OpMdMemory : IMetadataHandler<BuiltInMetadata.Memory>
         var d = nullable.Value;
         if (!isPhaseTransition.Value)
         {
-            foreach (var input in op.Children)
+            foreach (var input in op.Inputs)
             {
                 nullable = mq.CumulativeMemoryWithinPhase(input);
                 if (nullable is null)

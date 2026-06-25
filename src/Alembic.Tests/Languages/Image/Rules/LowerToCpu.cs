@@ -24,8 +24,8 @@ sealed class LowerToCpu : ConverterRule
     public override IOp? Convert(IOp op)
     {
         // Each input must also be in (lowered to) the CPU convention before this op can consume it.
-        var lowered = ImmutableArray.CreateBuilder<IOp>(op.Children.Length);
-        foreach (var child in op.Children)
+        var lowered = ImmutableArray.CreateBuilder<IOp>(op.Inputs.Length);
+        foreach (var child in op.Inputs)
             lowered.Add(Convert(child, ImageConventions.Cpu));
 
         return op.Copy(op.Traits.Replace(ConventionTraitDef.Instance, ImageConventions.Cpu), lowered.MoveToImmutable());

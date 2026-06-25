@@ -15,7 +15,7 @@ namespace Alembic.Plan;
 /// </summary>
 /// <remarks>
 /// A rule reaches its matched ops through <see cref="Op"/>, not by navigating
-/// <see cref="IOp.Children"/>: under a heuristic planner the children are the concrete ops, but
+/// <see cref="IOp.Inputs"/>: under a heuristic planner the children are the concrete ops, but
 /// under a cost-based planner they are equivalence subsets, so only the operand-bound ops are
 /// guaranteed to be the concrete types the rule expects.
 /// </remarks>

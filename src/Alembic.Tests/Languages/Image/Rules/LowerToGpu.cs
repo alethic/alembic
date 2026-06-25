@@ -28,8 +28,8 @@ sealed class LowerToGpu : ConverterRule
             return null;
 
         // Each input must also be in (lowered to) the GPU convention before this op can consume it.
-        var lowered = ImmutableArray.CreateBuilder<IOp>(op.Children.Length);
-        foreach (var child in op.Children)
+        var lowered = ImmutableArray.CreateBuilder<IOp>(op.Inputs.Length);
+        foreach (var child in op.Inputs)
             lowered.Add(Convert(child, ImageConventions.Gpu));
 
         return op.Copy(op.Traits.Replace(ConventionTraitDef.Instance, ImageConventions.Gpu), lowered.MoveToImmutable());

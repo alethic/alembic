@@ -389,7 +389,7 @@ public class OpSubset : AbstractOp
         var seen = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
         foreach (var parent in LiveSet.Parents)
         {
-            foreach (var input in parent.Children)
+            foreach (var input in parent.Inputs)
             {
                 if (ReferenceEquals(input, this) && seen.Add(parent))
                 {
@@ -409,7 +409,7 @@ public class OpSubset : AbstractOp
         var seen = new HashSet<OpSubset>();
         foreach (var parent in LiveSet.Parents)
         {
-            foreach (var input in parent.Children)
+            foreach (var input in parent.Inputs)
             {
                 var sub = (OpSubset)input;
                 if (sub.LiveSet == LiveSet && sub.Traits.Equals(Traits))
@@ -434,7 +434,7 @@ public class OpSubset : AbstractOp
         var seen = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
         foreach (var parent in live.Parents)
         {
-            foreach (var input in parent.Children)
+            foreach (var input in parent.Inputs)
             {
                 var sub = (OpSubset)input;
                 if (sub.LiveSet == live && Traits.Satisfies(sub.Traits))
@@ -505,7 +505,7 @@ public class OpSubset : AbstractOp
             if (ordinal != -1)
                 _planner.FireOpChosen(p);
 
-            var oldInputs = p.Children;
+            var oldInputs = p.Inputs;
             var inputs = ImmutableArray.CreateBuilder<IOp>(oldInputs.Length);
             for (int i = 0; i < oldInputs.Length; i++)
             {
@@ -527,6 +527,12 @@ public class OpSubset : AbstractOp
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "computeSelfCost(RelOptPlanner, RelMetadataQuery)")]
     public override IOpCost? ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq) => planner.CostFactory.MakeZeroCost();
+
+    /// <summary>
+    /// A subset's output type is that of its set's representative op.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.RelSubset", "deriveRowType()")]
+    protected override IOutputType DeriveOutputType() => Set.Rel!.OutputType;
 
     /// <summary>
     /// A subset is identified by reference: two subsets are structurally equal only if they are the same

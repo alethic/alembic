@@ -214,7 +214,7 @@ internal class TopDownRuleDriver : IRuleDriver
         }
 
         bool unProcessed = false;
-        foreach (var input in rel.Children)
+        foreach (var input in rel.Inputs)
         {
             if (((OpSubset)input).GetWinnerCost() is null)
             {
@@ -227,7 +227,7 @@ internal class TopDownRuleDriver : IRuleDriver
         if (!unProcessed)
             return new DeriveTrait(this, rel, group);
 
-        if (rel.Children.Length == 1)
+        if (rel.Inputs.Length == 1)
             return new OptimizeInput1(this, rel, group);
 
         return new OptimizeInputs(this, rel, group);
@@ -424,7 +424,7 @@ internal class TopDownRuleDriver : IRuleDriver
                 return;
 
             _driver._tasks.Push(new ApplyRules(_driver, _mExpr, _group, _explore));
-            for (int i = _mExpr.Children.Length - 1; i >= 0; --i)
+            for (int i = _mExpr.Inputs.Length - 1; i >= 0; --i)
                 _driver._tasks.Push(new ExploreInput(_driver, _mExpr, i));
         }
     }
@@ -457,7 +457,7 @@ internal class TopDownRuleDriver : IRuleDriver
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.EnsureGroupExplored", "perform()")]
         public void Perform()
         {
-            if (!ReferenceEquals(_parent.Children[_inputOrdinal], _input))
+            if (!ReferenceEquals(_parent.Inputs[_inputOrdinal], _input))
             {
                 _driver._tasks.Push(new ExploreInput(_driver, _parent, _inputOrdinal));
                 return;
@@ -490,7 +490,7 @@ internal class TopDownRuleDriver : IRuleDriver
         public ExploreInput(TopDownRuleDriver driver, IOp parent, int inputOrdinal)
         {
             _driver = driver;
-            _group = (OpSubset)parent.Children[inputOrdinal];
+            _group = (OpSubset)parent.Inputs[inputOrdinal];
             _parent = parent;
             _inputOrdinal = inputOrdinal;
         }
@@ -618,7 +618,7 @@ internal class TopDownRuleDriver : IRuleDriver
             if (upperForInput.IsLessThanOrEqual(_driver._planner.ZeroCost))
                 return;
 
-            var input = (OpSubset)_mExpr.Children[0];
+            var input = (OpSubset)_mExpr.Inputs[0];
 
             _driver._tasks.Push(new DeriveTrait(_driver, _mExpr, _group));
             _driver._tasks.Push(new CheckInput(_driver, null, _mExpr, input, 0, upperForInput));
@@ -657,7 +657,7 @@ internal class TopDownRuleDriver : IRuleDriver
             _group = group;
             _upperBound = group.UpperBound;
             _upperForInput = driver._planner.InfiniteCost;
-            _childCount = rel.Children.Length;
+            _childCount = rel.Inputs.Length;
             _processingChild = 0;
         }
 
@@ -681,7 +681,7 @@ internal class TopDownRuleDriver : IRuleDriver
                         _upperForInput = planner.UpperBoundForInputs(_mExpr, _upperBound);
 
                     LowerBounds = new List<IOpCost>(_childCount);
-                    foreach (var input in _mExpr.Children)
+                    foreach (var input in _mExpr.Inputs)
                     {
                         var lb = planner.GetLowerBound(input);
                         LowerBounds.Add(lb);
@@ -701,7 +701,7 @@ internal class TopDownRuleDriver : IRuleDriver
 
             while (_processingChild < _childCount)
             {
-                var input = (OpSubset)_mExpr.Children[_processingChild];
+                var input = (OpSubset)_mExpr.Inputs[_processingChild];
 
                 if (input.GetWinnerCost() is not null)
                 {
@@ -758,9 +758,9 @@ internal class TopDownRuleDriver : IRuleDriver
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.CheckInput", "perform()")]
         public void Perform()
         {
-            if (!ReferenceEquals(_input, _parent.Children[_i]))
+            if (!ReferenceEquals(_input, _parent.Inputs[_i]))
             {
-                _input = (OpSubset)_parent.Children[_i];
+                _input = (OpSubset)_parent.Inputs[_i];
                 _driver._tasks.Push(this);
                 _driver._tasks.Push(new OptimizeGroup(_driver, _input, _upper));
                 return;
@@ -828,7 +828,7 @@ internal class TopDownRuleDriver : IRuleDriver
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleDriver.DeriveTrait", "perform()")]
         public void Perform()
         {
-            foreach (var input in _mExpr.Children)
+            foreach (var input in _mExpr.Inputs)
             {
                 if (((OpSubset)input).GetWinnerCost() is null)
                     return;
@@ -848,14 +848,14 @@ internal class TopDownRuleDriver : IRuleDriver
                 return;
 
             var mode = rel.DeriveMode;
-            int arity = rel.Children.Length;
+            int arity = rel.Inputs.Length;
             var inputTraits = new List<IList<OpTraitSet>>(arity);
 
             for (int i = 0; i < arity; i++)
             {
                 int childId = mode == DeriveMode.RightFirst ? arity - i - 1 : i;
 
-                var input = (OpSubset)rel.Children[childId];
+                var input = (OpSubset)rel.Inputs[childId];
                 var traits = new List<OpTraitSet>();
                 inputTraits.Add(traits);
 
@@ -875,7 +875,7 @@ internal class TopDownRuleDriver : IRuleDriver
                         var newRel = rel.Derive(subset.Traits, childId);
                         if (newRel is not null && !_driver._planner.IsRegistered(newRel))
                         {
-                            var newInput = newRel.Children[childId];
+                            var newInput = newRel.Inputs[childId];
                             if (ReferenceEquals(newInput, subset))
                                 subset.DisableEnforcing();
 

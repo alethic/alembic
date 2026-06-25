@@ -284,6 +284,10 @@ public class VolcanoPlanner : AbstractOpPlanner
         OpSet? set = null;
         if (equivalent is not null)
         {
+            if (!op.OutputType.IsEquivalentTo(equivalent.OutputType))
+                throw new ArgumentException(
+                    "op output type " + op.OutputType + " differs from equiv output type " + equivalent.OutputType);
+
             var equivSubset = EnsureRegistered(equivalent, null);
             set = EquivRoot(equivSubset.Set);
         }
@@ -364,6 +368,10 @@ public class VolcanoPlanner : AbstractOpPlanner
                 // The same op is already registered, so return its subset.
                 return GetSubsetNonNull(equivExp);
 
+            if (!equivExp.OutputType.IsEquivalentTo(op.OutputType))
+                throw new ArgumentException(
+                    "equiv output type " + equivExp.OutputType + " differs from op output type " + op.OutputType);
+
             // A different, equivalent op exists: carry over its pruned state and join its set.
             CheckPruned(equivExp, op);
             return RegisterSubset(set, GetSubsetNonNull(equivExp));
@@ -427,7 +435,7 @@ public class VolcanoPlanner : AbstractOpPlanner
         if (!firstForDigest)
             return added;
 
-        foreach (var child in op.Children)
+        foreach (var child in op.Inputs)
             ((OpSubset)child).Set.Parents.Add(op);
 
         // Queue up all rules triggered by this op's creation.
@@ -600,7 +608,7 @@ public class VolcanoPlanner : AbstractOpPlanner
             // cost must be positive, so nudge it
             cost = CostFactory.MakeTinyCost();
 
-        foreach (var child in op.Children)
+        foreach (var child in op.Inputs)
         {
             var inputCost = GetCost(child, mq);
             if (inputCost is null)
@@ -896,7 +904,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoPlanner", "fixUpInputs(RelNode)")]
     bool FixUpInputs(IOp op)
     {
-        var inputs = op.Children;
+        var inputs = op.Inputs;
         var newInputs = new List<IOp>(inputs.Length);
         int changeCount = 0;
         foreach (var input in inputs)
@@ -953,7 +961,7 @@ public class VolcanoPlanner : AbstractOpPlanner
                 var equivOpSubset = GetSubsetNonNull(equiv);
 
                 // Remove back-links from children.
-                foreach (var input in op.Children)
+                foreach (var input in op.Inputs)
                     ((OpSubset)input).Set.Parents.Remove(op);
 
                 // Remove op from its subset. (This may leave the subset empty, but if so, that will be

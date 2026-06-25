@@ -39,10 +39,18 @@ public interface IOp
     OpTraitSet Traits { get; }
 
     /// <summary>
-    /// This op's child ops, in order.
+    /// This op's input ops, in order.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptNode", "getInputs()")]
-    ImmutableArray<IOp> Children { get; }
+    ImmutableArray<IOp> Inputs { get; }
+
+    /// <summary>
+    /// The type of the output this op produces. The planner treats it opaquely — it only asks whether
+    /// two ops' output types are equivalent (<see cref="IOutputType.IsEquivalentTo"/>), the invariant
+    /// every op in an equivalence set shares.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.RelOptNode", "getRowType()")]
+    IOutputType OutputType { get; }
 
     /// <summary>
     /// Produces a copy of this op with the given traits and children.

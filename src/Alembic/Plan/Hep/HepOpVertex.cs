@@ -50,6 +50,10 @@ sealed class HepOpVertex : AbstractOp, IDelegatingMetadataOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "getMetadataDelegateRel()")]
     public IOp GetMetadataDelegateOp() => _currentOp;
 
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRelVertex", "deriveRowType()")]
+    protected override IOutputType DeriveOutputType() => _currentOp.OutputType;
+
     /// <summary>
     /// Replaces the implementation for this vertex with a new op.
     /// </summary>
@@ -64,7 +68,7 @@ sealed class HepOpVertex : AbstractOp, IDelegatingMetadataOp
     public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
         Debug.Assert(traits.Equals(Traits));
-        Debug.Assert(children.SequenceEqual(Children));
+        Debug.Assert(children.SequenceEqual(Inputs));
         return this;
     }
 

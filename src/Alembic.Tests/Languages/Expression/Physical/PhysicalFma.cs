@@ -33,7 +33,7 @@ sealed class PhysicalFma : AbstractOp
 
     public IOp C => _c;
 
-    public override ImmutableArray<IOp> Children => ImmutableArray.Create(_a, _b, _c);
+    public override ImmutableArray<IOp> Inputs => ImmutableArray.Create(_a, _b, _c);
 
     public override IOpWriter ExplainTerms(IOpWriter writer)
     {

@@ -159,7 +159,7 @@ public class RelationalLoweringTests
         var best = Lower(planner, root, physical);
 
         var filter = Assert.IsType<PhysicalFilter>(best);
-        Assert.Equal(RelationalConventions.Logical, filter.Children[0].Convention);
+        Assert.Equal(RelationalConventions.Logical, filter.Inputs[0].Convention);
     }
 
     static (OpTraitSet Logical, OpTraitSet Physical) Setup()

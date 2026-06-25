@@ -21,9 +21,9 @@ sealed class Inpaint : ImageOp
 
     public override bool SupportsGpu => false;
 
-    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
+    public override IOp Copy(OpTraitSet traits, ImmutableArray<IOp> inputs)
     {
-        return new Inpaint(traits, children[0]);
+        return new Inpaint(traits, inputs[0]);
     }
 
 }

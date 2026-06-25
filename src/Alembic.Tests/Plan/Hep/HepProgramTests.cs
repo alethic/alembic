@@ -27,7 +27,7 @@ public class HepProgramTests
         if (!IsSorted(op))
             return false;
 
-        foreach (var child in op.Children)
+        foreach (var child in op.Inputs)
             if (!AllSorted(child))
                 return false;
 
@@ -61,7 +61,7 @@ public class HepProgramTests
         var best = Run(HepProgram.Builder().AddMatchLimit(1).AddRuleInstance(new MarkSorted()).Build());
 
         Assert.True(IsSorted(best));
-        Assert.False(IsSorted(best.Children[0]));
+        Assert.False(IsSorted(best.Inputs[0]));
     }
 
     [Fact]

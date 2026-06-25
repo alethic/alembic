@@ -84,7 +84,7 @@ public class OpWriterImpl : IOpWriter
         _builder.Append('\n');
 
         _spaces += 2;
-        foreach (var input in op.Children)
+        foreach (var input in op.Inputs)
             input.Explain(this);
         _spaces -= 2;
     }

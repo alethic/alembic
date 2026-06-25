@@ -100,6 +100,53 @@ public class VolcanoPlannerTests
         Assert.True(spy.Fired);
     }
 
+    // Registering an op as equivalent to another with a different output type is rejected: a set holds
+    // only ops with the same output (Calcite's register row-type guard).
+    [Fact]
+    public void Register_rejects_an_equivalent_with_a_different_output_type()
+    {
+        var planner = new VolcanoPlanner();
+        var cluster = new OpCluster(planner);
+        var op = new ShapedLeaf(cluster, planner.EmptyTraitSet, new Shape(2));
+        var equivalent = new ShapedLeaf(cluster, planner.EmptyTraitSet, new Shape(3));
+
+        Assert.Throws<ArgumentException>(() => planner.Register(op, equivalent));
+    }
+
+    // End to end: a rule that offers an "equivalent" with a different output type is rejected when the
+    // planner registers the result during the search — the set's output-type invariant holds mid-plan.
+    [Fact]
+    public void A_rule_transforming_to_a_different_output_type_is_rejected_during_planning()
+    {
+        var planner = new VolcanoPlanner();
+        var cluster = new OpCluster(planner);
+
+        planner.AddRule(new Retype());
+        planner.SetRoot(new ShapedLeaf(cluster, planner.EmptyTraitSet, new Shape(2)));
+
+        // The planner wraps a failing rule application; the cause is the output-type guard.
+        var error = Assert.Throws<InvalidOperationException>(() => planner.FindBestPlan());
+        var cause = Assert.IsType<ArgumentException>(error.InnerException);
+        Assert.Contains("output type", cause.Message);
+    }
+
+    // Offers, as an equivalent of the matched leaf, a leaf with a different output type.
+    sealed class Retype : OpRule
+    {
+
+        public Retype()
+            : base(Operand<ShapedLeaf>(Any()))
+        {
+        }
+
+        public override void OnMatch(OpRuleCall call)
+        {
+            var leaf = call.Op(0);
+            call.TransformTo(new ShapedLeaf(leaf.Cluster, leaf.Traits, new Shape(3)));
+        }
+
+    }
+
     /// <summary>
     /// A transformation rule that records every op it is invoked on and transforms nothing.
     /// </summary>

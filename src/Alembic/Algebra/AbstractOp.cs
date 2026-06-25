@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -20,6 +21,9 @@ public abstract class AbstractOp : IOp
 {
 
     readonly InnerOpDigest _digest;
+
+    // Lazily derived and cached, as in Calcite's AbstractRelNode.rowType (MonotonicNonNull).
+    IOutputType? _outputType;
 
     // The source of op ids, handed out in creation order. Atomic, as in Calcite's NEXT_ID.
     static int _nextId;
@@ -51,11 +55,24 @@ public abstract class AbstractOp : IOp
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getInputs()")]
-    public virtual ImmutableArray<IOp> Children => ImmutableArray<IOp>.Empty;
+    public virtual ImmutableArray<IOp> Inputs => ImmutableArray<IOp>.Empty;
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getConvention()")]
     public virtual IConvention? Convention => Traits.Convention;
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getRowType()")]
+    public IOutputType OutputType => _outputType ??= DeriveOutputType();
+
+    /// <summary>
+    /// Derives this op's <see cref="OutputType"/>. The base returns <see cref="VoidOutputType"/> — the
+    /// trivial "no meaningful output" type — for ops that attach no meaning to their output; a subclass
+    /// overrides to describe what it produces. (Calcite's base throws <c>UnsupportedOperationException</c>;
+    /// Alembic defaults to <c>Void</c> so an output-agnostic medium need not implement it.)
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "deriveRowType()")]
+    protected virtual IOutputType DeriveOutputType() => VoidOutputType.Instance;
 
     /// <summary>
     /// Lists this op's identity-bearing terms. A subclass calls <c>base.ExplainTerms</c>, then adds its
@@ -80,7 +97,7 @@ public abstract class AbstractOp : IOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "childrenAccept(RelVisitor)")]
     public void ChildrenAccept(OpVisitor visitor)
     {
-        var inputs = Children;
+        var inputs = Inputs;
         for (int i = 0; i < inputs.Length; i++)
             visitor.Visit(inputs[i], i, this);
     }
@@ -93,7 +110,7 @@ public abstract class AbstractOp : IOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "copy(RelTraitSet, List<RelNode>)")]
     public virtual IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
-        if (System.Linq.Enumerable.SequenceEqual(Children, children) && ReferenceEquals(traits, Traits))
+        if (System.Linq.Enumerable.SequenceEqual(Inputs, children) && ReferenceEquals(traits, Traits))
             return this;
 
         throw new InvalidOperationException("Op should override Copy. Class=[" + GetType()
@@ -152,10 +169,14 @@ public abstract class AbstractOp : IOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "onRegister(RelOptPlanner)")]
     public virtual IOp OnRegister(IOpPlanner planner)
     {
-        var oldInputs = Children;
+        var oldInputs = Inputs;
         var builder = ImmutableArray.CreateBuilder<IOp>(oldInputs.Length);
         foreach (var input in oldInputs)
-            builder.Add(planner.EnsureRegistered(input, null));
+        {
+            var e = planner.EnsureRegistered(input, null);
+            Debug.Assert(ReferenceEquals(e, input) || input.OutputType.IsEquivalentTo(e.OutputType));
+            builder.Add(e);
+        }
 
         var inputs = builder.MoveToImmutable();
 
@@ -187,6 +208,7 @@ public abstract class AbstractOp : IOp
 
         var that = (AbstractOp)other;
         if (!Traits.Equals(that.Traits)) return false;
+        if (!OutputType.IsEquivalentTo(that.OutputType)) return false;
 
         var a = DigestItems();
         var b = that.DigestItems();

@@ -39,8 +39,10 @@ public class HepRuleCall : OpRuleCall
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.hep.HepRuleCall", "transformTo(RelNode, Map<RelNode, RelNode>, RelHintsPropagator)")]
     public override void TransformTo(IOp equivalent, IReadOnlyDictionary<IOp, IOp> equiv)
     {
+        var op0 = Op(0);
+        PlanUtil.VerifyTypeEquivalence(op0, equivalent, op0);
         _results.Add(equivalent);
-        Op(0).Cluster.InvalidateMetadataQuery();
+        op0.Cluster.InvalidateMetadataQuery();
     }
 
 }

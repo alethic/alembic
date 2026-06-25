@@ -42,7 +42,7 @@ public class OpMdCumulativeCost : IMetadataHandler<BuiltInMetadata.CumulativeCos
         if (cost is null)
             return null;
 
-        foreach (var input in op.Children)
+        foreach (var input in op.Inputs)
         {
             var inputCost = mq.GetCumulativeCost(input);
             if (inputCost is null)

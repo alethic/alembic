@@ -34,7 +34,11 @@ public abstract class SingleOp : AbstractOp
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel", "getInputs()")]
-    public override ImmutableArray<IOp> Children => ImmutableArray.Create(_input);
+    public override ImmutableArray<IOp> Inputs => ImmutableArray.Create(_input);
+
+    /// <inheritdoc />
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.SingleRel", "deriveRowType()")]
+    protected override IOutputType DeriveOutputType() => _input.OutputType;
 
     /// <inheritdoc />
     public override IOpWriter ExplainTerms(IOpWriter writer)

@@ -179,7 +179,7 @@ public class VolcanoRuleCall : OpRuleCall
         {
             parentOperand = operand.Parent ?? throw new NullReferenceException($"operand.Parent for {operand}");
             var parentRel = Ops[parentOperand.OrdinalInRule]!;
-            var inputs = parentRel.Children;
+            var inputs = parentRel.Inputs;
             // If the child is unordered, then add all ops in all input subsets to the successors list
             // because unordered can match a child in any ordinal.
             if (parentOperand.ChildPolicy == RuleOperandChildPolicy.Unordered)
@@ -248,10 +248,10 @@ public class VolcanoRuleCall : OpRuleCall
             {
                 // We know the previous operand matched *a* child of its parent; check that it is the
                 // *correct* child of this candidate parent.
-                if (previousOperand.OrdinalInParent >= rel.Children.Length)
+                if (previousOperand.OrdinalInParent >= rel.Inputs.Length)
                     continue;
 
-                var input = (OpSubset)rel.Children[previousOperand.OrdinalInParent];
+                var input = (OpSubset)rel.Inputs[previousOperand.OrdinalInParent];
                 if (previousOperand.MatchedType == typeof(OpSubset))
                 {
                     // The matched subset (previous) must satisfy our input subset.
@@ -283,14 +283,14 @@ public class VolcanoRuleCall : OpRuleCall
                 // rule reads getChildRels (it is public API for downstream rules), so the bug just waits.
                 if (ascending)
                 {
-                    var inputs = new List<IOp>(rel.Children);
+                    var inputs = new List<IOp>(rel.Inputs);
                     inputs[previousOperand.OrdinalInParent] = previous;
                     SetChildRels(rel, inputs);
                 }
                 else
                 {
                     var existing = GetChildOps(previous);
-                    var inputs = existing is not null ? new List<IOp>(existing) : new List<IOp>(previous.Children);
+                    var inputs = existing is not null ? new List<IOp>(existing) : new List<IOp>(previous.Inputs);
                     inputs[operand.OrdinalInParent] = rel;
                     SetChildRels(previous, inputs);
                 }

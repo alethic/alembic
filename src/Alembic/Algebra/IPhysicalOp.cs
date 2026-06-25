@@ -34,9 +34,9 @@ public interface IPhysicalOp : IOp
         if (pair is null)
             return null;
 
-        var inputs = ImmutableArray.CreateBuilder<IOp>(Children.Length);
-        for (int i = 0; i < Children.Length; i++)
-            inputs.Add(Cluster.Planner.ChangeTraits(Children[i], pair.Right[i]));
+        var inputs = ImmutableArray.CreateBuilder<IOp>(Inputs.Length);
+        for (int i = 0; i < Inputs.Length; i++)
+            inputs.Add(Cluster.Planner.ChangeTraits(Inputs[i], pair.Right[i]));
 
         return Copy(pair.Left, inputs.MoveToImmutable());
     }
@@ -63,9 +63,9 @@ public interface IPhysicalOp : IOp
         if (pair is null)
             return null;
 
-        var inputs = ImmutableArray.CreateBuilder<IOp>(Children.Length);
-        for (int i = 0; i < Children.Length; i++)
-            inputs.Add(Cluster.Planner.ChangeTraits(Children[i], pair.Right[i]));
+        var inputs = ImmutableArray.CreateBuilder<IOp>(Inputs.Length);
+        for (int i = 0; i < Inputs.Length; i++)
+            inputs.Add(Cluster.Planner.ChangeTraits(Inputs[i], pair.Right[i]));
 
         return Copy(pair.Left, inputs.MoveToImmutable());
     }

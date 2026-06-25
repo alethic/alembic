@@ -73,7 +73,7 @@ sealed class HepVertexIterator : IEnumerator<HepOpVertex>
         }
         else
         {
-            foreach (var input in current.Children)
+            foreach (var input in current.Inputs)
             {
                 var target = (HepOpVertex)input;
                 if (_visited.Add(target.Id))
