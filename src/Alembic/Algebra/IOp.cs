@@ -156,11 +156,35 @@ public interface IOp
     IOpCost? ComputeSelfCost(IOpPlanner planner, OpMetadataQuery mq);
 
     /// <summary>
+    /// Context for <see cref="IsValid"/>. Empty here: Calcite's <c>RelNode.Context</c> carries only a
+    /// correlation-variable set (relational), which Alembic has no use for. Kept as an extension point —
+    /// a downstream layer can supply a richer context type. The core passes <see cref="Empty"/> wherever
+    /// Calcite passes a null <c>Context</c>, so an override never has to null-check it.
+    /// </summary>
+    [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode.Context")]
+    interface IContext
+    {
+
+        /// <summary>
+        /// The empty context, carrying no information — passed by the core in place of Calcite's null
+        /// <c>Context</c>, so a downstream override can inspect the context without a null check.
+        /// </summary>
+        [Provenance(ProvenanceSource.Local)]
+        static IContext Empty { get; } = new EmptyContext();
+
+        private sealed class EmptyContext : IContext
+        {
+        }
+
+    }
+
+    /// <summary>
     /// Whether this op is valid, reporting any failure through <paramref name="litmus"/> (which may throw
     /// or return false). The base op is always valid; an op may override to check its own invariants.
-    /// (Calcite's second <c>Context</c> parameter is correlation-only — relational — so it is dropped.)
+    /// Unlike Calcite's nullable <c>Context</c>, the context is non-null — the core passes
+    /// <see cref="IContext.Empty"/> — so an override can inspect it without a null check.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelNode", "isValid(Litmus, Context)")]
-    bool IsValid(Alembic.Util.Litmus litmus);
+    bool IsValid(Alembic.Util.Litmus litmus, IOp.IContext context);
 
 }

@@ -185,13 +185,13 @@ public abstract class AbstractOp : IOp
             r = Copy(Traits, inputs);
 
         r.RecomputeDigest();
-        System.Diagnostics.Debug.Assert(r.IsValid(Alembic.Util.Litmus.Throw));
+        System.Diagnostics.Debug.Assert(r.IsValid(Alembic.Util.Litmus.Throw, IOp.IContext.Empty));
         return r;
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "isValid(Litmus, Context)")]
-    public virtual bool IsValid(Alembic.Util.Litmus litmus) => litmus.Succeed();
+    public virtual bool IsValid(Alembic.Util.Litmus litmus, IOp.IContext context) => litmus.Succeed();
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "register(RelOptPlanner)")]
