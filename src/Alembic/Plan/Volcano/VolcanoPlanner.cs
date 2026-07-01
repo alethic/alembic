@@ -427,9 +427,7 @@ public class VolcanoPlanner : AbstractOpPlanner
         var added = AddOpToSet(op, set);
 
         // putIfAbsent: only the first op seen for this digest owns the mapping.
-        var firstForDigest = !_digestToOp.ContainsKey(op.GetOpDigest());
-        if (firstForDigest)
-            _digestToOp[op.GetOpDigest()] = op;
+        var firstForDigest = _digestToOp.TryAdd(op.GetOpDigest(), op);
 
         // The op may have been registered while we recursively registered its children. If so, done.
         if (!firstForDigest)
