@@ -215,33 +215,37 @@ public abstract class AbstractOp : IOp
             return false;
 
         // The item buffers are pooled and returned below; the planner probes its digest maps constantly
-        // and every hit calls this to confirm the key, so allocating two lists per call dominated planning.
+        // and every hit calls this to confirm the key, so allocating per call dominated planning. Terms are
+        // collected as Cells — scalar terms encoded to a long, so integral/bool/char/enum terms don't box.
         var wa = DigestItems();
         var wb = that.DigestItems();
         try
         {
-            var a = wa.Items;
-            var b = wb.Items;
+            var a = wa.Cells;
+            var b = wb.Cells;
             if (a.Count != b.Count)
                 return false;
 
             for (int i = 0; i < a.Count; i++)
             {
-                var v1 = a[i].Value;
-                var v2 = b[i].Value;
-                if (v1 is IOp n1)
+                var ca = a[i];
+                var cb = b[i];
+                if (ca.Kind != cb.Kind)
+                    return false;
+
+                if (ca.Kind == ItemKind.Op)
                 {
                     // Calcite compares op-valued items by value only (deepEquals) — the term name is not
                     // part of the comparison for inputs.
-                    if (v2 is not IOp n2 || !n1.DeepEquals(n2))
+                    if (!((IOp)ca.Ref!).DeepEquals((IOp)cb.Ref!))
                         return false;
                 }
                 else
                 {
                     // Non-op items compare as a whole (name, value) entry, per Calcite's Map.Entry.equals.
-                    if (!string.Equals(a[i].Name, b[i].Name, StringComparison.Ordinal))
+                    if (!string.Equals(ca.Name, cb.Name, StringComparison.Ordinal))
                         return false;
-                    if (!Equals(v1, v2))
+                    if (ca.Kind == ItemKind.Scalar ? ca.Bits != cb.Bits : !Equals(ca.Ref, cb.Ref))
                         return false;
                 }
             }
@@ -250,8 +254,8 @@ public abstract class AbstractOp : IOp
         }
         finally
         {
-            DigestWriter.Return(wa);
-            DigestWriter.Return(wb);
+            CompareWriter.Return(wa);
+            CompareWriter.Return(wb);
         }
     }
 
@@ -271,13 +275,14 @@ public abstract class AbstractOp : IOp
     }
 
     /// <summary>
-    /// Returns a pooled DigestWriter (not a bare list as Calcite's getDigestItems does) so DeepEquals can
-    /// return the buffer for reuse; the caller must DigestWriter.Return it. Its Items are the digest items.
+    /// Returns a pooled CompareWriter (not a bare list of boxed values as Calcite's getDigestItems does)
+    /// so DeepEquals can compare terms without boxing scalars and return the buffer for reuse; the caller
+    /// must CompareWriter.Return it. Its Cells are the digest items.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getDigestItems()")]
-    DigestWriter DigestItems()
+    CompareWriter DigestItems()
     {
-        var writer = DigestWriter.Rent();
+        var writer = CompareWriter.Rent();
         ExplainTerms(writer);
         return writer;
     }
@@ -292,6 +297,138 @@ public abstract class AbstractOp : IOp
         => value is Array
             ? value.GetType().Name + "@" + RuntimeHelpers.GetHashCode(value).ToString("x")
             : value;
+
+    /// <summary>How a <see cref="Cell"/> carries a digest term's value.</summary>
+    enum ItemKind : byte
+    {
+        /// <summary>A null term value.</summary>
+        Null,
+        /// <summary>An op input; <see cref="Cell.Ref"/> holds it, compared by <see cref="DeepEquals"/>.</summary>
+        Op,
+        /// <summary>A reference or boxed value; <see cref="Cell.Ref"/> holds it, compared by <see cref="object.Equals(object,object)"/>.</summary>
+        Ref,
+        /// <summary>An integral/bool/char/enum term encoded into <see cref="Cell.Bits"/>, so it never boxes.</summary>
+        Scalar,
+    }
+
+    /// <summary>
+    /// One collected digest term. Scalars live in <see cref="Bits"/> (no box); ops and reference/boxed
+    /// values live in <see cref="Ref"/>. Kept small so the pooled term buffer is a flat array of structs.
+    /// </summary>
+    readonly struct Cell
+    {
+
+        public readonly string Name;
+        public readonly ItemKind Kind;
+        public readonly object? Ref;
+        public readonly long Bits;
+
+        public Cell(string name, ItemKind kind, object? @ref, long bits)
+        {
+            Name = name;
+            Kind = kind;
+            Ref = @ref;
+            Bits = bits;
+        }
+
+    }
+
+    /// <summary>
+    /// Per-<typeparamref name="T"/> classification, computed once: whether a term of type T is an
+    /// integral/bool/char/enum that <see cref="CompareWriter"/> can encode into a <see cref="Cell.Bits"/>
+    /// long without boxing. Floating-point, decimal, and other value types are excluded and fall back to
+    /// the boxed <see cref="ItemKind.Ref"/> path, preserving their exact <c>Equals</c> semantics.
+    /// </summary>
+    static class ScalarInfo<T>
+    {
+
+        public static readonly bool IsSupported = ComputeSupported();
+
+        static bool ComputeSupported()
+        {
+            var t = typeof(T);
+            var u = t.IsEnum ? Enum.GetUnderlyingType(t) : t;
+            return u == typeof(int) || u == typeof(uint)
+                || u == typeof(long) || u == typeof(ulong)
+                || u == typeof(short) || u == typeof(ushort)
+                || u == typeof(byte) || u == typeof(sbyte)
+                || u == typeof(bool) || u == typeof(char);
+        }
+
+    }
+
+    // Reinterprets a supported scalar's bits into a long without boxing; equality of these longs matches
+    // value equality (and the hash HashWriter folds), since both sides encode the same T identically.
+    static long ScalarBits<T>(T value) => Unsafe.SizeOf<T>() switch
+    {
+        1 => Unsafe.As<T, byte>(ref value),
+        2 => Unsafe.As<T, ushort>(ref value),
+        4 => Unsafe.As<T, uint>(ref value),
+        _ => unchecked((long)Unsafe.As<T, ulong>(ref value)),
+    };
+
+    /// <summary>
+    /// Collects an op's terms as <see cref="Cell"/>s for the term-by-term <see cref="DeepEquals"/>
+    /// comparison, encoding scalar terms into a long so they don't box. Pooled per thread — with
+    /// re-entrant returns to cover the recursion of op-valued terms — so equality allocates nothing in
+    /// steady state. (The digest *string* is rendered by <see cref="DigestWriter"/> instead, which keeps
+    /// the values as objects; that path is cold.)
+    /// </summary>
+    sealed class CompareWriter : IOpWriter
+    {
+
+        [ThreadStatic]
+        static Stack<CompareWriter>? _pool;
+
+        internal readonly List<Cell> Cells = new List<Cell>();
+
+        /// <summary>Rents a cleared writer for collecting an op's digest items (see <see cref="DigestItems"/>).</summary>
+        internal static CompareWriter Rent()
+        {
+            var pool = _pool;
+            var writer = pool is not null && pool.Count > 0 ? pool.Pop() : new CompareWriter();
+            writer.Cells.Clear();
+            return writer;
+        }
+
+        /// <summary>Returns a writer to the per-thread free list for reuse.</summary>
+        internal static void Return(CompareWriter writer)
+            => (_pool ??= new Stack<CompareWriter>()).Push(writer);
+
+        /// <inheritdoc/>
+        public IOpWriter Item(string name, object? value)
+        {
+            // The non-generic path carries op inputs and already-boxed values; classify by runtime type.
+            if (value is null)
+                Cells.Add(new Cell(name, ItemKind.Null, null, 0));
+            else if (value is IOp)
+                Cells.Add(new Cell(name, ItemKind.Op, value, 0));
+            else
+                Cells.Add(new Cell(name, ItemKind.Ref, NormalizeItemValue(value), 0));
+
+            return this;
+        }
+
+        /// <inheritdoc/>
+        public IOpWriter Item<T>(string name, T value)
+        {
+            if (value is null)
+                Cells.Add(new Cell(name, ItemKind.Null, null, 0));
+            else if (value is IOp)
+                Cells.Add(new Cell(name, ItemKind.Op, value, 0));
+            else if (ScalarInfo<T>.IsSupported)
+                Cells.Add(new Cell(name, ItemKind.Scalar, null, ScalarBits(value)));
+            else
+                // Float/decimal/other value types and reference types: box (rare) so Equals still applies.
+                Cells.Add(new Cell(name, ItemKind.Ref, NormalizeItemValue(value), 0));
+
+            return this;
+        }
+
+        /// <inheritdoc/>
+        public IOpWriter Done(IOp op) => this;
+
+    }
 
     /// <summary>
     /// An <see cref="IOpWriter"/> that folds an op's terms straight into a running hash — the 31-based
@@ -420,8 +557,8 @@ public abstract class AbstractOp : IOp
 
     /// <summary>
     /// Collects an op's explain terms and, on <see cref="Done"/>, renders them into the digest string
-    /// (inputs are referenced by type, not recursed). <see cref="Items"/> also backs the term-by-term
-    /// <see cref="DeepEquals"/> comparison.
+    /// (inputs are referenced by type, not recursed). Used only for the digest *string* — a cold path;
+    /// the hot term-by-term <see cref="DeepEquals"/> comparison uses <see cref="CompareWriter"/> instead.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter")]
     sealed class DigestWriter : IOpWriter
@@ -435,26 +572,6 @@ public abstract class AbstractOp : IOp
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "digest")]
         internal string Digest = "";
-
-        [ThreadStatic]
-        static Stack<DigestWriter>? _pool;
-
-        /// <summary>
-        /// Rents a cleared writer for collecting an op's digest items (see <see cref="DigestItems"/>).
-        /// Pooled per thread — with re-entrant returns to cover the recursion of op-valued terms — so the
-        /// item-collection <see cref="DeepEquals"/> depends on allocates nothing in steady state.
-        /// </summary>
-        internal static DigestWriter Rent()
-        {
-            var pool = _pool;
-            var writer = pool is not null && pool.Count > 0 ? pool.Pop() : new DigestWriter();
-            writer.Items.Clear();
-            return writer;
-        }
-
-        /// <summary>Returns a writer to the per-thread free list for reuse.</summary>
-        internal static void Return(DigestWriter writer)
-            => (_pool ??= new Stack<DigestWriter>()).Push(writer);
 
         /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "item(String, Object)")]
