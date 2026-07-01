@@ -5,27 +5,30 @@ using Alembic.Plan.Volcano;
 using Alembic.Tests.Languages.Expression;
 using Alembic.Tests.Languages.Expression.Logical;
 
-using BenchmarkDotNet.Attributes;
-
 namespace Alembic.Benchmarks;
 
 /// <summary>
 /// An end-to-end Volcano planning run over the toy arithmetic-expression language: build a deep logical
 /// tree, register the physical convention, and drive it to the best physical plan. This is the realistic
-/// workload that keys ops into <c>_digestToOp</c> — <see cref="MemoryDiagnoser"/> shows the total
-/// allocation of a full plan so we can see how much the digest path contributes.
+/// workload that keys ops into <c>_digestToOp</c>.
 /// </summary>
-[MemoryDiagnoser]
 public class PlanningBenchmarks
 {
 
     // Depth of the balanced expression tree; 2^Depth leaves and 2^Depth-1 binary ops.
-    [Params(4, 6)]
     public int Depth;
 
     static readonly string[] Names = { "a", "b", "c", "d" };
 
-    [Benchmark]
+    public void Run()
+    {
+        Bench.Header("Planning");
+        Depth = 4;
+        Bench.Run("Plan(depth=4)", 2_000, () => Bench.Sink += Plan().Id);
+        Depth = 6;
+        Bench.Run("Plan(depth=6)", 1_000, () => Bench.Sink += Plan().Id);
+    }
+
     public IOp Plan()
     {
         var logical = OpTraitSet.CreateEmpty().Plus(ExpressionConventions.Logical);
