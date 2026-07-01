@@ -1,0 +1,29 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".github/workflows/Alembic.yml" />
+    <File Path=".gitignore" />
+    <File Path="Alembic.dist.msbuildproj" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="GitVersion.yml" />
+    <File Path="global.json" />
+    <File Path="LICENSE" />
+    <File Path="NOTICE" />
+    <File Path="OUTPUT.md" />
+    <File Path="PLAN.md" />
+    <File Path="PORT.md" />
+    <File Path="README.md" />
+    <File Path="THEORY.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Alembic.Benchmarks/Alembic.Benchmarks.csproj" />
+    <Project Path="src/Alembic.Tests/Alembic.Tests.csproj" />
+    <Project Path="src/Alembic/Alembic.csproj" />
+  </Folder>
+  <Folder Name="/src/dist/">
+    <Project Path="src/dist-nuget/dist-nuget.csproj" />
+    <Project Path="src/dist-tests/dist-tests.csproj" />
+  </Folder>
+</Solution>

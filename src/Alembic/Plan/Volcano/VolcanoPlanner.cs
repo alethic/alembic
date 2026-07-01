@@ -31,7 +31,6 @@ public class VolcanoPlanner : AbstractOpPlanner
     readonly Dictionary<IOp, OpSubset> _opToSubset = new Dictionary<IOp, OpSubset>(ReferenceEqualityComparer.Instance);
     readonly LinkedListMultimap<Type, OpRuleOperand> _classOperands = new LinkedListMultimap<Type, OpRuleOperand>();
     readonly HashSet<IOp> _prunedOps = new HashSet<IOp>(ReferenceEqualityComparer.Instance);
-
     readonly List<OpTraitDef> _traitDefs = new List<OpTraitDef>();
 
     IRuleDriver _ruleDriver;

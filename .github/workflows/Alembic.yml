@@ -42,7 +42,7 @@ jobs:
     - name: Execute GitVersion
       uses: gittools/actions/gitversion/execute@v4
     - name: NuGet Restore
-      run: dotnet restore Alembic.sln
+      run: dotnet restore Alembic.slnx
     - name: Build
       run: |
         dotnet msbuild /m /bl \

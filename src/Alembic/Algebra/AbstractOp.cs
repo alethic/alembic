@@ -357,8 +357,10 @@ public abstract class AbstractOp : IOp
 
     }
 
-    // Reinterprets a supported scalar's bits into a long without boxing; equality of these longs matches
-    // value equality (and the hash HashWriter folds), since both sides encode the same T identically.
+    /// <summary>
+    /// Reinterprets a supported scalar's bits into a long without boxing; equality of these longs matches
+    /// value equality (and the hash HashWriter folds), since both sides encode the same T identically.
+    /// </summary>
     static long ScalarBits<T>(T value) => Unsafe.SizeOf<T>() switch
     {
         1 => Unsafe.As<T, byte>(ref value),
@@ -393,7 +395,9 @@ public abstract class AbstractOp : IOp
 
         /// <summary>Returns a writer to the per-thread free list for reuse.</summary>
         internal static void Return(CompareWriter writer)
-            => (_pool ??= new Stack<CompareWriter>()).Push(writer);
+        {
+            (_pool ??= new Stack<CompareWriter>()).Push(writer);
+        }
 
         /// <inheritdoc/>
         public IOpWriter Item(string name, object? value)

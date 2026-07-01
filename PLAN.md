@@ -42,7 +42,7 @@ are features for downstream users.
 - Target framework `net8.0` (the chosen floor; the machine SDK is .NET 10, `global.json` rolls
   forward).
 - `dotnet test src/Alembic.Tests/Alembic.Tests.csproj` → **41/41 passing**.
-- `dotnet build Alembic.sln` → clean (0 warnings, 0 errors).
+- `dotnet build Alembic.slnx` → clean (0 warnings, 0 errors).
 - The dist pipeline works: `Alembic.dist.msbuildproj` produces `dist/nuget/*.nupkg` (+ `.snupkg`)
   and a published `dist/tests/...` bundle. **Run dist/msbuild via PowerShell, not Git Bash** —
   Git Bash mangles `/p:` switches (use `-p:` or the PowerShell tool).
@@ -479,7 +479,7 @@ planner, rules, operands, and `Convention.register` all take `IOp`. (The generic
 ```pwsh
 # from D:\alembic
 dotnet test src/Alembic.Tests/Alembic.Tests.csproj   # run the unit tests
-dotnet build Alembic.sln                              # full solution incl. dist (no-op) projects
+dotnet build Alembic.slnx                             # full solution incl. dist (no-op) projects
 
 # Full dist build (NuGet + published tests) — use PowerShell, NOT Git Bash:
 dotnet msbuild Alembic.dist.msbuildproj -p:Configuration=Release -p:Version=1.0.0-dev
