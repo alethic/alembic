@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Alembic.Util;
@@ -8,12 +9,16 @@ namespace Alembic.Util;
 /// insertion order) with a per-key index into that chain (preserving per-key insertion order). A given
 /// key→value pair may be stored more than once. The .NET stand-in for Guava's <c>LinkedListMultimap</c>,
 /// whose <c>Node</c>s are linked both globally (<c>head</c>/<c>tail</c> + <c>next</c>/<c>previous</c>) and
-/// per key (<c>nextSibling</c>/<c>previousSibling</c>, indexed by <c>keyToKeyList</c>).
+/// per key (<c>nextSibling</c>/<c>previousSibling</c>, indexed by <c>keyToKeyList</c>). Here a
+/// <see cref="LinkedList{T}"/> supplies the global chain (it is a head/tail doubly-linked list internally)
+/// and a per-key list of its nodes supplies the per-key index.
 /// </summary>
 /// <remarks>
-/// Guava's <c>get</c> and <c>values</c> hand back live, mutate-through sequential-list views; Alembic only
-/// reads them, so <c>Get</c> returns a snapshot and <c>RemoveValuesWhere</c> drives the removal directly.
-/// <c>size</c>/<c>modCount</c> are not ported (no <c>size()</c> or fail-fast iteration consumer).
+/// As in Guava, <see cref="Get"/> hands back a live, mutate-through view over the key's values rather than
+/// a snapshot: reads reflect the current state and add/insert/remove/set change the multimap in place.
+/// <c>values().removeIf(...)</c> is exposed narrowly as <see cref="RemoveValuesWhere"/> (Alembic never
+/// iterates the whole value collection). <c>size</c>/<c>modCount</c> are not ported (no <c>size()</c>
+/// consumer, and no live view is iterated concurrently with mutation — callers copy first).
 /// </remarks>
 /// <typeparam name="TKey">The key type.</typeparam>
 /// <typeparam name="TValue">The value type.</typeparam>
@@ -45,21 +50,11 @@ public sealed class LinkedListMultimap<TKey, TValue>
     }
 
     /// <summary>
-    /// The values associated with <paramref name="key"/>, in insertion order (an empty list if none) — a
-    /// snapshot, in lieu of Guava's live sequential-list view.
+    /// A live, mutate-through view of the values associated with <paramref name="key"/>, in insertion
+    /// order — Guava's <c>get(K)</c> (an <c>AbstractSequentialList</c> backed by the key's sibling chain).
     /// </summary>
     [Provenance(ProvenanceSource.Other, "com.google.common.collect.LinkedListMultimap", "get(K)")]
-    public IReadOnlyList<TValue> Get(TKey key)
-    {
-        if (!_index.TryGetValue(key, out var nodes))
-            return Array.Empty<TValue>();
-
-        var values = new List<TValue>(nodes.Count);
-        foreach (var node in nodes)
-            values.Add(node.Value.Value);
-
-        return values;
-    }
+    public IList<TValue> Get(TKey key) => new ValuesForKey(this, key);
 
     /// <summary>
     /// Removes every value (across all keys) matching <paramref name="predicate"/>, walking the overall
@@ -95,6 +90,150 @@ public sealed class LinkedListMultimap<TKey, TValue>
     {
         _entries.Clear();
         _index.Clear();
+    }
+
+    /// <summary>
+    /// The live view returned by <see cref="Get"/> — the .NET equivalent of Guava's <c>get(K)</c> view and
+    /// its <c>ValueForKeyIterator</c>. It holds only the key, resolving the key's node list on each access,
+    /// so it reflects concurrent additions/removals; mutations insert or remove nodes in both the global
+    /// chain (<see cref="_entries"/>) and the per-key index (<see cref="_index"/>), preserving global
+    /// insertion order (a positional insert splices before the node currently at that position).
+    /// </summary>
+    sealed class ValuesForKey : IList<TValue>
+    {
+
+        readonly LinkedListMultimap<TKey, TValue> _map;
+        readonly TKey _key;
+
+        internal ValuesForKey(LinkedListMultimap<TKey, TValue> map, TKey key)
+        {
+            _map = map;
+            _key = key;
+        }
+
+        List<LinkedListNode<KeyValuePair<TKey, TValue>>>? Nodes()
+            => _map._index.GetValueOrDefault(_key);
+
+        public int Count => Nodes()?.Count ?? 0;
+
+        public bool IsReadOnly => false;
+
+        public TValue this[int index]
+        {
+            get
+            {
+                var nodes = Nodes();
+                if (nodes is null || (uint)index >= (uint)nodes.Count)
+                    throw OutOfRange(index);
+
+                return nodes[index].Value.Value;
+            }
+            set
+            {
+                var nodes = Nodes();
+                if (nodes is null || (uint)index >= (uint)nodes.Count)
+                    throw OutOfRange(index);
+
+                nodes[index].Value = new KeyValuePair<TKey, TValue>(_key, value);
+            }
+        }
+
+        public void Add(TValue value) => _map.Put(_key, value);
+
+        public void Insert(int index, TValue value)
+        {
+            var nodes = Nodes();
+            int count = nodes?.Count ?? 0;
+            if ((uint)index > (uint)count)
+                throw OutOfRange(index);
+
+            if (index == count)
+            {
+                Add(value);
+                return;
+            }
+
+            // Splice a node before the one currently at `index`, in both the global and per-key chains.
+            var nextSibling = nodes![index];
+            var node = _map._entries.AddBefore(nextSibling, new KeyValuePair<TKey, TValue>(_key, value));
+            nodes.Insert(index, node);
+        }
+
+        public void RemoveAt(int index)
+        {
+            var nodes = Nodes();
+            if (nodes is null || (uint)index >= (uint)nodes.Count)
+                throw OutOfRange(index);
+
+            _map._entries.Remove(nodes[index]);
+            nodes.RemoveAt(index);
+            if (nodes.Count == 0)
+                _map._index.Remove(_key);
+        }
+
+        public bool Remove(TValue value)
+        {
+            int index = IndexOf(value);
+            if (index < 0)
+                return false;
+
+            RemoveAt(index);
+            return true;
+        }
+
+        public void Clear()
+        {
+            var nodes = Nodes();
+            if (nodes is null)
+                return;
+
+            foreach (var node in nodes)
+                _map._entries.Remove(node);
+
+            _map._index.Remove(_key);
+        }
+
+        public int IndexOf(TValue value)
+        {
+            var nodes = Nodes();
+            if (nodes is null)
+                return -1;
+
+            var comparer = EqualityComparer<TValue>.Default;
+            for (int i = 0; i < nodes.Count; i++)
+                if (comparer.Equals(nodes[i].Value.Value, value))
+                    return i;
+
+            return -1;
+        }
+
+        public bool Contains(TValue value) => IndexOf(value) >= 0;
+
+        public void CopyTo(TValue[] array, int arrayIndex)
+        {
+            var nodes = Nodes();
+            if (nodes is null)
+                return;
+
+            foreach (var node in nodes)
+                array[arrayIndex++] = node.Value.Value;
+        }
+
+        public IEnumerator<TValue> GetEnumerator()
+        {
+            var nodes = Nodes();
+            if (nodes is null)
+                yield break;
+
+            foreach (var node in nodes)
+                yield return node.Value.Value;
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        static ArgumentOutOfRangeException OutOfRange(int index)
+            => new ArgumentOutOfRangeException(nameof(index), index, "Index out of range for the key's values.");
+
     }
 
 }
