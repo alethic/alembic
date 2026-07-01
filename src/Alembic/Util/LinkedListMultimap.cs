@@ -5,20 +5,40 @@ using System.Collections.Generic;
 namespace Alembic.Util;
 
 /// <summary>
-/// A multimap that keeps every key→value entry in a single doubly-linked chain (preserving overall
-/// insertion order) with a per-key doubly-linked sibling chain (preserving per-key insertion order). A
-/// given key→value pair may be stored more than once. A faithful port of Guava's
-/// <c>LinkedListMultimap</c>: each <see cref="Node"/> is linked both globally (<see cref="_head"/>/
+/// A multimap that supports deterministic iteration order for both keys and values — the .NET port of
+/// Guava's <c>LinkedListMultimap</c>. The iteration order is preserved across non-distinct key values;
+/// for the following definition
+/// <code>
+/// var multimap = new LinkedListMultimap&lt;K, V&gt;();
+/// multimap.Put(key1, foo);
+/// multimap.Put(key2, bar);
+/// multimap.Put(key1, baz);
+/// </code>
+/// the values of <c>key1</c> iterate as <c>[foo, baz]</c>, and entries overall in the order they were
+/// added. Each entry is held in one <see cref="Node"/> linked both globally (<see cref="_head"/>/
 /// <see cref="_tail"/> + <see cref="Node.Next"/>/<see cref="Node.Previous"/>) and per key
 /// (<see cref="Node.NextSibling"/>/<see cref="Node.PreviousSibling"/>, indexed by <see cref="_keyToKeyList"/>),
 /// so an entry is inserted or removed in O(1) given its node.
 /// </summary>
 /// <remarks>
-/// As in Guava, <see cref="Get"/> hands back a live, mutate-through view over a key's values (not a
-/// snapshot): reads reflect the current state and add/insert/remove/set change the multimap in place.
-/// <c>values().removeIf(...)</c> is exposed narrowly as <see cref="RemoveValuesWhere"/>. Guava's
-/// <c>size</c>/<c>modCount</c> are not ported: there is no <c>size()</c> consumer, and callers copy the
-/// live view before iterating, so no fail-fast is needed.
+/// <para>
+/// <see cref="Get"/> returns a collection that iterates a key's values in the order they were added — a
+/// live, mutate-through view (as in Guava), not a snapshot: reads reflect the current state and
+/// add/insert/remove/set change the multimap in place through the O(1) <see cref="AddNode"/>/
+/// <see cref="RemoveNode"/>. <c>values().removeIf(...)</c> is exposed narrowly as
+/// <see cref="RemoveValuesWhere"/>.
+/// </para>
+/// <para>
+/// This class is not thread-safe when any concurrent operation updates the multimap; concurrent reads
+/// work correctly if the last write happens-before them.
+/// </para>
+/// <para>
+/// Values may be null; keys may not (the <c>notnull</c> constraint — Guava itself permits null keys). Only
+/// the surface Alembic needs is ported: <see cref="Put"/>, the live <see cref="Get"/> view,
+/// <see cref="RemoveValuesWhere"/>, and <see cref="Clear"/>. Guava's <c>size</c>/<c>modCount</c> are not
+/// ported: there is no <c>size()</c> consumer, and callers copy the live view before iterating, so no
+/// fail-fast is needed.
+/// </para>
 /// </remarks>
 /// <typeparam name="TKey">The key type.</typeparam>
 /// <typeparam name="TValue">The value type.</typeparam>
@@ -27,9 +47,8 @@ public sealed class LinkedListMultimap<TKey, TValue>
     where TKey : notnull
 {
 
-    // The head and tail of the global chain of all entries, in insertion order.
-    Node? _head;
-    Node? _tail;
+    Node? _head; // the head for all keys
+    Node? _tail; // the tail for all keys
 
     // Per-key sibling chains, indexed by key (= Guava's keyToKeyList).
     readonly Dictionary<TKey, KeyList> _keyToKeyList = new();
@@ -44,10 +63,10 @@ public sealed class LinkedListMultimap<TKey, TValue>
 
         internal readonly TKey Key;
         internal TValue Value;
-        internal Node? Next;
-        internal Node? Previous;
-        internal Node? NextSibling;
-        internal Node? PreviousSibling;
+        internal Node? Next;            // the next node (with any key)
+        internal Node? Previous;        // the previous node (with any key)
+        internal Node? NextSibling;     // the next node with the same key
+        internal Node? PreviousSibling; // the previous node with the same key
 
         internal Node(TKey key, TValue value)
         {
@@ -181,8 +200,9 @@ public sealed class LinkedListMultimap<TKey, TValue>
 
     /// <summary>
     /// Stores <paramref name="value"/> with <paramref name="key"/>, appending a node to both the overall
-    /// chain and the key's chain (= Guava's <c>addNode(key, value, null)</c>). Always returns <c>true</c>.
+    /// chain and the key's chain (= Guava's <c>addNode(key, value, null)</c>).
     /// </summary>
+    /// <returns><c>true</c> always.</returns>
     [Provenance(ProvenanceSource.Other, "com.google.common.collect.LinkedListMultimap", "put(K, V)")]
     public bool Put(TKey key, TValue value)
     {
@@ -194,6 +214,10 @@ public sealed class LinkedListMultimap<TKey, TValue>
     /// A live, mutate-through view of the values associated with <paramref name="key"/>, in insertion
     /// order — Guava's <c>get(K)</c> (an <c>AbstractSequentialList</c> backed by the key's sibling chain).
     /// </summary>
+    /// <remarks>
+    /// If the multimap is modified while an iteration over the returned view is in progress — except
+    /// through the view's own add/insert/remove/set — the results of the iteration are undefined.
+    /// </remarks>
     [Provenance(ProvenanceSource.Other, "com.google.common.collect.LinkedListMultimap", "get(K)")]
     public IList<TValue> Get(TKey key)
     {
