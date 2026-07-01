@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 using Alembic.Algebra.Metadata;
@@ -170,22 +171,30 @@ public abstract class AbstractOp : IOp
     public virtual IOp OnRegister(IOpPlanner planner)
     {
         var oldInputs = Inputs;
-        var builder = ImmutableArray.CreateBuilder<IOp>(oldInputs.Length);
-        foreach (var input in oldInputs)
+        if (oldInputs.IsEmpty)
         {
-            var e = planner.EnsureRegistered(input, null);
-            Debug.Assert(ReferenceEquals(e, input) || input.OutputType.IsEquivalentTo(e.OutputType));
-            builder.Add(e);
+            // No inputs to register, so nothing to replace — as Calcite's equalShallow(empty, empty).
+            RecomputeDigest();
+            Debug.Assert(IsValid(Alembic.Util.Litmus.Throw, IOp.IContext.Empty));
+            return this;
         }
 
-        var inputs = builder.MoveToImmutable();
+        // Register each input, tracking whether any was replaced by a different (registered) op. The exact
+        // array is wrapped as the result's ImmutableArray without a copy, avoiding the builder and the
+        // boxing that passing an ImmutableArray to Util.EqualShallow (an IReadOnlyList) would incur.
+        var inputs = new IOp[oldInputs.Length];
+        bool changed = false;
+        for (int i = 0; i < oldInputs.Length; i++)
+        {
+            var e = planner.EnsureRegistered(oldInputs[i], null);
+            Debug.Assert(ReferenceEquals(e, oldInputs[i]) || oldInputs[i].OutputType.IsEquivalentTo(e.OutputType));
+            inputs[i] = e;
+            changed |= !ReferenceEquals(e, oldInputs[i]);
+        }
 
-        IOp r = this;
-        if (!Alembic.Util.Util.EqualShallow(oldInputs, inputs))
-            r = Copy(Traits, inputs);
-
+        var r = changed ? Copy(Traits, ImmutableCollectionsMarshal.AsImmutableArray(inputs)) : this;
         r.RecomputeDigest();
-        System.Diagnostics.Debug.Assert(r.IsValid(Alembic.Util.Litmus.Throw, IOp.IContext.Empty));
+        Debug.Assert(r.IsValid(Alembic.Util.Litmus.Throw, IOp.IContext.Empty));
         return r;
     }
 
