@@ -111,11 +111,10 @@ public abstract class AbstractOp : IOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "copy(RelTraitSet, List<RelNode>)")]
     public virtual IOp Copy(OpTraitSet traits, ImmutableArray<IOp> children)
     {
-        if (System.Linq.Enumerable.SequenceEqual(Inputs, children) && ReferenceEquals(traits, Traits))
+        if (Inputs.AsSpan().SequenceEqual(children.AsSpan()) && ReferenceEquals(traits, Traits))
             return this;
 
-        throw new InvalidOperationException("Op should override Copy. Class=[" + GetType()
-            + "]; traits=[" + Traits + "]; desired traits=[" + traits + "]");
+        throw new InvalidOperationException($"Op should override Copy. Class=[{GetType()}]; traits=[{Traits}]; desired traits=[{traits}]");
     }
 
     /// <inheritdoc />
