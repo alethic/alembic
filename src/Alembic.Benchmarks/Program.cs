@@ -82,6 +82,15 @@ public class DigestBenchmarks
 public static class Program
 {
     // Run all benchmarks, or filter from the command line, e.g. --filter *Planning* or --filter *Digest*.
+    // Pass "alloc" to run the type-level allocation profile instead of the benchmarks.
     public static void Main(string[] args)
-        => BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
+    {
+        if (args.Length > 0 && args[0] == "alloc")
+        {
+            AllocProfile.Run(depth: 6, iterations: 4000);
+            return;
+        }
+
+        BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
+    }
 }

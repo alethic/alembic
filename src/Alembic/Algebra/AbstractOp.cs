@@ -210,29 +210,41 @@ public abstract class AbstractOp : IOp
         if (!Traits.Equals(that.Traits)) return false;
         if (!OutputType.IsEquivalentTo(that.OutputType)) return false;
 
-        var a = DigestItems();
-        var b = that.DigestItems();
-        if (a.Count != b.Count) return false;
-
-        for (int i = 0; i < a.Count; i++)
+        // The item buffers are pooled and returned below; the planner probes its digest maps constantly
+        // and every hit calls this to confirm the key, so allocating two lists per call dominated planning.
+        var wa = DigestItems();
+        var wb = that.DigestItems();
+        try
         {
-            var v1 = a[i].Value;
-            var v2 = b[i].Value;
-            if (v1 is IOp n1)
-            {
-                // Calcite compares op-valued items by value only (deepEquals) — the term name is not part
-                // of the comparison for inputs.
-                if (v2 is not IOp n2 || !n1.DeepEquals(n2)) return false;
-            }
-            else
-            {
-                // Non-op items compare as a whole (name, value) entry, per Calcite's Map.Entry.equals.
-                if (!string.Equals(a[i].Name, b[i].Name, StringComparison.Ordinal)) return false;
-                if (!Equals(v1, v2)) return false;
-            }
-        }
+            var a = wa.Items;
+            var b = wb.Items;
+            if (a.Count != b.Count) return false;
 
-        return true;
+            for (int i = 0; i < a.Count; i++)
+            {
+                var v1 = a[i].Value;
+                var v2 = b[i].Value;
+                if (v1 is IOp n1)
+                {
+                    // Calcite compares op-valued items by value only (deepEquals) — the term name is not
+                    // part of the comparison for inputs.
+                    if (v2 is not IOp n2 || !n1.DeepEquals(n2)) return false;
+                }
+                else
+                {
+                    // Non-op items compare as a whole (name, value) entry, per Calcite's Map.Entry.equals.
+                    if (!string.Equals(a[i].Name, b[i].Name, StringComparison.Ordinal)) return false;
+                    if (!Equals(v1, v2)) return false;
+                }
+            }
+
+            return true;
+        }
+        finally
+        {
+            DigestWriter.Return(wa);
+            DigestWriter.Return(wb);
+        }
     }
 
     /// <inheritdoc />
@@ -250,12 +262,14 @@ public abstract class AbstractOp : IOp
         return result;
     }
 
+    // Returns a pooled DigestWriter (not a bare list as Calcite's getDigestItems does) so DeepEquals can
+    // return the buffer for reuse; the caller must DigestWriter.Return it. Its Items are the digest items.
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getDigestItems()")]
-    List<(string Name, object? Value)> DigestItems()
+    DigestWriter DigestItems()
     {
-        var writer = new DigestWriter();
+        var writer = DigestWriter.Rent();
         ExplainTerms(writer);
-        return writer.Items;
+        return writer;
     }
 
     /// <summary>
@@ -410,6 +424,26 @@ public abstract class AbstractOp : IOp
         /// </summary>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "digest")]
         internal string Digest = "";
+
+        [ThreadStatic]
+        static Stack<DigestWriter>? _pool;
+
+        /// <summary>
+        /// Rents a cleared writer for collecting an op's digest items (see <see cref="DigestItems"/>).
+        /// Pooled per thread — with re-entrant returns to cover the recursion of op-valued terms — so the
+        /// item-collection <see cref="DeepEquals"/> depends on allocates nothing in steady state.
+        /// </summary>
+        internal static DigestWriter Rent()
+        {
+            var pool = _pool;
+            var writer = pool is not null && pool.Count > 0 ? pool.Pop() : new DigestWriter();
+            writer.Items.Clear();
+            return writer;
+        }
+
+        /// <summary>Returns a writer to the per-thread free list for reuse.</summary>
+        internal static void Return(DigestWriter writer)
+            => (_pool ??= new Stack<DigestWriter>()).Push(writer);
 
         /// <inheritdoc/>
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "item(String, Object)")]
