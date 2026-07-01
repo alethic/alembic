@@ -507,28 +507,7 @@ public class VolcanoPlanner : AbstractOpPlanner
     {
         var mq = op.Cluster.GetMetadataQuery();
         var propagateOps = new Dictionary<IOp, IOpCost>(ReferenceEqualityComparer.Instance);
-        var propagateHeap = new PriorityQueue<IOp>(Comparer<IOp>.Create((o1, o2) =>
-        {
-            var c1 = propagateOps.TryGetValue(o1, out var v1) ? v1 : null;
-            var c2 = propagateOps.TryGetValue(o2, out var v2) ? v2 : null;
-            if (c1 is null)
-            {
-                return c2 is null ? 0 : -1;
-            }
-            if (c2 is null)
-            {
-                return 1;
-            }
-            if (CostEquals(c1, c2))
-            {
-                return 0;
-            }
-            else if (c1.IsLessThan(c2))
-            {
-                return -1;
-            }
-            return 1;
-        }));
+        var propagateHeap = new PriorityQueue<IOp>(new PropagateCostComparer(propagateOps));
         propagateOps[op] = GetCostOrInfinite(op, mq);
         propagateHeap.Offer(op);
 
@@ -574,6 +553,35 @@ public class VolcanoPlanner : AbstractOpPlanner
     }
 
     static bool CostEquals(IOpCost a, IOpCost b) => !a.IsLessThan(b) && !b.IsLessThan(a);
+
+    /// <summary>
+    /// Orders ops by their tentative cost in a propagation map (an op absent from the map, or with no
+    /// cost, sorts first), for <see cref="PropagateCostImprovements"/>'s heap. A named comparer holding
+    /// the map avoids the closure, <see cref="Comparison{T}"/> delegate, and wrapper that
+    /// <c>Comparer&lt;IOp&gt;.Create(lambda)</c> would allocate on every propagation.
+    /// </summary>
+    sealed class PropagateCostComparer : IComparer<IOp>
+    {
+
+        readonly Dictionary<IOp, IOpCost> _costs;
+
+        internal PropagateCostComparer(Dictionary<IOp, IOpCost> costs) => _costs = costs;
+
+        public int Compare(IOp? o1, IOp? o2)
+        {
+            var c1 = o1 is not null && _costs.TryGetValue(o1, out var v1) ? v1 : null;
+            var c2 = o2 is not null && _costs.TryGetValue(o2, out var v2) ? v2 : null;
+            if (c1 is null)
+                return c2 is null ? 0 : -1;
+            if (c2 is null)
+                return 1;
+            if (CostEquals(c1, c2))
+                return 0;
+
+            return c1.IsLessThan(c2) ? -1 : 1;
+        }
+
+    }
 
     /// <summary>
     /// The cost of <paramref name="op"/>, or the infinite cost when <see cref="GetCost"/> returns
