@@ -203,12 +203,16 @@ public abstract class AbstractOp : IOp
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "deepEquals(Object)")]
     public virtual bool DeepEquals(IOp? other)
     {
-        if (ReferenceEquals(this, other)) return true;
-        if (other is null || GetType() != other.GetType()) return false;
+        if (ReferenceEquals(this, other))
+            return true;
+        if (other is null || GetType() != other.GetType())
+            return false;
 
         var that = (AbstractOp)other;
-        if (!Traits.Equals(that.Traits)) return false;
-        if (!OutputType.IsEquivalentTo(that.OutputType)) return false;
+        if (!Traits.Equals(that.Traits))
+            return false;
+        if (!OutputType.IsEquivalentTo(that.OutputType))
+            return false;
 
         // The item buffers are pooled and returned below; the planner probes its digest maps constantly
         // and every hit calls this to confirm the key, so allocating two lists per call dominated planning.
@@ -218,7 +222,8 @@ public abstract class AbstractOp : IOp
         {
             var a = wa.Items;
             var b = wb.Items;
-            if (a.Count != b.Count) return false;
+            if (a.Count != b.Count)
+                return false;
 
             for (int i = 0; i < a.Count; i++)
             {
@@ -228,13 +233,16 @@ public abstract class AbstractOp : IOp
                 {
                     // Calcite compares op-valued items by value only (deepEquals) — the term name is not
                     // part of the comparison for inputs.
-                    if (v2 is not IOp n2 || !n1.DeepEquals(n2)) return false;
+                    if (v2 is not IOp n2 || !n1.DeepEquals(n2))
+                        return false;
                 }
                 else
                 {
                     // Non-op items compare as a whole (name, value) entry, per Calcite's Map.Entry.equals.
-                    if (!string.Equals(a[i].Name, b[i].Name, StringComparison.Ordinal)) return false;
-                    if (!Equals(v1, v2)) return false;
+                    if (!string.Equals(a[i].Name, b[i].Name, StringComparison.Ordinal))
+                        return false;
+                    if (!Equals(v1, v2))
+                        return false;
                 }
             }
 
@@ -262,8 +270,10 @@ public abstract class AbstractOp : IOp
         return result;
     }
 
-    // Returns a pooled DigestWriter (not a bare list as Calcite's getDigestItems does) so DeepEquals can
-    // return the buffer for reuse; the caller must DigestWriter.Return it. Its Items are the digest items.
+    /// <summary>
+    /// Returns a pooled DigestWriter (not a bare list as Calcite's getDigestItems does) so DeepEquals can
+    /// return the buffer for reuse; the caller must DigestWriter.Return it. Its Items are the digest items.
+    /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode", "getDigestItems()")]
     DigestWriter DigestItems()
     {
@@ -391,7 +401,8 @@ public abstract class AbstractOp : IOp
             if (_hash == 0)
             {
                 _hash = _op.DeepHashCode();
-                if (_hash == 0) _hash = 1;
+                if (_hash == 0)
+                    _hash = 1;
             }
 
             return _hash;
@@ -461,7 +472,8 @@ public abstract class AbstractOp : IOp
             sb.Append(op.GetType().Name).Append('.').Append(op.Traits).Append('(');
             for (int i = 0; i < Items.Count; i++)
             {
-                if (i > 0) sb.Append(',');
+                if (i > 0)
+                    sb.Append(',');
                 sb.Append(Items[i].Name).Append('=');
                 if (Items[i].Value is IOp input)
                     sb.Append(input.GetType().Name).Append('#').Append(input.Id);
