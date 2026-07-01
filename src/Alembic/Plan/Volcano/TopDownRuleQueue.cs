@@ -16,8 +16,10 @@ internal class TopDownRuleQueue : RuleQueue
 
     readonly Dictionary<IOp, LinkedList<VolcanoRuleMatch>> _matches = new Dictionary<IOp, LinkedList<VolcanoRuleMatch>>(ReferenceEqualityComparer.Instance);
 
+    // Calcite keys this dedup set on each match's digest string (Set<String>); Alembic keys on the match
+    // itself via a structural comparer (same rule + bound op ids), avoiding a digest string per match.
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.TopDownRuleQueue", "names")]
-    readonly HashSet<string> _names = new HashSet<string>();
+    readonly HashSet<VolcanoRuleMatch> _names = new HashSet<VolcanoRuleMatch>(VolcanoRuleMatch.Comparer.Instance);
 
     /// <summary>
     /// Creates a queue for the given planner.
@@ -39,7 +41,7 @@ internal class TopDownRuleQueue : RuleQueue
             _matches[rel] = queue;
         }
 
-        if (!_names.Add(match.ToString()))
+        if (!_names.Add(match))
             return;
 
         // A substitution rule is applied first even though queued last: the driver pops from the front
