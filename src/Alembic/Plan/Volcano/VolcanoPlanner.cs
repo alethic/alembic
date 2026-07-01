@@ -565,7 +565,10 @@ public class VolcanoPlanner : AbstractOpPlanner
 
         readonly Dictionary<IOp, IOpCost> _costs;
 
-        internal PropagateCostComparer(Dictionary<IOp, IOpCost> costs) => _costs = costs;
+        internal PropagateCostComparer(Dictionary<IOp, IOpCost> costs)
+        {
+            _costs = costs;
+        }
 
         public int Compare(IOp? o1, IOp? o2)
         {

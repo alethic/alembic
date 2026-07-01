@@ -54,7 +54,10 @@ public sealed class LinkedListMultimap<TKey, TValue>
     /// order — Guava's <c>get(K)</c> (an <c>AbstractSequentialList</c> backed by the key's sibling chain).
     /// </summary>
     [Provenance(ProvenanceSource.Other, "com.google.common.collect.LinkedListMultimap", "get(K)")]
-    public IList<TValue> Get(TKey key) => new ValuesForKey(this, key);
+    public IList<TValue> Get(TKey key)
+    {
+        return new ValuesForKey(this, key);
+    }
 
     /// <summary>
     /// Removes every value (across all keys) matching <paramref name="predicate"/>, walking the overall
@@ -112,11 +115,19 @@ public sealed class LinkedListMultimap<TKey, TValue>
         }
 
         List<LinkedListNode<KeyValuePair<TKey, TValue>>>? Nodes()
-            => _map._index.GetValueOrDefault(_key);
+        {
+            return _map._index.GetValueOrDefault(_key);
+        }
 
-        public int Count => Nodes()?.Count ?? 0;
+        public int Count
+        {
+            get { return Nodes()?.Count ?? 0; }
+        }
 
-        public bool IsReadOnly => false;
+        public bool IsReadOnly
+        {
+            get { return false; }
+        }
 
         public TValue this[int index]
         {
@@ -138,7 +149,10 @@ public sealed class LinkedListMultimap<TKey, TValue>
             }
         }
 
-        public void Add(TValue value) => _map.Put(_key, value);
+        public void Add(TValue value)
+        {
+            _map.Put(_key, value);
+        }
 
         public void Insert(int index, TValue value)
         {
@@ -207,7 +221,10 @@ public sealed class LinkedListMultimap<TKey, TValue>
             return -1;
         }
 
-        public bool Contains(TValue value) => IndexOf(value) >= 0;
+        public bool Contains(TValue value)
+        {
+            return IndexOf(value) >= 0;
+        }
 
         public void CopyTo(TValue[] array, int arrayIndex)
         {
@@ -229,10 +246,15 @@ public sealed class LinkedListMultimap<TKey, TValue>
                 yield return node.Value.Value;
         }
 
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
 
         static ArgumentOutOfRangeException OutOfRange(int index)
-            => new ArgumentOutOfRangeException(nameof(index), index, "Index out of range for the key's values.");
+        {
+            return new ArgumentOutOfRangeException(nameof(index), index, "Index out of range for the key's values.");
+        }
 
     }
 

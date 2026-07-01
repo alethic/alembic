@@ -26,27 +26,33 @@ internal class VolcanoRuleMatch : VolcanoRuleCall
     string? _digest;
 
     /// <summary>
-    /// Creates a completed match binding <paramref name="rels"/> to the operands rooted at
+    /// Creates a completed match binding <paramref name="ops"/> to the operands rooted at
     /// <paramref name="operand0"/>; throws if any operand is unbound.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "VolcanoRuleMatch(VolcanoPlanner, RelOptRuleOperand, RelNode[], Map<RelNode, List<RelNode>>)")]
-    internal VolcanoRuleMatch(VolcanoPlanner planner, OpRuleOperand operand0, IOp?[] rels, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs)
-        : base(planner, operand0, (IOp?[])rels.Clone(), nodeInputs)
+    internal VolcanoRuleMatch(VolcanoPlanner planner, OpRuleOperand operand0, IOp?[] ops, IDictionary<IOp, IReadOnlyList<IOp>> nodeInputs)
+        : base(planner, operand0, (IOp?[])ops.Clone(), nodeInputs)
     {
         // A completed match must have bound an op to every operand.
-        Debug.Assert(rels.All(op => op is not null));
+        Debug.Assert(ops.All(op => op is not null));
     }
 
     /// <inheritdoc />
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "toString()")]
-    public override string ToString() => _digest ??= ComputeDigest();
+    public override string ToString()
+    {
+        return _digest ??= ComputeDigest();
+    }
 
     /// <summary>
     /// Recomputes this match's digest (after its bound ops have changed).
     /// </summary>
     [Obsolete("To be removed before 2.0")]
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "recomputeDigest()")]
-    public void RecomputeDigest() => _digest = ComputeDigest();
+    public void RecomputeDigest()
+    {
+        _digest = ComputeDigest();
+    }
 
     /// <summary>
     /// The digest by which two matches are deemed equivalent: the rule and the ids of its bound ops.
@@ -54,7 +60,7 @@ internal class VolcanoRuleMatch : VolcanoRuleCall
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.plan.volcano.VolcanoRuleMatch", "computeDigest()")]
     string ComputeDigest()
     {
-        var buf = new StringBuilder("rule [" + Rule.Description + "] rels [");
+        var buf = new StringBuilder("rule [" + Rule.Description + "] ops [");
         for (int i = 0; i < Ops.Length; i++)
         {
             if (i > 0)
