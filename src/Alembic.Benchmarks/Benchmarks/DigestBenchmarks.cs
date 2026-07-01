@@ -4,15 +4,21 @@ using Alembic.Algebra;
 using Alembic.Plan;
 using Alembic.Plan.Volcano;
 
+using BenchmarkDotNet.Attributes;
+
 namespace Alembic.Benchmarks;
 
 /// <summary>
 /// Isolates the digest hot path: structural hashing (<see cref="IOp.DeepHashCode"/>), deep equality
 /// (<see cref="IOp.DeepEquals"/>), and keying a dictionary by <see cref="IOpDigest"/> the way the
-/// planners do.
+/// planners do. <see cref="MemoryDiagnoser"/> reports the allocation cost we want to drive down.
 /// </summary>
+[MemoryDiagnoser]
 public class DigestBenchmarks
 {
+
+    [Params(1000, 10000)]
+    public int N;
 
     OpTraitSet _traits = null!;
     OpCluster _cluster = null!;
@@ -21,7 +27,8 @@ public class DigestBenchmarks
     IOp _treeCopy = null!;
     IOp[] _leaves = null!;
 
-    public void Run(int mapSize = 1000)
+    [GlobalSetup]
+    public void Setup()
     {
         var planner = new VolcanoPlanner();
         _cluster = new OpCluster(planner);
@@ -31,15 +38,9 @@ public class DigestBenchmarks
         _tree = BuildTree(12);
         _treeCopy = BuildTree(12);
 
-        _leaves = new IOp[mapSize];
-        for (int i = 0; i < mapSize; i++)
+        _leaves = new IOp[N];
+        for (int i = 0; i < N; i++)
             _leaves[i] = new Var(_cluster, _traits, "v" + i, i);
-
-        Bench.Header("Digest");
-        Bench.Run("HashLeaf", 2_000_000, () => Bench.Sink += _leaf.DeepHashCode());
-        Bench.Run("HashTree", 500, () => Bench.Sink += _tree.DeepHashCode());
-        Bench.Run("EqualsTree", 300, () => Bench.Sink += _tree.DeepEquals(_treeCopy) ? 1 : 0);
-        Bench.Run("DigestMapInsert", 2_000, () => Bench.Sink += DigestMapInsert());
     }
 
     // A balanced binary tree of the given depth: 2^depth leaves, 2^depth-1 binary nodes.
@@ -51,8 +52,21 @@ public class DigestBenchmarks
         return new Bin(_traits, BuildTree(depth - 1), BuildTree(depth - 1));
     }
 
+    // Fresh structural hash of a single leaf: one node's DigestItems allocation + boxing of the int term.
+    [Benchmark]
+    public int HashLeaf() => _leaf.DeepHashCode();
+
+    // Fresh structural hash of a whole tree: recurses every node.
+    [Benchmark]
+    public int HashTree() => _tree.DeepHashCode();
+
+    // Deep equality of two structurally-equal trees (the collision path).
+    [Benchmark]
+    public bool EqualsTree() => _tree.DeepEquals(_treeCopy);
+
     // Key N distinct ops into a digest-keyed dictionary, as the planner's _digestToOp does.
-    int DigestMapInsert()
+    [Benchmark]
+    public int DigestMapInsert()
     {
         var map = new Dictionary<IOpDigest, IOp>();
         foreach (var op in _leaves)
