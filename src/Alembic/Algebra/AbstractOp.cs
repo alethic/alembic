@@ -240,14 +240,13 @@ public abstract class AbstractOp : IOp
     public virtual int DeepHashCode()
     {
         // Calcite folds the trait set and the term *values* only — not the op type, not the term names —
-        // with a fixed 31-based accumulation: 31 + traitSet.hashCode(), then result*31 + valueHash.
-        int result = 31 + Traits.GetHashCode();
-        foreach (var (_, value) in DigestItems())
-        {
-            int h = value is null ? 0 : value is IOp op ? op.DeepHashCode() : value.GetHashCode();
-            result = result * 31 + h;
-        }
-
+        // with a fixed 31-based accumulation: 31 + traitSet.hashCode(), then result*31 + valueHash. The
+        // fold streams through a pooled HashWriter so it neither materializes the item list nor boxes
+        // value-typed terms; the result is identical to folding over DigestItems().
+        var writer = HashWriter.Rent(31 + Traits.GetHashCode());
+        ExplainTerms(writer);
+        int result = writer.Hash;
+        HashWriter.Return(writer);
         return result;
     }
 
@@ -257,6 +256,83 @@ public abstract class AbstractOp : IOp
         var writer = new DigestWriter();
         ExplainTerms(writer);
         return writer.Items;
+    }
+
+    /// <summary>
+    /// Normalizes a term value for digesting: an array can't be compared or hashed by value, so it is
+    /// stringified per-instance (matching Calcite's <c>"" + value</c>, i.e. <c>Object.toString</c> =
+    /// <c>type@identityHash</c>). Every other value passes through unchanged. Shared so the hashing path
+    /// (<see cref="HashWriter"/>) and the equality/rendering path (<see cref="DigestWriter"/>) agree.
+    /// </summary>
+    static object? NormalizeItemValue(object? value)
+        => value is Array
+            ? value.GetType().Name + "@" + RuntimeHelpers.GetHashCode(value).ToString("x")
+            : value;
+
+    /// <summary>
+    /// An <see cref="IOpWriter"/> that folds an op's terms straight into a running hash — the 31-based
+    /// accumulation Calcite's <c>deepHashCode()</c> uses — without materializing the item list or boxing
+    /// value-typed terms. Instances are pooled per thread (<see cref="Rent"/>/<see cref="Return"/>) so a
+    /// hash computation allocates nothing in steady state; the per-thread free list also covers the
+    /// re-entrancy of op-valued terms, which recurse into a nested <see cref="DeepHashCode"/>.
+    /// </summary>
+    sealed class HashWriter : IOpWriter
+    {
+
+        [ThreadStatic]
+        static Stack<HashWriter>? _pool;
+
+        /// <summary>The running hash; seeded by <see cref="Rent"/>, read back after <see cref="ExplainTerms"/>.</summary>
+        internal int Hash;
+
+        /// <summary>Rents a writer seeded with <paramref name="seed"/> (<c>31 + traits.hashCode()</c>).</summary>
+        internal static HashWriter Rent(int seed)
+        {
+            var pool = _pool;
+            var writer = pool is not null && pool.Count > 0 ? pool.Pop() : new HashWriter();
+            writer.Hash = seed;
+            return writer;
+        }
+
+        /// <summary>Returns a writer to the per-thread free list for reuse.</summary>
+        internal static void Return(HashWriter writer)
+            => (_pool ??= new Stack<HashWriter>()).Push(writer);
+
+        void Fold(int h) => Hash = Hash * 31 + h;
+
+        /// <inheritdoc/>
+        public IOpWriter Item(string name, object? value)
+        {
+            if (value is null)
+                Fold(0);
+            else if (value is IOp op)
+                Fold(op.DeepHashCode());
+            else
+                Fold(NormalizeItemValue(value)!.GetHashCode());
+
+            return this;
+        }
+
+        /// <inheritdoc/>
+        public IOpWriter Item<T>(string name, T value)
+        {
+            if (value is null)
+                Fold(0);
+            else if (value is IOp op)
+                Fold(op.DeepHashCode());
+            else if (value is Array)
+                Fold(NormalizeItemValue(value)!.GetHashCode());
+            else
+                // EqualityComparer<T>.Default.GetHashCode matches value.GetHashCode() for the boxed value,
+                // so the fold is identical to the boxing path — just without the box for value types.
+                Fold(EqualityComparer<T>.Default.GetHashCode(value));
+
+            return this;
+        }
+
+        /// <inheritdoc/>
+        public IOpWriter Done(IOp op) => this;
+
     }
 
     /// <summary>
@@ -339,12 +415,7 @@ public abstract class AbstractOp : IOp
         [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.AbstractRelNode.RelDigestWriter", "item(String, Object)")]
         public IOpWriter Item(string name, object? value)
         {
-            // We can't rely on value-based hashCode/equals for an array, so stringify it (per-instance,
-            // matching Calcite's `"" + value`, i.e. Object.toString = type@identityHash).
-            if (value is Array)
-                value = value.GetType().Name + "@" + RuntimeHelpers.GetHashCode(value).ToString("x");
-
-            Items.Add((name, value));
+            Items.Add((name, NormalizeItemValue(value)));
             return this;
         }
 

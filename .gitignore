@@ -246,3 +246,6 @@ build/
 
 # Dist output
 /dist/
+
+# BenchmarkDotNet output
+BenchmarkDotNet.Artifacts/

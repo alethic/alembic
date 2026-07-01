@@ -17,6 +17,15 @@ public interface IOpWriter
     IOpWriter Item(string name, object? value);
 
     /// <summary>
+    /// Adds an attribute term whose value is typed, avoiding a box for value-typed <typeparamref name="T"/>.
+    /// The default routes to <see cref="Item(string, object?)"/> (boxing as before); a writer that only
+    /// needs the value's hash — e.g. the one behind <see cref="IOp.DeepHashCode"/> — overrides this to
+    /// consume <paramref name="value"/> without boxing. (Alembic addition: Calcite's <c>RelWriter.item</c>
+    /// takes a bare <c>Object</c>.)
+    /// </summary>
+    IOpWriter Item<T>(string name, T value) => Item(name, (object?)value);
+
+    /// <summary>
     /// Adds an attribute term only when <paramref name="condition"/> holds.
     /// </summary>
     [Provenance(ProvenanceSource.Calcite, "org.apache.calcite.rel.RelWriter", "itemIf(String, Object, boolean)")]
